@@ -12,6 +12,8 @@
   class Shino80Bus {
     constructor({traceLimit=256,romRanges=[]}={}){
       this.memory=new Uint8Array(0x10000);
+      this.ioPorts=new Uint8Array(0x10000);
+      this.ioPorts.fill(0xFF);
       this.trace=[];
       this.traceLimit=traceLimit;
       this.sequence=0;
@@ -86,6 +88,26 @@
       return data;
     }
 
+    cpuIoRead(port,{tState=0,purpose='IO_READ',signals=['IORQ','RD'],meta={}}={}){
+      const address=this.normalizeAddress(port);
+      const data=this.ioPorts[address];
+      this.emit({
+        tState,actor:'CPU',space:'IO',operation:'READ',address,data,purpose,
+        signals:[...signals],meta:{...meta}
+      });
+      return data;
+    }
+
+    cpuIoWrite(port,value,{tState=0,purpose='IO_WRITE',signals=['IORQ','WR'],meta={}}={}){
+      const address=this.normalizeAddress(port),data=this.normalizeData(value);
+      this.ioPorts[address]=data;
+      this.emit({
+        tState,actor:'CPU',space:'IO',operation:'WRITE',address,data,purpose,
+        signals:[...signals],meta:{...meta}
+      });
+      return data;
+    }
+
     emitRefresh({tState=0,i=0,r=0}={}){
       const i8=Number(i)&0xFF;
       const r7=Number(r)&0x7F;
@@ -107,6 +129,9 @@
 
     debugPeek(address){return this.memory[this.normalizeAddress(address)];}
     debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
+    debugIoPeek(port){return this.ioPorts[this.normalizeAddress(port)];}
+    debugIoPoke(port,value){this.ioPorts[this.normalizeAddress(port)]=this.normalizeData(value);}
+    clearIoPorts(value=0xFF){this.ioPorts.fill(this.normalizeData(value));}
     clearWritableMemory(value=0){
       const data=this.normalizeData(value);
       for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;

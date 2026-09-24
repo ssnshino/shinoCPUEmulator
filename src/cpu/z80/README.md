@@ -1,6 +1,6 @@
 # src/cpu/z80
 
-Current stacked candidate: PHASE 1D
+Current candidate: **PHASE 1E — BASE COMPLETE**
 
 ```text
 z80/
@@ -9,14 +9,40 @@ z80/
 └ z80-flags.js
 ```
 
-Current responsibilities:
+## Current coverage
 
-- decoder: BASE instruction recognition
-- flags: current documented INC/DEC flags
-- core: CPU state, memory/bus access, control flow and stack semantics
+- BASE first-byte decode: 256 / 256
+- executable non-prefix BASE opcodes: 252 / 252
+- prefix entry points recognized: CB / DD / ED / FD
 
-PHASE 1D adds internal `pushWord()` / `popWord()` because CALL/RET now require a real stack.
+## Responsibilities
 
-These helpers use normal bus memory traffic and are intended to support later PUSH/POP, RST and interrupt work.
+### z80-decoder.js
+- complete BASE opcode recognition
+- instruction descriptors
+- prefix-family entry recognition
 
-Do not split into a separate stack module unless future implementation pressure justifies it.
+### z80-flags.js
+- documented BASE arithmetic/logic flags
+- INC/DEC
+- general ALU
+- 16-bit ADD HL flags
+- accumulator rotates
+- DAA
+
+Undocumented X/Y remains a later accuracy target.
+
+### z80-core.js
+- architectural state
+- execution
+- memory / I/O bus transactions
+- stack
+- control flow
+- HALT functional cycling
+- DI/EI functional state
+
+## Next
+
+PHASE 1F adds CB execution.
+
+Do not create a generic multi-CPU abstraction while finishing Z80.
