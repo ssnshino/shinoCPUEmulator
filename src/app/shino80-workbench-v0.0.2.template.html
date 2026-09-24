@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SHINO-80 v0.0.3 — Z80 PHASE 1A</title>
+<title>SHINO-80 v0.0.4 — Z80 PHASE 1B</title>
 <style>/*__CSS__*/</style>
 </head>
 <body>
 <div class="app" id="app">
   <header class="toolbar">
-    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · Z80 PHASE 1A v0.0.3</div></div>
+    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · Z80 PHASE 1B v0.0.4</div></div>
     <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
     <div class="toolbar-spacer"></div>
     <div class="control-group" aria-label="Machine controls">
@@ -36,11 +36,11 @@
           <div class="computer-shell">
             <div class="crt-bezel"><div class="crt"><div class="crt-copy">
               <div class="big">SHINO-80</div>
-              <div>Z80 INSTRUCTION DECODER ONLINE</div>
+              <div>Z80 FLAGS ENGINE ONLINE</div>
               <div class="dim">VIDEO DEVICE NOT INSTALLED — DISPLAY INTERFACE RESERVED</div>
               <div style="margin-top:1.2em">PC <span id="displayPc">0000</span>h · R <span id="displayR">00</span>h · T <span id="displayT">0</span></div><div class="dim">LAST <span id="displayInst">RESET</span></div>
             </div></div></div>
-            <div class="shell-legend"><span><b>MODEL</b> Z80 / 4.000 MHz</span><span><b>BUILD</b> Z80 PHASE 1A v0.0.3</span><span><b>VIDEO</b> RESERVED</span></div>
+            <div class="shell-legend"><span><b>MODEL</b> Z80 / 4.000 MHz</span><span><b>BUILD</b> Z80 PHASE 1B v0.0.4</span><span><b>VIDEO</b> RESERVED</span></div>
           </div>
         </div>
       </section>
@@ -127,6 +127,7 @@
   </section>
 </div>
 <script>/*__BUS__*/</script>
+<script>/*__FLAGS__*/</script>
 <script>/*__DECODER__*/</script>
 <script>/*__CPU__*/</script>
 <script>/*__APP__*/</script>

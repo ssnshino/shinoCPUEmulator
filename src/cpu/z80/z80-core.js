@@ -1,15 +1,18 @@
 (function(root,factory){
   const busApi=(typeof module==='object'&&module.exports)?require('../../machine/shino80/shino80-bus.js'):root.SHINO_BUS;
   const decoderApi=(typeof module==='object'&&module.exports)?require('./z80-decoder.js'):root.SHINO_Z80_DECODER;
-  const api=factory(busApi,decoderApi);
+  const flagsApi=(typeof module==='object'&&module.exports)?require('./z80-flags.js'):root.SHINO_Z80_FLAGS;
+  const api=factory(busApi,decoderApi,flagsApi);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_Z80=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(busApi,decoderApi){
+})(typeof globalThis!=='undefined'?globalThis:this,function(busApi,decoderApi,flagsApi){
   'use strict';
   if(!busApi||!busApi.Shino80Bus)throw new Error('SHINO Z80 CORE: bus API missing');
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
+  if(!flagsApi||!flagsApi.inc8||!flagsApi.dec8)throw new Error('SHINO Z80 CORE: flags API missing');
 
   const {decodeBase,REG8_KEYS}=decoderApi;
+  const {FLAG_BITS,flagState,inc8,dec8}=flagsApi;
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
 
   function coldState(){
@@ -63,6 +66,22 @@
       const s=this.state;
       switch(desc.kind){
         case 'NOP':return desc.mnemonic;
+        case 'INC_R':{
+          const before=this.getReg8(desc.targetCode),next=inc8(s.f,before);
+          this.setReg8(desc.targetCode,next.result);s.f=next.f;return desc.mnemonic;
+        }
+        case 'DEC_R':{
+          const before=this.getReg8(desc.targetCode),next=dec8(s.f,before);
+          this.setReg8(desc.targetCode,next.result);s.f=next.f;return desc.mnemonic;
+        }
+        case 'INC_MEM_HL':{
+          const address=this.getHL(),before=this.readData(address,ctx,4),next=inc8(s.f,before);
+          this.writeData(address,next.result,ctx,8);s.f=next.f;return desc.mnemonic;
+        }
+        case 'DEC_MEM_HL':{
+          const address=this.getHL(),before=this.readData(address,ctx,4),next=dec8(s.f,before);
+          this.writeData(address,next.result,ctx,8);s.f=next.f;return desc.mnemonic;
+        }
         case 'LD_R_R':this.setReg8(desc.dstCode,this.getReg8(desc.srcCode));return desc.mnemonic;
         case 'LD_R_N':{const n=this.fetchOperandByte(ctx,4);this.setReg8(desc.dstCode,n);return desc.mnemonic.replace('n',`${hex(n,2)}h`);}
         case 'LD_DD_NN':{const nn=this.fetchOperandWord(ctx,4);this.setPair16(desc.pairCode,nn);return desc.mnemonic.replace('nn',`${hex(nn,4)}h`);}
@@ -92,7 +111,5 @@
     snapshot(){return JSON.parse(JSON.stringify(this.state));}
   }
 
-  const FLAG_BITS=Object.freeze({S:7,Z:6,Y:5,H:4,X:3,PV:2,N:1,C:0});
-  function flagState(f){const v=Number(f)&0xFF;return Object.fromEntries(Object.entries(FLAG_BITS).map(([name,bit])=>[name,!!(v&(1<<bit))]));}
   return {Z80Core,coldState,FLAG_BITS,flagState};
 });

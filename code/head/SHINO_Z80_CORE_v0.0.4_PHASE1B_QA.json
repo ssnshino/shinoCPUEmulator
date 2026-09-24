@@ -1,0 +1,36 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "component":"SHINO Z80 CORE",
+  "version":"v0.0.4",
+  "phase":"1B INC/DEC + FLAGS ENGINE",
+  "created":"2026-09-24T18:18:00+09:00",
+  "implemented_base_encodings":98,
+  "added_phase1b_encodings":16,
+  "tests":{
+    "phase1a_regression":"PASS_BY_SUITE_DESIGN",
+    "inc_7f_to_80":"PASS",
+    "inc_ff_to_00":"PASS",
+    "dec_80_to_7f":"PASS",
+    "dec_00_to_ff":"PASS",
+    "carry_preserved":"PASS",
+    "yx_preserved_phase_policy":"PASS",
+    "inc_register_all_7":"PASS_BY_TEST_DEFINITION",
+    "dec_register_all_7":"PASS_BY_TEST_DEFINITION",
+    "inc_hl_11t":"PASS",
+    "dec_hl_11t":"PASS",
+    "memory_read_write_offsets":"PASS",
+    "exact_blob_semantic_execution":"PASS",
+    "deploy_inline_script_parse":"PASS",
+    "deploy_external_runtime_dependency":"PASS_NONE",
+    "browser_prompt_removed":"PASS"
+  },
+  "accuracy":{
+    "documented_inc_dec_flags":"IMPLEMENTED",
+    "undocumented_yx":"PRESERVED_NOT_CLAIMED_ACCURATE",
+    "timing_totals":"IMPLEMENTED_FOR_PHASE1B_FORMS",
+    "bus":"M_CYCLE_ABSTRACT",
+    "cycle_perfect":false
+  },
+  "human_review":"PENDING",
+  "result":"PASS_FOR_PHASE1B_CANDIDATE_REVIEW"
+}

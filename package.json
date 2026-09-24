@@ -1,14 +1,15 @@
 {
   "name":"shino-cpu-emulator",
-  "version":"0.0.3",
+  "version":"0.0.4",
   "private":true,
   "description":"ONE-PAGE Z80 COMPUTER / SHINO-80",
   "scripts":{
     "build":"node scripts/build-one-page.cjs",
     "test:nop":"node tests/z80_core_v0.0.1.test.cjs",
     "test:phase1a":"node tests/z80_phase1a_ld.test.cjs",
-    "test:source":"node tests/v0.0.3_static.test.cjs",
-    "test:artifact":"node tests/v0.0.3_artifact.test.cjs",
-    "test":"npm run test:nop && npm run test:phase1a && npm run test:source && npm run build && npm run test:artifact"
+    "test:phase1b":"node tests/z80_phase1b_inc_dec_flags.test.cjs",
+    "test:source":"node tests/v0.0.4_static.test.cjs",
+    "test:artifact":"node tests/v0.0.4_artifact.test.cjs",
+    "test":"npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:source && npm run build && npm run test:artifact"
   }
 }
