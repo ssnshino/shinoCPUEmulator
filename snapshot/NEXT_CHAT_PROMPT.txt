@@ -1,28 +1,28 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Current candidate:
-SHINO Z80 CORE v0.0.6 PHASE 1D CALL / RET + STACK
+SHINO-80 v0.0.7 PHASE 2A MINIMUM VIDEO + IPL
 
 Branch:
-feature/z80-phase1d-call-ret-stack-20260924
+feature/shino80-phase2a-minimum-video-ipl-20260924
 
 Artifact:
-deploy/one_page_shino80_v0.0.6_z80_phase1d.html
+deploy/one_page_shino80_v0.0.7_phase2a_video_ipl.html
 
-Implemented:
-- CALL nn
-- RET
-- pushWord/popWord
-- STACK_WRITE/STACK_READ bus trace
-- nested CALL teaching program
-- 107 executable BASE encodings
+New hardware:
+- SYSTEM ROM 8 KiB @ 0000-1FFF
+- TEXT VRAM @ C000
+- TEXT VIDEO 80x25
+- CG-ROM 4 KiB / 8x16
+- CRT canvas
 
-Expected visible SP:
-F000 -> EFFE -> EFFC -> EFFE -> F000
+IPL writes by real Z80 execution:
+SHINO-80 IPL
+VIDEO OK
+MON
+*
 
-Video/BIOS are still not implemented.
-Future text-VRAM writes do not yet render.
+MON prompt is not interactive yet.
 
-After Human acceptance, likely next options:
-- PUSH / POP / RST
-- or begin minimal VIDEO DEVICE + original monitor/BIOS path
+After Human acceptance, strong next candidate:
+PHASE 2B Keyboard + minimal ROM MONITOR commands (D/M/G first).

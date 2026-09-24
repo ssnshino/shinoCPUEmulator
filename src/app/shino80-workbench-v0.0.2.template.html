@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SHINO-80 v0.0.6 — Z80 PHASE 1D</title>
+<title>SHINO-80 v0.0.7 — PHASE 2A</title>
 <style>/*__CSS__*/</style>
 </head>
 <body>
 <div class="app" id="app">
   <header class="toolbar">
-    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · Z80 PHASE 1D v0.0.6</div></div>
+    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · SHINO-80 PHASE 2A v0.0.7</div></div>
     <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
     <div class="toolbar-spacer"></div>
     <div class="control-group" aria-label="Machine controls">
@@ -34,13 +34,8 @@
       <section class="view active" data-view-panel="display" aria-label="Display">
         <div class="display-stage">
           <div class="computer-shell">
-            <div class="crt-bezel"><div class="crt"><div class="crt-copy">
-              <div class="big">SHINO-80</div>
-              <div>Z80 CALL / RET STACK ONLINE</div>
-              <div class="dim">VIDEO DEVICE NOT INSTALLED — DISPLAY INTERFACE RESERVED</div>
-              <div style="margin-top:1.2em">PC <span id="displayPc">0000</span>h · R <span id="displayR">00</span>h · T <span id="displayT">0</span></div><div class="dim">LAST <span id="displayInst">RESET</span></div>
-            </div></div></div>
-            <div class="shell-legend"><span><b>MODEL</b> Z80 / 4.000 MHz</span><span><b>BUILD</b> Z80 PHASE 1D v0.0.6</span><span><b>VIDEO</b> RESERVED</span></div>
+            <div class="crt-bezel"><div class="crt"><canvas id="crtCanvas" width="640" height="400" aria-label="SHINO-80 text display"></canvas></div></div>
+            <div class="shell-legend"><span><b>MODEL</b> Z80 / 4.000 MHz</span><span><b>BUILD</b> PHASE 2A v0.0.7</span><span><b>VIDEO</b> 80×25 ONLINE</span><span><b>PC</b> <i id="displayPc">0000</i>h · <b>R</b> <i id="displayR">00</i>h · <b>T</b> <i id="displayT">0</i> · <b>LAST</b> <i id="displayInst">RESET</i></span></div>
           </div>
         </div>
       </section>
@@ -84,7 +79,7 @@
       </section>
 
       <section class="view" data-view-panel="devices" aria-label="Devices">
-        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">slots reserved — devices not implemented</span></div><div class="devices" id="deviceList"></div></div>
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">TEXT VIDEO ONLINE · other slots reserved</span></div><div class="devices" id="deviceList"></div></div>
       </section>
     </main>
 
@@ -104,7 +99,7 @@
     <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
   </nav>
 
-  <footer class="statusbar"><span id="statusRun" class="ok">READY</span><span>MODEL 4.000 MHz</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>VIDEO RESERVED</span><span>FDD —</span><span>UART —</span></footer>
+  <footer class="statusbar"><span id="statusRun" class="ok">READY</span><span>MODEL 4.000 MHz</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>VIDEO ONLINE</span><span>FDD —</span><span>UART —</span></footer>
 </div>
 
 <div class="more-sheet" id="moreMenu" hidden aria-hidden="true">
@@ -130,6 +125,9 @@
 <script>/*__FLAGS__*/</script>
 <script>/*__DECODER__*/</script>
 <script>/*__CPU__*/</script>
+<script>/*__CGROM__*/</script>
+<script>/*__SYSTEM_ROM__*/</script>
+<script>/*__VIDEO__*/</script>
 <script>/*__APP__*/</script>
 </body>
 </html>

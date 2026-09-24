@@ -10,15 +10,24 @@
   const DATA_MASK=0xFF;
 
   class Shino80Bus {
-    constructor({traceLimit=256}={}){
+    constructor({traceLimit=256,romRanges=[]}={}){
       this.memory=new Uint8Array(0x10000);
       this.trace=[];
       this.traceLimit=traceLimit;
       this.sequence=0;
+      this.romRanges=(romRanges||[]).map(range=>{
+        const start=Number(range[0])&ADDRESS_MASK,end=Number(range[1])&ADDRESS_MASK;
+        if(end<start)throw new RangeError('ROM range must not wrap');
+        return [start,end];
+      });
     }
 
     normalizeAddress(address){return Number(address)&ADDRESS_MASK;}
     normalizeData(value){return Number(value)&DATA_MASK;}
+    isRomAddress(address){
+      const addr=this.normalizeAddress(address);
+      return this.romRanges.some(([start,end])=>addr>=start&&addr<=end);
+    }
 
     clearTrace(){this.trace.length=0;}
 
@@ -48,6 +57,20 @@
 
     cpuWrite(address,value,{tState=0,purpose='MEMORY_WRITE',signals=['MREQ','WR'],meta={}}={}){
       const addr=this.normalizeAddress(address),data=this.normalizeData(value);
+      if(this.isRomAddress(addr)){
+        this.emit({
+          tState,
+          actor:'CPU',
+          space:'MEMORY',
+          operation:'WRITE_BLOCKED',
+          address:addr,
+          data,
+          purpose:'ROM_WRITE_BLOCKED',
+          signals:[...signals],
+          meta:{...meta,requestedPurpose:purpose}
+        });
+        return data;
+      }
       this.memory[addr]=data;
       this.emit({
         tState,

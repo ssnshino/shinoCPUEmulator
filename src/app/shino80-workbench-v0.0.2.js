@@ -2,45 +2,27 @@
   'use strict';
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
-  const bus=new Shino80Bus({traceLimit:512});
+  const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
+  const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
+  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]]});
   const cpu=new Z80Core(bus);
-  bus.load(new Uint8Array(0x10000).fill(0x00));
-  const teachingProgram=new Uint8Array(0x40);
-  teachingProgram.set([
-    0x31,0x00,0xF0, // 0000: LD SP,F000h
-    0x3E,0x10,      // 0003: LD A,10h
-    0xCD,0x10,0x00,// 0005: CALL 0010h -> return 0008h
-    0x06,0x55,      // 0008: LD B,55h
-    0xC3,0x30,0x00 // 000A: JP 0030h
-  ],0x0000);
-  teachingProgram.set([
-    0x3C,           // 0010: INC A -> 11h
-    0xCD,0x20,0x00,// 0011: CALL 0020h -> return 0014h
-    0x3C,           // 0014: INC A -> 13h
-    0xC9            // 0015: RET -> 0008h
-  ],0x0010);
-  teachingProgram.set([
-    0x3C,           // 0020: INC A -> 12h
-    0xC9            // 0021: RET -> 0014h
-  ],0x0020);
-  teachingProgram.set([
-    0x0E,0x77,      // 0030: LD C,77h
-    0x00            // 0032: NOP
-  ],0x0030);
-  bus.load(teachingProgram,0x0000);
+  const systemRom=buildSystemRom();
+  bus.load(systemRom.bytes,0x0000);
   cpu.reset();
 
   const queryOne=s=>document.querySelector(s);
   const queryAll=s=>[...document.querySelectorAll(s)];
+  const video=new Shino80TextVideo(bus,queryOne('#crtCanvas'));
   const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
   const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
 
-  const ui={view:'display',running:false,paceIndex:0,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'fdd-a',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
+  const ui={view:'display',running:false,paceIndex:0,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'video',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
   const paces=[{label:'VISUAL',mode:'interval',ms:125,batch:1},{label:'FAST',mode:'interval',ms:16,batch:8},{label:'MAX',mode:'raf',ms:0,batch:256}];
   let runTimer=null;
   let morePreviousFocus=null;
 
   const devices=[
+    {id:'video',icon:'VD',name:'TEXT VIDEO',desc:'80×25 / 8×16 CG-ROM',state:'ONLINE'},
     {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
@@ -68,7 +50,7 @@
   }
 
   function renderDevices(){
-    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state reserved">${d.state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
+    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${d.state.toLowerCase()}">${d.state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
   }
 
   function setView(view){
@@ -94,15 +76,15 @@
 
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
-    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ok"></span>CPU HEARTBEAT</div><div class="inspector-chip"><span class="dot info"></span>VIDEO RESERVED</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div></div><div class="inspector-section inspector-note">DISPLAY is the future primary human interface to SHINO-80. This placeholder is intentionally separate from CPU/Bus observation tools.</div>`;
+    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ok"></span>CPU HEARTBEAT</div><div class="inspector-chip"><span class="dot ok"></span>TEXT VIDEO ONLINE</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE / LD / INC / DEC / FLOW / STACK ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1D adds CALL/RET. Watch PC jump into nested subroutines while SP descends through RAM and returns climb back out.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
-    if(ui.view==='devices'){const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0];html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${d.state}</b></div></div><div class="inspector-section inspector-note">The Device Dock reserves information architecture only. No FDD/UART/Printer behavior is implemented yet.</div>`;}
+    if(ui.view==='devices'){const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0];html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${d.state}</b></div></div><div class="inspector-section inspector-note">${d.id==='video'?'TEXT VIDEO is live. FDD/UART/Printer remain reserved.':'Reserved device slot; behavior not implemented yet.'}</div>`;}
     root.innerHTML=html;
   }
 
-  function render(){updateRegisters();updateBusLeds();updateSignalLamps();updateTrace();updateMemory();renderInspector();queryOne('#machineState').textContent=ui.running?'RUNNING':'READY';queryOne('#statusRun').textContent=ui.running?'RUNNING':'READY';queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;}
+  function render(){video.render();updateRegisters();updateBusLeds();updateSignalLamps();updateTrace();updateMemory();renderInspector();queryOne('#machineState').textContent=ui.running?'RUNNING':'READY';queryOne('#statusRun').textContent=ui.running?'RUNNING':'READY';queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;}
   function markSignals(events){ui.activeSignals=new Set(events.flatMap(e=>e.signals||[]));ui.pulseUntil=performance.now()+180;}
   function stepBatch(count){const before=bus.trace.length;try{cpu.runInstructions(count);markSignals(bus.trace.slice(before));ui.dirty=true;}catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);}}
   function stepOne(){stepBatch(1);}
@@ -169,13 +151,15 @@
   }
 
   function selfTest(){
-    const tb=new Shino80Bus(),tc=new Z80Core(tb);
-    tb.load([0xCD,0x05,0x00,0x00,0x00,0xC9]);tc.reset();tb.clearTrace();tc.state.sp=0xF000;
-    const call=tc.step(),ret=tc.step();
-    return call.mnemonic==='CALL 0005h'&&call.stackBefore===0xF000&&call.stackAfter===0xEFFE&&
-      ret.mnemonic==='RET'&&tc.state.pc===0x0003&&tc.state.sp===0xF000&&tc.state.tStates===27;
+    const tb=new Shino80Bus({romRanges:[[0x0000,0x1FFF]]}),tc=new Z80Core(tb),rom=buildSystemRom();
+    tb.load(rom.bytes,0);tc.reset();tb.clearTrace();
+    tc.runInstructions(3);
+    const firstChar=tb.debugPeek(TEXT_VRAM_BASE);
+    const romByte=tb.debugPeek(0);
+    tb.cpuWrite(0,0x00,{purpose:'SELFTEST_ROM_WRITE'});
+    return firstChar===0x53&&tb.debugPeek(0)===romByte&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
   }
   function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
 
-  buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 1D SELF TEST PASS':'SELF TEST FAIL';setView('display');render();requestAnimationFrame(observerLoop);
+  buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 2A SELF TEST PASS':'SELF TEST FAIL';setView('display');render();requestAnimationFrame(observerLoop);
 })();
