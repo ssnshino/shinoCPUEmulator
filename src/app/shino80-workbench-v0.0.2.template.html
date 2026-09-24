@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SHINO-80 v0.0.2 — UI FOUNDATION</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="toolbar">
+    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · UI FOUNDATION v0.0.2</div></div>
+    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
+    <div class="toolbar-spacer"></div>
+    <div class="control-group" aria-label="Machine controls">
+      <button class="control primary" id="runPauseBtn" aria-label="Run or pause"><span id="runPauseLabel">RUN</span></button>
+      <button class="control compact-label" id="stepBtn" aria-label="Step one instruction">STEP</button>
+      <button class="control pace" id="paceBtn" aria-label="Change observation pace"><span class="wide-label">PACE </span><span id="paceLabel">VISUAL</span></button>
+      <button class="control danger reset-wide" id="resetBtn" aria-label="Reset CPU">RESET</button>
+      <button class="control" id="moreBtn" aria-label="More actions">•••</button>
+    </div>
+  </header>
+
+  <div class="workbench">
+    <nav class="navrail" aria-label="Workbench views">
+      <button class="navbtn" data-view="display" aria-selected="true"><span class="ico">▣</span><span class="lab">DISPLAY</span></button>
+      <button class="navbtn" data-view="cpu" aria-selected="false"><span class="ico">CPU</span><span class="lab">CPU</span></button>
+      <button class="navbtn" data-view="memory" aria-selected="false"><span class="ico">MEM</span><span class="lab">MEMORY</span></button>
+      <button class="navbtn" data-view="bus" aria-selected="false"><span class="ico">BUS</span><span class="lab">BUS</span></button>
+      <button class="navbtn" data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">DEVICES</span></button>
+    </nav>
+
+    <main class="main" id="mainStage">
+      <section class="view active" data-view-panel="display" aria-label="Display">
+        <div class="display-stage">
+          <div class="computer-shell">
+            <div class="crt-bezel"><div class="crt"><div class="crt-copy">
+              <div class="big">SHINO-80</div>
+              <div>CPU HEARTBEAT ONLINE</div>
+              <div class="dim">VIDEO DEVICE NOT INSTALLED — DISPLAY INTERFACE RESERVED</div>
+              <div style="margin-top:1.2em">PC <span id="displayPc">0000</span>h · R <span id="displayR">00</span>h · T <span id="displayT">0</span></div>
+            </div></div></div>
+            <div class="shell-legend"><span><b>MODEL</b> Z80 / 4.000 MHz</span><span><b>BUILD</b> UI FOUNDATION v0.0.2</span><span><b>VIDEO</b> RESERVED</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="cpu" aria-label="CPU Debug Lab">
+        <div class="cpu-layout">
+          <div class="frontpanel">
+            <div class="panel-title">CPU DEBUG LAB / FRONT PANEL</div>
+            <div class="busrow"><span class="buslabel">ADDRESS</span><div class="leds" id="addrLeds"></div><span class="hex" id="addrHex">0000</span></div>
+            <div class="busrow"><span class="buslabel">DATA</span><div class="leds" id="dataLeds"></div><span class="hex" id="dataHex">00</span></div>
+            <div class="signals" id="signalGrid">
+              <div class="signal" data-signal="M1"><span class="led green"></span>M1</div>
+              <div class="signal" data-signal="MREQ"><span class="led green"></span>MREQ</div>
+              <div class="signal" data-signal="IORQ"><span class="led green"></span>IORQ</div>
+              <div class="signal" data-signal="RD"><span class="led green"></span>RD</div>
+              <div class="signal" data-signal="WR"><span class="led green"></span>WR</div>
+              <div class="signal" data-signal="RFSH"><span class="led blue"></span>RFSH</div>
+              <div class="signal" data-signal="HALT"><span class="led amber"></span>HALT</div>
+              <div class="signal" data-signal="WAIT"><span class="led amber"></span>WAIT</div>
+              <div class="signal" data-signal="INT"><span class="led amber"></span>INT</div>
+              <div class="signal" data-signal="NMI"><span class="led amber"></span>NMI</div>
+            </div>
+          </div>
+          <div class="cpu-grid">
+            <div class="machine-card"><div class="card-head"><h2>REGISTER BANK</h2><span class="eyebrow">bit lamps + exact hex</span></div><div style="padding:10px"><div class="registers" id="regGrid"></div></div></div>
+            <div class="machine-card"><div class="card-head"><h2>STATE</h2><span class="eyebrow" id="selfTest">SELF TEST</span></div><div style="padding:10px">
+              <div class="flaggrid" id="flagGrid"></div>
+              <div class="telemetry"><div class="metric"><div class="k">T-STATES</div><div class="v" id="tstates">0</div></div><div class="metric"><div class="k">INSTRUCTIONS</div><div class="v" id="icount">0</div></div><div class="metric"><div class="k">IFF1 / IFF2</div><div class="v"><span id="iff1">0</span> / <span id="iff2">0</span></div></div><div class="metric"><div class="k">IM</div><div class="v" id="im">0</div></div></div>
+              <div class="debug-actions"><button id="burstBtn">BURST ×256</button><button id="clearTraceBtn">CLEAR TRACE</button></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="memory" aria-label="Memory">
+        <div class="machine-card memory-card"><div class="card-head"><h2>MEMORY INSPECTOR</h2><span class="eyebrow">DEBUG PEEK — no fake CPU bus traffic</span></div><div class="memory-toolbar">0000h–00FFh · 16 bytes / row · current fetch highlighted</div><div class="memory-grid" id="memoryGrid"></div></div>
+      </section>
+
+      <section class="view" data-view-panel="bus" aria-label="Bus">
+        <div class="machine-card bus-card"><div class="card-head"><h2>BUS ANALYZER</h2><span class="eyebrow">M_CYCLE_ABSTRACT · not pin-perfect</span></div><div class="bus-view-grid"><div class="big-trace" id="busTrace"></div><div class="signal-bank"><h3>LIVE SIGNAL BANK</h3><div class="signals" id="busSignalGrid"></div><div class="telemetry"><div class="metric"><div class="k">LAST ADDRESS</div><div class="v" id="busLastAddr">0000</div></div><div class="metric"><div class="k">LAST DATA</div><div class="v" id="busLastData">00</div></div></div></div></div></div>
+      </section>
+
+      <section class="view" data-view-panel="devices" aria-label="Devices">
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">slots reserved — devices not implemented</span></div><div class="devices" id="deviceList"></div></div>
+      </section>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Inspector"><div id="inspectorContent"></div></aside>
+
+    <section class="tracepanel" id="tracePanel" aria-label="Bus trace panel">
+      <div class="tracehead"><strong style="font-size:10px">BUS TRACE / EVENT LOG</strong><span class="eyebrow" id="traceSummary">0 events</span><button id="traceToggleBtn" aria-label="Toggle trace panel">▼</button></div>
+      <div class="tracebody" id="tracePanelBody"></div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Compact workbench views">
+    <button data-view="display" aria-selected="true"><span class="ico">▣</span><span class="lab">DISPLAY</span></button>
+    <button data-view="cpu" aria-selected="false"><span class="ico">CPU</span><span class="lab">CPU</span></button>
+    <button data-view="memory" aria-selected="false"><span class="ico">MEM</span><span class="lab">MEM</span></button>
+    <button data-view="bus" aria-selected="false"><span class="ico">BUS</span><span class="lab">BUS</span></button>
+    <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
+  </nav>
+
+  <footer class="statusbar"><span id="statusRun" class="ok">READY</span><span>MODEL 4.000 MHz</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>VIDEO RESERVED</span><span>FDD —</span><span>UART —</span></footer>
+</div>
+
+<div id="moreMenu" hidden></div>
+<script>/*__BUS__*/</script>
+<script>/*__CPU__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>

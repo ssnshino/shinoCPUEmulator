@@ -1,77 +1,78 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T15:13:07+09:00
+Last updated: 2026-09-24T16:42:00+09:00
 
 ## Reviewed baseline
 
 - Repository: `ssnshino/shinoCPUEmulator`
 - Default branch: `main`
-- Repository bootstrap PR #1: MERGED
-- Bootstrap merge commit: `f374840d1c5f56431d48ecb90188ed7868b515fd`
-- Machine: SHINO-80
-- Reviewed main baseline remains research/document foundation.
+- UI Design Standard v0.1 / PR #3: MERGED
+- CPU PR #2: OPEN / UNMERGED
 
-## Parallel active candidates
+## Active candidate
 
-### CPU first heartbeat
+- PR: #4
+- Branch: `feature/ui-foundation-v0.0.2-20260924`
+- Candidate: **SHINO-80 v0.0.2 UI FOUNDATION**
+- Artifact: `one_page_shino80_v0.0.2_ui_foundation.html`
+- Automated adaptive browser QA: PASS
+- Human smartphone real-device QA: **PASS**
+- Human verdict: **大満足 / 非の打ち所が無い**
+- Merge: PENDING EXPLICIT HUMAN MERGE AUTHORIZATION
 
-- PR: #2
-- Branch: `feature/z80-core-v0.0.1-first-heartbeat-20260924`
-- Candidate: SHINO Z80 CORE v0.0.1
-- Human result: one-page HTML executes on smartphone
-- Merge: PENDING HUMAN REVIEW
+## Candidate scope
 
-### UI foundation research
+CPU behavior remains the first heartbeat:
 
-- Branch: `research/ui-design-standard-v0.1-20260924`
-- Scope: modern UI research + SHINO-specific UI standard + three layout blueprints
-- Runtime code change: NONE
-- Merge: PENDING HUMAN REVIEW
+- RESET documented subset
+- `00h NOP`
+- PC/R/T-state
+- abstract M1/refresh trace
 
-## Current UI design documents
+UI foundation adds:
 
-- `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
-- `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
-- `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
-- `working-logs/head/SHINO_80_UI_RESEARCH_WORKLOG_v0.1.md`
-- `code/head/SHINO_80_UI_RESEARCH_QA_v0.1.json`
-
-## UI core decisions proposed
-
+- DISPLAY / CPU / MEMORY / BUS / DEVICES
 - Modern Shell / Retro Machine
-- DISPLAY FIRST
-- OBSERVER SECOND
-- top-level destinations: DISPLAY / CPU / MEMORY / BUS / DEVICES
-- Expanded: navigation + primary + inspector + optional trace
-- Medium: primary + one supporting inspector
-- Compact: one major pane at a time
-- phone landscape uses compact-height rule
-- future peripherals live under Device Dock
-- current LED front panel becomes Debug Lab / CPU Inspector, not the entire machine UI
+- Expanded / Medium / Compact
+- compact-height phone landscape
+- contextual inspector
+- Device Dock placeholders
+- trace panel
+- safe-area / reduced-motion
+- state preservation across layout changes
 
-## Candidate layout thresholds
+## Human recording evidence
 
-```text
-COMPACT   width < 720 CSS px
-MEDIUM    720 <= width < 1200 CSS px
-EXPANDED  width >= 1200 CSS px
+Standalone one-page artifact confirmed on smartphone through Edge external-file.
 
-COMPACT HEIGHT override: height < 500 CSS px
-```
+Observed:
 
-These are candidates pending real-device QA.
+- DISPLAY
+- CPU Debug Lab
+- RUN / PAUSE
+- live CPU/LED activity
+- destination switching
 
-## Next gate
+## Important branch relationship
 
-1. Human reviews UI Design Standard / Blueprints.
-2. Decide whether to merge UI research PR.
-3. CPU PR #2 remains independently reviewable.
-4. After design approval, create a dedicated v0.0.2 UI implementation branch using the latest accepted CPU baseline.
-5. v0.0.2 must refactor shell only; do not add FDD/UART/Printer behavior just to fill placeholders.
+v0.0.2 contains the CPU heartbeat code that also exists in PR #2.
 
-## Update History
+If v0.0.2 is explicitly authorized and merged, PR #2 may become superseded. Do not close or merge PR #2 without Human decision.
 
-- 2026-09-24T13:20:14+09:00 — ChatGPT — Initial repository snapshot created.
-- 2026-09-24T15:13:07+09:00 — ChatGPT — Repository bootstrap merge、CPU PR #2、UI foundation researchをparallel candidateとして整理。
+## Next technical direction
+
+UI foundation is accepted.
+
+Primary development focus can now move inward:
+
+1. Z80 instruction architecture
+2. flag correctness
+3. prefix groups
+4. control flow / stack
+5. HALT / EI delay
+6. INT / NMI / IM0-2
+7. timing / bus-cycle refinement
+8. broader test-suite integration
+
+Peripheral implementation remains later.

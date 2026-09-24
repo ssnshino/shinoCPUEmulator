@@ -1,0 +1,10 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm');
+const f='one_page_shino80_v0.0.2_ui_foundation.html',h=fs.readFileSync(f,'utf8');
+for(const m of ['/*__CSS__*/','/*__BUS__*/','/*__CPU__*/','/*__APP__*/'])if(h.includes(m))throw Error('unresolved '+m);
+for(const id of ['runPauseBtn','stepBtn','paceBtn','resetBtn','mainStage','inspector','tracePanel','regGrid','memoryGrid','busTrace','deviceList'])if(!h.includes(`id="${id}"`))throw Error('missing '+id);
+if(/<script[^>]+src=|<link[^>]+href=/i.test(h))throw Error('external runtime dependency');
+const ss=[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);ss.forEach((s,i)=>new vm.Script(s,{filename:'inline-'+i}));
+if(!h.includes('env(safe-area-inset-bottom)'))throw Error('safe-area missing');
+if(!h.includes('prefers-reduced-motion'))throw Error('reduced motion missing');
+console.log('v0.0.2 artifact static PASS',Buffer.byteLength(h),'bytes');

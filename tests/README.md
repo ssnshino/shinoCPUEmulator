@@ -1,25 +1,22 @@
 # tests
 
-CPU Core / Machine / Device testの予定地。
+Current automated coverage:
 
-## Priority
+- `z80_core_v0.0.1.test.cjs` — RESET/NOP/PC/R/T-state/bus-trace regression
+- `v0.0.2_static.test.cjs` — source JavaScript syntax
+- `v0.0.2_artifact.test.cjs` — generated one-page markers, inline JS syntax, safe-area, reduced-motion, external dependency checks
+- `browser_smoke_v0.0.2.py` — optional Chromium/Playwright adaptive runtime smoke
 
-CPU implementation開始後はUIより先にunit testを作る。
+Run dependency-free core/static suite:
 
-候補:
+```bash
+npm test
+```
 
-- register/state transition
-- instruction execution
-- flags
-- PC/SP
-- prefix decode
-- interrupt
-- HALT/EI edge cases
-- R/refresh
-- T-state accounting
-- bus trace
-- memory/I/O boundary
-- ROM/RAM protection
-- device register behavior
+Optional adaptive browser smoke requires Python Playwright and a Chromium executable:
 
-External test vectorを取り込む場合はlicense/provenanceを記録する。
+```bash
+CHROMIUM_PATH=/usr/bin/chromium python tests/browser_smoke_v0.0.2.py
+```
+
+Human real-device review remains the final UI gate.

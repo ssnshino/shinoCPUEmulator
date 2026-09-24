@@ -1,60 +1,48 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T15:13:07+09:00
+Updated: 2026-09-24T16:42:00+09:00
 
-## Task
+## Candidate
 
-Research modern UI best practices for the future SHINO-80 single-page computer and translate them into a project-specific UI architecture.
+SHINO-80 v0.0.2 UI FOUNDATION / PR #4
 
-Human specifically requested strong consideration of Apple UI thinking.
+## Automated result
 
-## Research completed
+PASS:
 
-Reviewed current official guidance from:
+- Node CPU regression
+- source syntax
+- one-page build
+- inline JS
+- safe-area / reduced-motion
+- exact Chromium adaptive smoke
+- Desktop / Tablet / Phone portrait / Phone landscape
+- state preservation
+- zero page errors
 
-- Apple WWDC26 design principles
-- Apple HIG Split Views
-- Apple HIG Toolbars
-- Apple HIG Materials / Liquid Glass
-- Apple HIG Color / Branding
-- Apple HIG Motion
-- Apple Dynamic Type / Labels / Safe Area references
-- Android Adaptive Apps canonical layouts
-- Android Supporting Pane layout
-- Android Window Size Classes
-- VS Code UX Overview / Views / Sidebars / Panel
+## Human real-device result
 
-## Project synthesis
+**PASS**
 
-Main UI principles:
+Human tested the standalone HTML on smartphone and supplied a screen recording.
 
-- Modern Shell / Retro Machine
-- DISPLAY FIRST
-- OBSERVER SECOND
-- ADAPT, DON'T SHRINK
-- BIG TOUCH, SMALL DATA
-- MOTION = INFORMATION
+Confirmed in recording:
 
-## Deliverables
+- Edge external-file standalone execution
+- DISPLAY view
+- CPU Debug Lab
+- RUN / PAUSE
+- active CPU/LED visualization
 
-Created:
+Human verdict:
 
-- `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
-- `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
-- `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
-- `working-logs/head/SHINO_80_UI_RESEARCH_WORKLOG_v0.1.md`
-- `code/head/SHINO_80_UI_RESEARCH_QA_v0.1.json`
+> 大満足 / 非の打ち所が無い
 
-## Code / runtime
+## Project consequence
 
-No emulator/UI runtime source modified in this branch.
+The UI shell is no longer the primary unknown.
 
-Browser QA: N/A for this document-only research task.
+Next project risk and engineering focus move to **internal Z80 correctness and completeness**.
 
-## Next action
-
-Human reviews the design standard and blueprints.
-
-After approval, implement the v0.0.2 UI shell in a separate branch against the latest accepted CPU baseline.
+PR #4 remains unmerged until explicit Human merge authorization.
