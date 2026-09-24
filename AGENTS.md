@@ -13,7 +13,8 @@
 4. `snapshot/NEXT_CHAT_PROMPT.txt`
 5. `plan/head/` のCurrent PLAN
 6. `docs/head/` のCurrent Concept / Architecture / Spec
-7. 必要に応じて `research/` / `working-logs/head/` / `code/head/`
+7. UI変更なら `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+8. 必要に応じて `research/` / `working-logs/head/` / `code/head/`
 
 通常の開始時にhistory全体を走査しない。historyは過去仕様比較、regression、廃止方式確認など理由がある場合だけ読む。
 
@@ -141,7 +142,40 @@ CPU Coreではunit testを最優先する。
 
 One-page化のために、テスト性やCPU Coreの独立性を壊さない。
 
-## 10. GitHub / Pull Request workflow
+## 10. UI design policy
+
+UI変更前に必ず以下を読む。
+
+- `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+- 必要に応じて `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
+
+Core rules:
+
+- **Modern Shell / Retro Machine**
+- **DISPLAY FIRST**
+- **OBSERVER SECOND**
+- **ADAPT, DON'T SHRINK**
+- **BIG TOUCH, SMALL DATA**
+- **MOTION = INFORMATION**
+
+Additional rules:
+
+- viewport sizeでlayoutを決め、User-Agent/device-nameで固定しない。
+- Compactでは複数paneを横に詰め込まず、原則1 major pane。
+- future peripheralは原則DEVICES配下。勝手にtop-level tabを増やさない。
+- layout変更でCPU stateやdevice stateをresetしない。
+- mobile safe-areaを考慮する。
+- touch controlは約44 CSS px級のhit targetを候補基準とする。
+- statusを色だけで伝えない。
+- high-frequency CPU eventをDOMへ1 event = 1 animationで流さない。
+- `prefers-reduced-motion` を尊重する。
+- shell navigation/controlをretro terminal fontだけで作らない。
+- Current Altair-style LED panelは捨てず、Debug Lab / CPU Inspectorとして活かす。
+
+未合意のpixel値・breakpoint・pane比率を永続仕様として固定しない。Human real-device QAを優先する。
+
+## 11. GitHub / Pull Request workflow
 
 `main` はHuman Review済みの安定正本。
 
@@ -191,7 +225,7 @@ AI AgentはPR作成後に勝手にmergeしない。
 
 明示的なmerge依頼があった場合だけmergeする。
 
-## 11. Documentation policy
+## 12. Documentation policy
 
 Current資料:
 
@@ -204,7 +238,7 @@ Current資料:
 
 固定正本文書は末尾にappend-onlyの `Update History` を持つ。
 
-## 12. Reference / asset policy
+## 13. Reference / asset policy
 
 GitHubに置く:
 
@@ -225,7 +259,7 @@ GitHubに置く:
 
 外部資料はURL・書誌情報・要約で管理し、権利状態が不明なraw binaryを無断でcommitしない。
 
-## 13. Human authority
+## 14. Human authority
 
 最終的なマシン仕様、UI/UX、架空PC文化、命名、機能採否はHumanが決める。
 
@@ -234,3 +268,4 @@ AIは調査・設計・実装・QAを支援するが、未合意の候補を確�
 ## Update History
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Initial AI development rules created for SHINO-80 repository bootstrap.
+- 2026-09-24T15:13:07+09:00 — ChatGPT — UI Design Standard参照、adaptive layout、safe area、touch/motion/color/Device Dockの開発ルールを追加。

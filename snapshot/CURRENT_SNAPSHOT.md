@@ -1,55 +1,77 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T13:20:14+09:00
+Last updated: 2026-09-24T15:13:07+09:00
 
 ## Reviewed baseline
 
 - Repository: `ssnshino/shinoCPUEmulator`
 - Default branch: `main`
-- Initial main commit: `fef0ed9019806986851c350986a1df8e1101d840`
-- Emulator implementation: NOT STARTED
+- Repository bootstrap PR #1: MERGED
+- Bootstrap merge commit: `f374840d1c5f56431d48ecb90188ed7868b515fd`
 - Machine: SHINO-80
-- Current phase: PHASE 0 — Research / Architecture
+- Reviewed main baseline remains research/document foundation.
 
-## Active candidate
+## Parallel active candidates
 
-- Branch: `chore/repository-bootstrap-20260924`
-- Purpose: Repository structure + existing project materials + initial research plan
+### CPU first heartbeat
+
+- PR: #2
+- Branch: `feature/z80-core-v0.0.1-first-heartbeat-20260924`
+- Candidate: SHINO Z80 CORE v0.0.1
+- Human result: one-page HTML executes on smartphone
 - Merge: PENDING HUMAN REVIEW
 
-## Current project documents
+### UI foundation research
 
-- `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
-- `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
-- `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
-- `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
+- Branch: `research/ui-design-standard-v0.1-20260924`
+- Scope: modern UI research + SHINO-specific UI standard + three layout blueprints
+- Runtime code change: NONE
+- Merge: PENDING HUMAN REVIEW
 
-## Current state
+## Current UI design documents
 
-No CPU implementation exists yet.
+- `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
+- `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+- `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
+- `working-logs/head/SHINO_80_UI_RESEARCH_WORKLOG_v0.1.md`
+- `code/head/SHINO_80_UI_RESEARCH_QA_v0.1.json`
 
-Repository bootstrap intentionally stops before creating a speculative emulator framework.
+## UI core decisions proposed
 
-Next work is primary-source Z80 research and Architecture Draft verification.
+- Modern Shell / Retro Machine
+- DISPLAY FIRST
+- OBSERVER SECOND
+- top-level destinations: DISPLAY / CPU / MEMORY / BUS / DEVICES
+- Expanded: navigation + primary + inspector + optional trace
+- Medium: primary + one supporting inspector
+- Compact: one major pane at a time
+- phone landscape uses compact-height rule
+- future peripherals live under Device Dock
+- current LED front panel becomes Debug Lab / CPU Inspector, not the entire machine UI
+
+## Candidate layout thresholds
+
+```text
+COMPACT   width < 720 CSS px
+MEDIUM    720 <= width < 1200 CSS px
+EXPANDED  width >= 1200 CSS px
+
+COMPACT HEIGHT override: height < 500 CSS px
+```
+
+These are candidates pending real-device QA.
 
 ## Next gate
 
-PHASE 0 Research must establish:
-
-- authoritative Z80 references
-- instruction/prefix coverage map
-- register/flag model
-- interrupt semantics
-- T-state / M-cycle model
-- bus signal model
-- test suite strategy
-- SHINO-80 initial memory map
-- SHINO-80 initial I/O map
-- MVP success criteria
-
-Only after that should PHASE 1 Z80 Core implementation begin.
+1. Human reviews UI Design Standard / Blueprints.
+2. Decide whether to merge UI research PR.
+3. CPU PR #2 remains independently reviewable.
+4. After design approval, create a dedicated v0.0.2 UI implementation branch using the latest accepted CPU baseline.
+5. v0.0.2 must refactor shell only; do not add FDD/UART/Printer behavior just to fill placeholders.
 
 ## Update History
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Initial repository snapshot created.
+- 2026-09-24T15:13:07+09:00 — ChatGPT — Repository bootstrap merge、CPU PR #2、UI foundation researchをparallel candidateとして整理。
