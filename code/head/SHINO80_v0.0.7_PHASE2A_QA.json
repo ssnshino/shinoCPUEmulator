@@ -1,0 +1,26 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version": "v0.0.7",
+  "phase": "2A MINIMUM VIDEO + IPL",
+  "cpu_executable_base_encodings": 107,
+  "tests": {
+    "system_rom_size_8k": "PASS",
+    "rom_cpu_write_protection": "PASS",
+    "cg_rom_size_4k": "PASS",
+    "cg_rom_s_glyph_nonblank": "PASS",
+    "cg_rom_space_blank": "PASS",
+    "ipl_writes_shino80_ipl": "PASS",
+    "ipl_writes_video_ok": "PASS",
+    "ipl_writes_mon": "PASS",
+    "ipl_writes_star_prompt": "PASS",
+    "ipl_pc_reaches_monitor_loop": "PASS",
+    "ipl_sp_f000": "PASS",
+    "artifact_inline_scripts_8": "PASS",
+    "artifact_html_end": "PASS",
+    "artifact_external_runtime_dependency": "PASS_NONE",
+    "artifact_required_dom_ids": "PASS"
+  },
+  "video_bus_precision": "VRAM_OBSERVER_READ_NO_CONTENTION",
+  "human_review": "PENDING",
+  "result": "PASS_FOR_PHASE2A_CANDIDATE_REVIEW"
+}
