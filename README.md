@@ -16,15 +16,14 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Default branch: `main`
 - Current machine: **SHINO-80**
 - Reviewed baseline: repository bootstrap PR #1 merged
-- CPU implementation candidate: **PR #2 — SHINO Z80 CORE v0.0.1 FIRST HEARTBEAT**
-- CPU Human status: smartphone one-page execution confirmed; PR #2 remains unmerged
-- UI Design Standard v0.1: **MERGED to main via PR #3**
-- Active UI implementation candidate: **v0.0.2 UI FOUNDATION**
-- Candidate branch: `feature/ui-foundation-v0.0.2-20260924`
-- Candidate artifact: `one_page_shino80_v0.0.2_ui_foundation.html`
-- Candidate status: **Desktop / Tablet / Phone portrait / Phone landscape Chromium smoke PASS; Human review pending**
+- UI Design Standard v0.1: **MERGED via PR #3**
+- SHINO-80 v0.0.2 UI FOUNDATION: **MERGED via PR #4 / Human smartphone PASS**
+- Current development source: `src/`
+- Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
+- Active repository-layout candidate: `refactor/src-deploy-build-layout-20260924`
+- CPU PR #2 remains open as historical first-heartbeat candidate and is not part of this layout refactor
 
-PHASE 0 research remains active. v0.0.2 combines the proven NOP heartbeat core with the merged adaptive UI standard without expanding CPU instruction scope.
+PHASE 0 research remains active. v0.0.2 is the reviewed UI baseline; CPU scope is still the first heartbeat. Development now uses modular source and generates the standalone one-page artifact for distribution.
 
 ## UI core direction
 
@@ -123,11 +122,19 @@ SHINO-80をまず一台完成させる。将来の6502 / 6809 / 68000等を理�
 │  ├ z80/
 │  └ ui/
 ├ references/
-├ src/
-└ tests/
+├ src/        # development source of truth
+├ scripts/    # build tooling
+├ tests/      # source + artifact QA
+└ deploy/     # generated one-page distribution
 ```
 
 `head/` は現行開発資料。過去系列が発生したら各categoryの `history/` へ退避する。
+
+### Source / deploy rule
+
+> **One-page is the distribution format, not the development source format.**
+
+通常の開発は `src/` を編集し、`npm run build` で `deploy/` に単一HTMLを生成する。`deploy/*.html` は手編集しない。
 
 ## Development phases
 
@@ -198,3 +205,5 @@ VIRTUAL MICROCOMPUTER LAB
 - 2026-09-24T15:13:07+09:00 — ChatGPT — Modern Shell / Retro Machine、DISPLAY FIRST / OBSERVER SECONDを軸とするUI研究・設計標準の入口を追加。
 
 - 2026-09-24T15:36:00+09:00 — ChatGPT — v0.0.2 UI FOUNDATION candidateを追加。Display/CPU/Memory/Bus/Devicesのadaptive workbench、Desktop/Tablet/Phone layout、Device Dock placeholder、runtime smokeを追加。
+
+- 2026-09-24T16:50:00+09:00 — ChatGPT — 開発正本を `src/`、配布生成物を `deploy/` とするsource/deploy分離を追加。

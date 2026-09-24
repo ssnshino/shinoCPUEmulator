@@ -2,36 +2,30 @@ ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Repository: ssnshino/shinoCPUEmulator
 
-Reviewed:
-- UI Design Standard v0.1 merged via PR #3
+Reviewed main:
+- UI Design Standard v0.1
+- SHINO-80 v0.0.2 UI FOUNDATION / Human smartphone PASS
 
-Open:
-- PR #2 first-heartbeat CPU candidate
-- v0.0.2 UI FOUNDATION candidate branch: feature/ui-foundation-v0.0.2-20260924
+Active candidate:
+- refactor/src-deploy-build-layout-20260924
 
-Current artifact:
-one_page_shino80_v0.0.2_ui_foundation.html
+Repository rule:
+- src/ = development source of truth
+- scripts/ = build tooling
+- tests/ = source + artifact QA
+- deploy/ = generated standalone one-page distribution
+- deploy/*.html を直接編集しない
+- npm run build で deploy/ を生成
 
 Read:
 1. README.md
 2. AGENTS.md
 3. snapshot/CURRENT_SNAPSHOT.md
-4. docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md
-5. docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md
+4. docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md
+5. docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md
 6. docs/head/SHINO_80_UI_FOUNDATION_v0.0.2_SPEC.md
-7. code/head/SHINO_80_UI_FOUNDATION_v0.0.2_QA.json
 
-v0.0.2:
-- DISPLAY / CPU / MEMORY / BUS / DEVICES
-- Modern Shell / Retro Machine
-- adaptive Expanded/Medium/Compact
-- compact-height phone landscape
-- CPU state preserved across pane/resize
-- future devices are placeholders only
-- CPU is still NOP-only first heartbeat
-
-Automated Chromium adaptive smoke PASS.
-
-Next:
-Human real-device UI review and visual/interaction tuning.
-Do not add FDD/UART/Printer behavior before shell feedback.
+After layout merge:
+Begin Z80 PHASE 1A Instruction Architecture.
+Prefer natural modular boundaries under src/cpu/z80/ as real code pressure appears.
+Do not over-abstract for future CPUs yet.

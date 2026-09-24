@@ -142,7 +142,29 @@ CPU Coreではunit testを最優先する。
 
 One-page化のために、テスト性やCPU Coreの独立性を壊さない。
 
-## 10. UI design policy
+## 10. Source / deploy build policy
+
+Development source of truth is `src/`.
+
+Generated standalone distribution artifacts live in `deploy/`.
+
+Rules:
+
+- Do not hand-edit `deploy/*.html`.
+- Fix code in `src/`, then run the build.
+- `scripts/` owns build/tooling logic.
+- `tests/` validates both modular source and generated artifacts.
+- The one-page HTML remains a required deliverable, but it is not the authoring format.
+- A diagnostic emergency patch to a generated artifact must be back-ported into `src/` before merge.
+- CPU code must not import DOM/UI code.
+- Devices must not directly manipulate UI.
+- Future source should split by real responsibility (decoder, ALU, devices, debugger, firmware) when boundaries become useful; do not create abstraction for its own sake.
+
+Canonical detail:
+
+`docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md`
+
+## 11. UI design policy
 
 UI変更前に必ず以下を読む。
 
@@ -175,7 +197,7 @@ Additional rules:
 
 未合意のpixel値・breakpoint・pane比率を永続仕様として固定しない。Human real-device QAを優先する。
 
-## 11. GitHub / Pull Request workflow
+## 12. GitHub / Pull Request workflow
 
 `main` はHuman Review済みの安定正本。
 
@@ -225,7 +247,7 @@ AI AgentはPR作成後に勝手にmergeしない。
 
 明示的なmerge依頼があった場合だけmergeする。
 
-## 12. Documentation policy
+## 13. Documentation policy
 
 Current資料:
 
@@ -238,7 +260,7 @@ Current資料:
 
 固定正本文書は末尾にappend-onlyの `Update History` を持つ。
 
-## 13. Reference / asset policy
+## 14. Reference / asset policy
 
 GitHubに置く:
 
@@ -259,7 +281,7 @@ GitHubに置く:
 
 外部資料はURL・書誌情報・要約で管理し、権利状態が不明なraw binaryを無断でcommitしない。
 
-## 14. Human authority
+## 15. Human authority
 
 最終的なマシン仕様、UI/UX、架空PC文化、命名、機能採否はHumanが決める。
 
@@ -269,3 +291,5 @@ AIは調査・設計・実装・QAを支援するが、未合意の候補を確�
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Initial AI development rules created for SHINO-80 repository bootstrap.
 - 2026-09-24T15:13:07+09:00 — ChatGPT — UI Design Standard参照、adaptive layout、safe area、touch/motion/color/Device Dockの開発ルールを追加。
+
+- 2026-09-24T16:50:00+09:00 — ChatGPT — srcを開発正本、deployをgenerated one-page配布物とするbuild policyを追加。
