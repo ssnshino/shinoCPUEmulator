@@ -3,6 +3,7 @@
   "component": "SHINO Z80 CORE",
   "version": "v0.0.1",
   "created": "2026-09-24T13:42:12+09:00",
+  "updated": "2026-09-24T14:25:00+09:00",
   "accuracy": "functional NOP + abstract M-cycle trace",
   "tests": {
     "reset_documented_subset": "PASS",
@@ -19,10 +20,17 @@
     "one_page_build": "PASS",
     "one_page_placeholder_check": "PASS",
     "required_dom_ids_static_check": "PASS",
-    "npm_test": "PASS",
-    "generated_one_page_bytes": 25584
+    "inline_script_syntax_regression_check": "PASS",
+    "npm_test": "PASS"
   },
-  "runtimeBrowserHumanVisual": "PENDING",
+  "humanReview": {
+    "firstDeliveredArtifact": "FAIL",
+    "firstDeliveredArtifactCause": "duplicate const $ declaration in inline app script",
+    "repositorySourceHadCorrectDoubleDollarHelper": true,
+    "correctedArtifactInlineScriptParse": "PASS",
+    "correctedArtifactHumanRuntimeVisual": "PENDING"
+  },
+  "runtimeBrowserAutomation": "UNAVAILABLE_CHROMIUM_DBUS_STALL",
   "cyclePerfect": false,
-  "result": "PASS_FOR_FIRST_HEARTBEAT_CANDIDATE"
+  "result": "PASS_FOR_CORRECTED_FIRST_HEARTBEAT_RETRY"
 }

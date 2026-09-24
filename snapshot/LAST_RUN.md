@@ -1,7 +1,7 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T13:42:12+09:00
+Updated: 2026-09-24T14:25:00+09:00
 
 ## Candidate
 
@@ -11,13 +11,7 @@ Branch: `feature/z80-core-v0.0.1-first-heartbeat-20260924`
 
 ## Automated validation
 
-Command:
-
-```bash
-npm test
-```
-
-Result: **PASS**
+CPU/source tests: **PASS**
 
 Validated:
 
@@ -35,16 +29,40 @@ Validated:
 - unresolved build marker check
 - required DOM IDs
 - no external runtime script/link dependency
+- generated inline JavaScript syntax parse
 
-Generated artifact size: **25,584 bytes**.
+## Human review feedback
 
-## Browser visual status
+First delivered HTML: **FAIL — did not run**.
 
-Automated Chromium screenshot could not be established in the current container environment because headless Chromium stalled on platform/DBus startup.
+Cause found in exact delivered artifact:
 
-This is recorded as an environment limitation, not a browser PASS or FAIL.
+```js
+const $=s=>document.querySelector(s);
+const $=s=>[...document.querySelectorAll(s)];
+```
 
-Human browser visual review: **PENDING**.
+Duplicate lexical declaration caused load-time SyntaxError.
+
+GitHub source already had the intended second helper as `$$`, so the failure was an exported review-artifact mismatch.
+
+Corrected HTML:
+
+- duplicate declaration fixed
+- all three inline scripts parse successfully
+- Human retry: PENDING
+
+## Browser automation
+
+Headless Chromium runtime validation still cannot be established in the current container because Chromium stalls on platform/DBus startup.
+
+This is an environment limitation, not a runtime PASS.
+
+## Regression prevention
+
+`tests/one_page_v0.0.1_static.test.cjs` now parses all generated inline scripts using Node `vm.Script`.
+
+Future exact review artifacts must also be checked before delivery.
 
 ## Accuracy statement
 
@@ -54,11 +72,6 @@ Refresh A7 is not modeled rather than guessed.
 
 ## Next run
 
-Human visual review of the initial front panel, then decide v0.0.2 scope.
+Human retries corrected first-heartbeat HTML.
 
-PHASE 0 research continues; do not broaden instruction implementation without research/test coverage.
-
-## Update History
-
-- 2026-09-24T13:20:14+09:00 — ChatGPT — Initial LAST RUN created during repository bootstrap.
-- 2026-09-24T13:42:12+09:00 — ChatGPT — v0.0.1 Node/build/static QA PASS; Human visual PENDING.
+If it boots, proceed to visual/UI feedback before v0.0.2.
