@@ -107,6 +107,10 @@
 
     debugPeek(address){return this.memory[this.normalizeAddress(address)];}
     debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
+    clearWritableMemory(value=0){
+      const data=this.normalizeData(value);
+      for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;
+    }
 
     load(bytes,start=0){
       const base=this.normalizeAddress(start);

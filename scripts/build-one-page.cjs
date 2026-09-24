@@ -26,6 +26,6 @@ let html=read(source.template)
   .replace('/*__VIDEO__*/',read(source.video))
   .replace('/*__APP__*/',read(source.app));
 const dir=path.join(root,'deploy');fs.mkdirSync(dir,{recursive:true});
-const out=path.join(dir,'one_page_shino80_v0.0.7_phase2a_video_ipl.html');
+const out=path.join(dir,'one_page_shino80_v0.0.8_phase2a1_power_reset.html');
 fs.writeFileSync(out,html);
 console.log(`built ${out} (${Buffer.byteLength(html)} bytes)`);

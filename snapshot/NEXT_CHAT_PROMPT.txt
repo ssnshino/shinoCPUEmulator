@@ -1,28 +1,31 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Current candidate:
-SHINO-80 v0.0.7 PHASE 2A MINIMUM VIDEO + IPL
+SHINO-80 v0.0.8 PHASE 2A.1
 
 Branch:
-feature/shino80-phase2a-minimum-video-ipl-20260924
+feature/shino80-phase2a1-power-reset-crt-20260924
 
-Artifact:
-deploy/one_page_shino80_v0.0.7_phase2a_video_ipl.html
+Current display stack:
+TEXT VIDEO BOARD -> DIGITAL MONO 640x400 -> DM-80 DISPLAY
 
-New hardware:
-- SYSTEM ROM 8 KiB @ 0000-1FFF
-- TEXT VRAM @ C000
-- TEXT VIDEO 80x25
-- CG-ROM 4 KiB / 8x16
-- CRT canvas
+DM-80:
+- SHINOMIYA
+- GREEN MONO DIGITAL DISPLAY
+- raster geometry follows VIDEO BOARD signal dynamically
 
-IPL writes by real Z80 execution:
-SHINO-80 IPL
-VIDEO OK
-MON
-*
+Important architecture rule:
+Do not put overscan/safe-margin pixels into logical VIDEO raster merely for appearance.
+Canvas is the complete VIDEO raster.
+DISPLAY shell is replaceable hardware.
 
-MON prompt is not interactive yet.
+Machine/debug INFO has been removed from the monitor bezel and moved to footer.
 
-After Human acceptance, strong next candidate:
-PHASE 2B Keyboard + minimal ROM MONITOR commands (D/M/G first).
+Human test:
+- full A-H screen should use the CRT display area without large 4:3 letterboxing
+- monitor shows only DM-80 / SHINOMIYA / type labels
+- footer shows system telemetry
+- POWER / RESET / IPL display test behavior remains intact
+
+After acceptance:
+PHASE 2B Keyboard + real ROM MONITOR input.

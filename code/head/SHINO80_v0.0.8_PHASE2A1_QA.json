@@ -1,0 +1,29 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version": "v0.0.8",
+  "phase": "2A.1 POWER / RESET / DISPLAY DEVICE",
+  "cpu_executable_base_encodings": 107,
+  "tests": {
+    "power_state_model": "PASS",
+    "warm_reset_preserves_vram": "PASS",
+    "vram_test_pages_a_to_h": "PASS",
+    "monitor_loop_009c": "PASS",
+    "cgrom_blank_top_bottom_scanlines": "PASS",
+    "video_signal_metadata": "PASS",
+    "fixed_4_3_removed": "PASS",
+    "canvas_safe_margin_removed": "PASS",
+    "canvas_full_viewport": "PASS",
+    "legacy_monitor_info_band_removed": "PASS",
+    "dm80_nameplate": "PASS",
+    "shinomiya_maker_mark": "PASS",
+    "green_mono_type_mark": "PASS",
+    "machine_telemetry_in_footer": "PASS",
+    "required_dom_ids": "PASS",
+    "inline_scripts_8": "PASS",
+    "external_runtime_dependency": "PASS_NONE",
+    "display_viewport_square_corners": "PASS",
+    "monitor_bezel_radius_retained": "PASS"
+  },
+  "human_review": "PENDING",
+  "result": "PASS_FOR_DISPLAY_DEVICE_REVIEW"
+}

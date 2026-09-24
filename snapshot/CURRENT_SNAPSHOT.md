@@ -1,56 +1,54 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24
-
-## Stack
-
-- PR #6 PHASE 1A — LD / Human smartphone PASS
-- PR #7 PHASE 1B — INC/DEC + Flags
-- PR #8 PHASE 1C — Control Flow / Human smartphone PASS
-- PR #9 PHASE 1D — CALL/RET + Stack
-- PHASE 2A stacked on PHASE 1D
+Last updated: 2026-09-24T22:55:00+09:00
 
 ## Active candidate
 
-- Branch: `feature/shino80-phase2a-minimum-video-ipl-20260924`
-- Candidate: **SHINO-80 v0.0.7 — PHASE 2A MINIMUM VIDEO + IPL**
-- Artifact: `deploy/one_page_shino80_v0.0.7_phase2a_video_ipl.html`
-- CPU executable BASE encodings: **107**
-- Human real-device review: PENDING
+- Branch: `feature/shino80-phase2a1-power-reset-crt-20260924`
+- Candidate: **SHINO-80 v0.0.8 — PHASE 2A.1**
+- Artifact: `deploy/one_page_shino80_v0.0.8_phase2a1_power_reset.html`
+- CPU BASE opcode count: 107
+- Human review: PENDING
 
-## New machine hardware
-
-```text
-SYSTEM ROM   0000h-1FFFh  8 KiB
-TEXT VRAM    C000h-C7CFh  80x25 cells
-CG-ROM       4 KiB        256 x 8x16 glyph slots
-TEXT VIDEO   640x400 logical raster
-```
-
-CG-ROM is not CPU-addressable.
-
-CPU writes to SYSTEM ROM are blocked.
-
-## IPL output
-
-The boot ROM itself executes Z80 instructions which write:
+## Display stack
 
 ```text
-SHINO-80 IPL
-VIDEO OK
-MON
-*
+TEXT VIDEO BOARD
+  DIGITAL MONO / 640×400 / TEXT 80×25
+       ↓
+DM-80
+  SHINOMIYA
+  GREEN MONO DIGITAL DISPLAY
 ```
 
-into TEXT VRAM.
+The VIDEO BOARD owns logical raster geometry.
 
-The browser does not print these strings directly.
+The DISPLAY DEVICE follows the published signal aspect ratio.
 
-## Current boundary
+No fixed 4:3 viewport and no logical safe-margin scaling remain.
 
-The star prompt is only a visible placeholder.
+The CRT canvas fills its viewport 100%.
 
-No keyboard input or interactive monitor commands exist yet.
+## UI boundary
 
-VIDEO VRAM reads do not yet model contention or bus cycles.
+Monitor bezel:
+- DM-80
+- SHINOMIYA
+- GREEN MONO DIGITAL DISPLAY
+
+Application footer:
+- POWER/RUN state
+- CPU / clock
+- build
+- VIDEO signal
+- PC / R / T
+- LAST instruction
+
+## Boot
+
+POWER ON → A-H DISPLAY TEST → hold → VRAM CLEAR → SHINO-80 IPL / VIDEO OK / MON / *
+
+## DM-80 corner rule
+
+Physical monitor frame/bezel may be rounded. The actual VIDEO raster viewport is rectangular with zero corner radius.

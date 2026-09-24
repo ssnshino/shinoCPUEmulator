@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SHINO-80 v0.0.8 — PHASE 2A.1</title>
+<style>:root{
+  --shell-bg:#0a0d11;--shell-surface:#14191f;--shell-elev:#1b222a;--shell-line:#303a44;
+  --text:#e7edf2;--muted:#8b98a5;--accent:#61bdf7;--ready:#69e793;--warn:#f5bd63;--fault:#ff6b74;
+  --machine:#0a0d0f;--metal:#222a31;--metal-hi:#303a44;--crt:#07110c;--crt-text:#8fffae;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --toolbar-h:58px;--status-h:26px;--nav-w:92px;--inspector-w:360px;--bottom-nav-h:62px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--shell-bg);color:var(--text);font-family:var(--ui)}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,#0b0f13,#080a0d)}
+.toolbar{min-height:var(--toolbar-h);display:flex;align-items:center;gap:14px;padding:8px 12px;border-bottom:1px solid var(--shell-line);background:rgba(20,25,31,.96);backdrop-filter:blur(18px);z-index:20}
+.brand{min-width:220px}.brand-title{font-size:15px;font-weight:700;letter-spacing:.04em}.brand-sub{font:10px var(--mono);color:var(--muted);margin-top:2px}
+.toolbar-spacer{flex:1}.machine-status{font:11px var(--mono);color:var(--muted);white-space:nowrap}.machine-status b{color:var(--ready)}
+.control-group{display:flex;align-items:center;gap:7px}.control{min-height:44px;min-width:44px;padding:0 13px;border-radius:11px;border:1px solid var(--shell-line);background:linear-gradient(180deg,#252d35,#161b21);box-shadow:inset 0 1px rgba(255,255,255,.05)}
+.control:hover{border-color:#526474;cursor:pointer}.control.primary{border-color:#39624b}.control.primary.running{background:#173522;border-color:#4f8a66}.control.danger{border-color:#604047}.control.compact-label{min-width:54px}.control small{display:block;color:var(--muted);font-size:8px}
+.workbench{min-height:0;display:grid;grid-template-columns:var(--nav-w) minmax(0,1fr) var(--inspector-w);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"nav main inspector" "trace trace trace";gap:0}
+.navrail{grid-area:nav;border-right:1px solid var(--shell-line);background:#0f1419;padding:10px 7px;display:flex;flex-direction:column;gap:7px}
+.navbtn,.bottom-nav button{border:0;background:transparent;color:var(--muted);border-radius:11px;min-height:54px;padding:7px 5px;display:grid;place-items:center;gap:3px;cursor:pointer}
+.navbtn .ico,.bottom-nav .ico{font:17px var(--mono)}.navbtn .lab,.bottom-nav .lab{font-size:9px;font-weight:650;letter-spacing:.02em}.navbtn[aria-selected="true"],.bottom-nav button[aria-selected="true"]{background:#1a2630;color:#eaf7ff}.navbtn[aria-selected="true"] .ico,.bottom-nav button[aria-selected="true"] .ico{color:var(--accent)}
+.main{grid-area:main;min-width:0;min-height:0;overflow:auto;padding:14px;background:radial-gradient(circle at 50% 0,#141b22 0,#0a0d11 70%)}
+.view{display:none;min-height:100%}.view.active{display:block}
+.inspector{grid-area:inspector;min-width:0;min-height:0;border-left:1px solid var(--shell-line);background:#10151a;overflow:auto;padding:12px}
+.tracepanel{grid-area:trace;border-top:1px solid var(--shell-line);background:#0b0f13;max-height:220px;overflow:hidden;transition:max-height .2s ease}.tracepanel.closed{max-height:38px}.tracehead{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#13191f}.tracehead button{margin-left:auto;border:0;background:transparent;color:var(--muted);min-width:44px;min-height:34px;cursor:pointer}.tracebody{height:182px;overflow:auto;padding:7px 10px;font:10px/1.45 var(--mono)}
+.statusbar{min-height:var(--status-h);display:flex;align-items:center;gap:14px;padding:0 10px;border-top:1px solid #202832;background:#0e1318;font:9px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden}.statusbar .ok{color:var(--ready)}
+.bottom-nav{display:none}
+.machine-card{border:1px solid var(--shell-line);border-radius:15px;background:linear-gradient(180deg,#171e25,#0f1419);box-shadow:0 14px 35px rgba(0,0,0,.26);overflow:hidden}.card-head{min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;border-bottom:1px solid var(--shell-line)}.card-head h2{font-size:12px;margin:0;letter-spacing:.05em}.eyebrow{font:9px var(--mono);color:var(--muted)}
+.display-stage{min-height:calc(100dvh - 190px);display:grid;place-items:center;padding:clamp(10px,3vw,36px)}
+.computer-shell{width:min(860px,96%);border:1px solid #4a535b;border-radius:18px;padding:clamp(14px,2vw,28px);background:linear-gradient(145deg,#303941,#151b20);box-shadow:inset 0 1px rgba(255,255,255,.14),0 28px 60px rgba(0,0,0,.46)}
+.crt-bezel{border-radius:22px;padding:14px;background:#090b0d;box-shadow:inset 0 0 0 2px #040506,0 0 0 1px #4a5054}.crt{aspect-ratio:var(--display-aspect,8/5);border-radius:0;background:radial-gradient(ellipse at center,#0e2618,#07110c 70%);box-shadow:inset 0 0 55px #000,inset 0 0 9px rgba(143,255,174,.15);display:grid;place-items:center;position:relative;overflow:hidden}.crt:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);pointer-events:none}.crt-copy{text-align:center;font:clamp(12px,2vw,18px)/1.7 var(--mono);color:var(--crt-text);text-shadow:0 0 12px rgba(117,255,159,.45);padding:20px}.crt-copy .big{font-size:1.55em;letter-spacing:.13em}.crt-copy .dim{color:#5aa771;font-size:.72em}.cpu-layout{display:grid;gap:12px}.frontpanel{border:1px solid #46525d;border-radius:14px;background:linear-gradient(180deg,#2a333c,#12181d);padding:13px;box-shadow:inset 0 1px rgba(255,255,255,.1)}.panel-title{font:10px var(--mono);color:#c2d0db;margin-bottom:10px;letter-spacing:.06em}.busrow{display:grid;grid-template-columns:74px minmax(0,1fr) 62px;gap:8px;align-items:center;margin:8px 0}.buslabel{font:9px var(--mono);color:#9aa9b5}.hex{font:14px var(--mono);color:#ffe19c;text-align:right}.leds{display:flex;gap:4px;align-items:center;min-width:0}.led{width:12px;height:12px;flex:0 0 auto;border-radius:50%;background:#10161a;border:1px solid #46515a;box-shadow:inset 0 0 0 2px #07090b}.led.green.on{background:var(--ready);box-shadow:0 0 10px rgba(105,231,147,.62),inset 0 0 2px #fff}.led.amber.on{background:var(--warn);box-shadow:0 0 10px rgba(245,189,99,.62),inset 0 0 2px #fff}.led.blue.on{background:#65c9ff;box-shadow:0 0 10px rgba(101,201,255,.62),inset 0 0 2px #fff}.led.red.on{background:var(--fault);box-shadow:0 0 10px rgba(255,107,116,.62),inset 0 0 2px #fff}.signals{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:12px}.signal{display:flex;align-items:center;gap:6px;border:1px solid #313c46;border-radius:8px;background:#0e1317;padding:7px;font:9px var(--mono)}.signal .led{width:10px;height:10px}
+.cpu-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.registers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.regrow{display:grid;grid-template-columns:34px 48px minmax(0,1fr);gap:5px;align-items:center;padding:6px;border:1px solid #29343e;border-radius:8px;background:#0b0f13}.regname{font:9px var(--mono);color:#9fb0bd}.reghex{font:11px var(--mono);color:#ffe29b}.regrow .led{width:9px;height:9px}.regrow .leds{gap:2px}.flaggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.flag{padding:8px 4px;border:1px solid #29343e;border-radius:8px;background:#0b0f13;text-align:center;font:9px var(--mono)}.flag .led{margin:0 auto 4px}.telemetry{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}.metric{border:1px solid #29343e;border-radius:8px;padding:8px;background:#0b0f13}.metric .k{font:8px var(--mono);color:var(--muted)}.metric .v{font:12px var(--mono);color:#f2f5f7;margin-top:3px}.debug-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.debug-actions button{min-height:44px;border:1px solid #384652;background:#182027;border-radius:10px;padding:0 12px;font-size:10px;cursor:pointer}
+.memory-card,.bus-card,.device-card{min-height:calc(100dvh - 165px)}.memory-toolbar,.bus-toolbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--shell-line);font:10px var(--mono);color:var(--muted)}.memory-grid{padding:12px;font:11px/1.65 var(--mono);overflow:auto}.memline{display:grid;grid-template-columns:54px minmax(0,1fr);gap:10px}.memaddr{color:#7892a7}.membytes{word-spacing:7px;color:#cdd5db}.membytes .hot{background:#62471a;color:#fff;padding:1px 2px;border-radius:3px}.bus-view-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.55fr);gap:12px;padding:12px}.big-trace{height:min(58dvh,560px);overflow:auto;border:1px solid #26313a;border-radius:10px;background:#070a0d;padding:8px;font:10px/1.5 var(--mono)}.trace-line{display:grid;grid-template-columns:52px 108px 62px minmax(0,1fr);gap:6px;padding:3px 2px;border-bottom:1px solid #11171c}.trace-line .t{color:#7f93a5}.trace-line .kind{color:#c7d4dd}.trace-line .addr{color:#f0c875}.trace-line .sig{color:#67c9fb}.signal-bank{border:1px solid #26313a;border-radius:10px;background:#0c1115;padding:10px}.signal-bank h3{font-size:10px;margin:0 0 10px;color:#b8c6d0}
+.devices{padding:10px}.device-row{min-height:62px;display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;border-bottom:1px solid #242e37;padding:8px 5px;cursor:pointer}.device-row:hover{background:#141c22}.device-icon{width:38px;height:38px;border-radius:10px;border:1px solid #33404a;background:#0b1014;display:grid;place-items:center;font:12px var(--mono);color:#9fc9e5}.device-name{font-size:12px;font-weight:650}.device-desc{font:9px var(--mono);color:var(--muted);margin-top:3px}.device-state{font:9px var(--mono);color:var(--muted);text-align:right}.device-state.reserved{color:#7f8e99}.device-row.selected{background:#15222b}.device-row.selected .device-icon{color:var(--accent);border-color:#3e708d}
+.inspector-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.inspector-head h2{font-size:12px;margin:0}.inspector-section{border-top:1px solid #26313a;padding:11px 0}.inspector-section:first-of-type{border-top:0}.inspector-kv{display:grid;grid-template-columns:1fr auto;gap:8px;font:10px var(--mono);padding:4px 0}.inspector-kv span:first-child{color:var(--muted)}.inspector-kv b{font-weight:600}.inspector-note{font-size:11px;line-height:1.55;color:#9ba9b5}.inspector-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #32404b;border-radius:999px;padding:5px 8px;font:9px var(--mono);margin:3px 3px 3px 0}.dot{width:7px;height:7px;border-radius:50%;background:#53616c}.dot.ok{background:var(--ready)}.dot.info{background:var(--accent)}
+.empty-state{min-height:50dvh;display:grid;place-items:center;text-align:center;color:var(--muted);padding:30px}.empty-state .symbol{font:42px var(--mono);color:#50606b}.empty-state h3{color:#dce5eb;margin:12px 0 6px;font-size:15px}.empty-state p{max-width:420px;margin:0;font-size:11px;line-height:1.6}
+@media (max-width:1199px){
+  :root{--nav-w:70px;--inspector-w:300px}.brand{min-width:180px}.brand-sub{display:none}.machine-status{display:none}.workbench{grid-template-columns:var(--nav-w) minmax(0,1fr) var(--inspector-w)}.navbtn .lab{font-size:8px}.tracepanel{max-height:38px}.tracepanel.open{max-height:220px}.cpu-grid{grid-template-columns:1fr}.registers{grid-template-columns:repeat(2,minmax(0,1fr))}.signals{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:719px){
+  :root{--toolbar-h:58px}.app{grid-template-rows:auto minmax(0,1fr) auto}.toolbar{padding:7px 9px}.brand{min-width:0}.brand-title{font-size:13px}.toolbar-spacer,.machine-status{display:none}.control-group{margin-left:auto}.control{min-height:44px;padding:0 10px}.control .wide-label{display:none}.control.pace,.control.reset-wide{display:none}.workbench{display:block;min-height:0;overflow:hidden}.navrail,.inspector,.tracepanel{display:none}.main{height:100%;padding:8px 8px calc(var(--bottom-nav-h) + 8px);overflow:auto}.bottom-nav{position:fixed;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);left:env(safe-area-inset-left);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom);height:var(--bottom-nav-h);padding:4px 5px;background:rgba(15,20,25,.96);border-top:1px solid var(--shell-line);backdrop-filter:blur(18px)}.bottom-nav button{min-height:52px;padding:3px}.statusbar{display:none}.display-stage{min-height:calc(100dvh - 145px);padding:5px}.computer-shell{width:100%;padding:12px;border-radius:14px}.crt-bezel{padding:9px;border-radius:17px}.crt{border-radius:0}.cpu-layout{gap:8px}.frontpanel{padding:10px}.cpu-grid{grid-template-columns:1fr}.registers{grid-template-columns:1fr}.signals{grid-template-columns:repeat(2,1fr)}.led{width:10px;height:10px}.busrow{grid-template-columns:58px minmax(0,1fr) 46px}.bus-view-grid{grid-template-columns:1fr;padding:8px}.big-trace{height:52dvh}.memory-card,.bus-card,.device-card{min-height:calc(100dvh - 140px)}.trace-line{grid-template-columns:44px 94px 54px minmax(0,1fr);font-size:9px}.device-row{min-height:66px}.card-head{min-height:40px}.telemetry{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-height:499px){
+  .toolbar{min-height:48px;padding-top:3px;padding-bottom:3px}.brand-title{font-size:12px}.control{min-height:40px}.main{padding-top:5px}.display-stage{min-height:calc(100dvh - 118px)}.bottom-nav{height:54px;--bottom-nav-h:54px}.bottom-nav button{min-height:46px}.bottom-nav .lab{display:none}.crt-copy{font-size:10px}.crt-copy .big{font-size:1.25em}
+}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+@media (max-height:499px) and (max-width:1199px){
+  .workbench{display:block;min-height:0;overflow:hidden}.navrail,.inspector,.tracepanel{display:none}.main{height:100%;padding:5px 8px calc(54px + 6px);overflow:auto}.bottom-nav{position:fixed;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);left:env(safe-area-inset-left);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom);height:54px;padding:3px 5px;background:rgba(15,20,25,.96);border-top:1px solid var(--shell-line);backdrop-filter:blur(18px)}.bottom-nav button{min-height:46px;padding:2px}.bottom-nav .lab{display:none}.control.pace,.control.reset-wide{display:none}.cpu-grid{grid-template-columns:1fr}.registers{grid-template-columns:repeat(2,minmax(0,1fr))}.signals{grid-template-columns:repeat(5,minmax(0,1fr))}.display-stage{min-height:calc(100dvh - 110px)}
+}
+
+/* In-page More sheet for reliable local-file mobile controls. */
+.more-sheet[hidden]{display:none}
+.more-sheet{position:fixed;inset:0;z-index:120;display:grid;align-items:end;justify-items:stretch}
+.more-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.52);backdrop-filter:blur(6px);opacity:0;transition:opacity .18s ease}
+.more-panel{position:relative;z-index:1;width:min(420px,calc(100% - 16px));margin:0 auto calc(8px + env(safe-area-inset-bottom));border:1px solid #3b4853;border-radius:20px;background:rgba(24,30,36,.985);box-shadow:0 24px 70px rgba(0,0,0,.58);padding:8px 12px 14px;transform:translateY(24px);opacity:0;transition:transform .18s ease,opacity .18s ease}
+.more-sheet.open .more-backdrop{opacity:1}.more-sheet.open .more-panel{transform:translateY(0);opacity:1}
+.more-handle{width:38px;height:4px;border-radius:999px;background:#52606b;margin:2px auto 8px}
+.more-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 9px}.more-head h2{font-size:18px;margin:2px 0 0}.more-close{width:44px;height:44px;border:0;border-radius:50%;background:#2a333b;color:#dce6ed;font-size:24px;line-height:1;cursor:pointer}
+.more-actions{display:grid;gap:7px}.more-action{min-height:56px;border:1px solid #34414b;border-radius:13px;background:#11171c;color:var(--text);padding:8px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer}.more-action span{font-size:13px;font-weight:650}.more-action b{font:10px var(--mono);color:var(--muted);font-weight:500}.more-action.danger{border-color:#68454c}.more-action.danger span{color:#ff9299}.more-action:active{transform:scale(.985)}
+@media(min-width:720px){.more-sheet{justify-items:end;align-items:start}.more-panel{width:360px;margin:68px 12px 0 0;border-radius:16px}}
+@media(prefers-reduced-motion:reduce){.more-backdrop,.more-panel{transition:none!important}}
+
+/* PHASE 2A real text video */
+.crt canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#06100a}
+
+.device-state.online{color:var(--ready)}
+
+/* PHASE 2A.1 machine power controls */
+.control.power{border-color:#4c555d;gap:7px;display:flex;align-items:center}
+.power-led{width:9px;height:9px;border-radius:50%;background:#343d44;border:1px solid #65717a;box-shadow:inset 0 0 0 1px #111}
+.control.power.on{border-color:#3d7652;background:#152b1e}
+.control.power.on .power-led{background:var(--ready);box-shadow:0 0 10px rgba(105,231,147,.72),inset 0 0 2px #fff}
+.control:disabled{opacity:.38;cursor:not-allowed}
+.app.power-off .crt{filter:brightness(.34)}
+.app.power-off .crt canvas{opacity:.18}
+@media(max-width:719px){.control.power{padding:0 9px}.control.power #powerLabel{font-size:9px}}
+
+/* Exchangeable DISPLAY DEVICE: DM-80 */
+.monitor-shell{position:relative;padding-top:8px;padding-bottom:10px}
+.monitor-head{height:22px;display:flex;align-items:center;padding:0 4px 4px;font:10px var(--mono);letter-spacing:.11em;color:#d7e0e6}
+.monitor-model{font-weight:750}
+.monitor-foot{position:relative;height:28px;margin-top:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.monitor-maker{font-size:11px;font-weight:750;letter-spacing:.16em;color:#dce5ea}
+.monitor-type{position:absolute;right:2px;font-size:7px;letter-spacing:.08em;color:#87949e}
+.crt{width:100%}
+@media(max-width:719px){
+  .monitor-head{height:18px;font-size:8px}
+  .monitor-foot{height:22px;margin-top:5px}
+  .monitor-maker{font-size:9px}
+  .monitor-type{font-size:6px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="toolbar">
+    <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · SHINO-80 PHASE 2A.1 v0.0.8</div></div>
+    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
+    <div class="toolbar-spacer"></div>
+    <div class="control-group" aria-label="Machine controls">
+      <button class="control power" id="powerBtn" aria-label="Power on or off" aria-pressed="false"><span class="power-led" aria-hidden="true"></span><span id="powerLabel">POWER</span></button>
+      <button class="control primary" id="runPauseBtn" aria-label="Run or pause"><span id="runPauseLabel">RUN</span></button>
+      <button class="control compact-label" id="stepBtn" aria-label="Step one instruction">STEP</button>
+      <button class="control pace" id="paceBtn" aria-label="Change observation pace"><span class="wide-label">PACE </span><span id="paceLabel">VISUAL</span></button>
+      <button class="control danger reset-wide" id="resetBtn" aria-label="Reset CPU">RESET</button>
+      <button class="control" id="moreBtn" aria-label="More actions">•••</button>
+    </div>
+  </header>
+
+  <div class="workbench">
+    <nav class="navrail" aria-label="Workbench views">
+      <button class="navbtn" data-view="display" aria-selected="true"><span class="ico">▣</span><span class="lab">DISPLAY</span></button>
+      <button class="navbtn" data-view="cpu" aria-selected="false"><span class="ico">CPU</span><span class="lab">CPU</span></button>
+      <button class="navbtn" data-view="memory" aria-selected="false"><span class="ico">MEM</span><span class="lab">MEMORY</span></button>
+      <button class="navbtn" data-view="bus" aria-selected="false"><span class="ico">BUS</span><span class="lab">BUS</span></button>
+      <button class="navbtn" data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">DEVICES</span></button>
+    </nav>
+
+    <main class="main" id="mainStage">
+      <section class="view active" data-view-panel="display" aria-label="Display">
+        <div class="display-stage">
+          <div class="computer-shell monitor-shell" id="displayDevice">
+            <div class="monitor-head"><span class="monitor-model">DM-80</span></div>
+            <div class="crt-bezel"><div class="crt" id="crtViewport"><canvas id="crtCanvas" width="640" height="400" aria-label="DM-80 green monochrome digital display"></canvas></div></div>
+            <div class="monitor-foot"><span class="monitor-maker">SHINOMIYA</span><span class="monitor-type">GREEN MONO DIGITAL DISPLAY</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="cpu" aria-label="CPU Debug Lab">
+        <div class="cpu-layout">
+          <div class="frontpanel">
+            <div class="panel-title">CPU DEBUG LAB / FRONT PANEL</div>
+            <div class="busrow"><span class="buslabel">ADDRESS</span><div class="leds" id="addrLeds"></div><span class="hex" id="addrHex">0000</span></div>
+            <div class="busrow"><span class="buslabel">DATA</span><div class="leds" id="dataLeds"></div><span class="hex" id="dataHex">00</span></div>
+            <div class="signals" id="signalGrid">
+              <div class="signal" data-signal="M1"><span class="led green"></span>M1</div>
+              <div class="signal" data-signal="MREQ"><span class="led green"></span>MREQ</div>
+              <div class="signal" data-signal="IORQ"><span class="led green"></span>IORQ</div>
+              <div class="signal" data-signal="RD"><span class="led green"></span>RD</div>
+              <div class="signal" data-signal="WR"><span class="led green"></span>WR</div>
+              <div class="signal" data-signal="RFSH"><span class="led blue"></span>RFSH</div>
+              <div class="signal" data-signal="HALT"><span class="led amber"></span>HALT</div>
+              <div class="signal" data-signal="WAIT"><span class="led amber"></span>WAIT</div>
+              <div class="signal" data-signal="INT"><span class="led amber"></span>INT</div>
+              <div class="signal" data-signal="NMI"><span class="led amber"></span>NMI</div>
+            </div>
+          </div>
+          <div class="cpu-grid">
+            <div class="machine-card"><div class="card-head"><h2>REGISTER BANK</h2><span class="eyebrow">bit lamps + exact hex</span></div><div style="padding:10px"><div class="registers" id="regGrid"></div></div></div>
+            <div class="machine-card"><div class="card-head"><h2>STATE</h2><span class="eyebrow" id="selfTest">SELF TEST</span></div><div style="padding:10px">
+              <div class="flaggrid" id="flagGrid"></div>
+              <div class="telemetry"><div class="metric"><div class="k">T-STATES</div><div class="v" id="tstates">0</div></div><div class="metric"><div class="k">INSTRUCTIONS</div><div class="v" id="icount">0</div></div><div class="metric"><div class="k">IFF1 / IFF2</div><div class="v"><span id="iff1">0</span> / <span id="iff2">0</span></div></div><div class="metric"><div class="k">IM</div><div class="v" id="im">0</div></div></div>
+              <div class="debug-actions"><button id="burstBtn">BURST ×256</button><button id="clearTraceBtn">CLEAR TRACE</button></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="memory" aria-label="Memory">
+        <div class="machine-card memory-card"><div class="card-head"><h2>MEMORY INSPECTOR</h2><span class="eyebrow">DEBUG PEEK — no fake CPU bus traffic</span></div><div class="memory-toolbar">0000h–00FFh · 16 bytes / row · current fetch highlighted</div><div class="memory-grid" id="memoryGrid"></div></div>
+      </section>
+
+      <section class="view" data-view-panel="bus" aria-label="Bus">
+        <div class="machine-card bus-card"><div class="card-head"><h2>BUS ANALYZER</h2><span class="eyebrow">M_CYCLE_ABSTRACT · not pin-perfect</span></div><div class="bus-view-grid"><div class="big-trace" id="busTrace"></div><div class="signal-bank"><h3>LIVE SIGNAL BANK</h3><div class="signals" id="busSignalGrid"></div><div class="telemetry"><div class="metric"><div class="k">LAST ADDRESS</div><div class="v" id="busLastAddr">0000</div></div><div class="metric"><div class="k">LAST DATA</div><div class="v" id="busLastData">00</div></div></div></div></div></div>
+      </section>
+
+      <section class="view" data-view-panel="devices" aria-label="Devices">
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">TEXT VIDEO ONLINE · other slots reserved</span></div><div class="devices" id="deviceList"></div></div>
+      </section>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Inspector"><div id="inspectorContent"></div></aside>
+
+    <section class="tracepanel" id="tracePanel" aria-label="Bus trace panel">
+      <div class="tracehead"><strong style="font-size:10px">BUS TRACE / EVENT LOG</strong><span class="eyebrow" id="traceSummary">0 events</span><button id="traceToggleBtn" aria-label="Toggle trace panel">▼</button></div>
+      <div class="tracebody" id="tracePanelBody"></div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Compact workbench views">
+    <button data-view="display" aria-selected="true"><span class="ico">▣</span><span class="lab">DISPLAY</span></button>
+    <button data-view="cpu" aria-selected="false"><span class="ico">CPU</span><span class="lab">CPU</span></button>
+    <button data-view="memory" aria-selected="false"><span class="ico">MEM</span><span class="lab">MEM</span></button>
+    <button data-view="bus" aria-selected="false"><span class="ico">BUS</span><span class="lab">BUS</span></button>
+    <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
+  </nav>
+
+  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD 2A.1 v0.0.8</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>FDD —</span><span>UART —</span></footer>
+</div>
+
+<div class="more-sheet" id="moreMenu" hidden aria-hidden="true">
+  <div class="more-backdrop" id="moreBackdrop"></div>
+  <section class="more-panel" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+    <div class="more-handle" aria-hidden="true"></div>
+    <div class="more-head">
+      <div>
+        <div class="eyebrow">MACHINE CONTROL</div>
+        <h2 id="moreTitle">More</h2>
+      </div>
+      <button class="more-close" id="moreCloseBtn" aria-label="Close more actions">×</button>
+    </div>
+    <div class="more-actions">
+      <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">VISUAL</b></button>
+      <button class="more-action" data-more-action="burst"><span>BURST</span><b>×256</b></button>
+      <button class="more-action" data-more-action="clear"><span>CLEAR TRACE</span><b>BUS LOG</b></button>
+      <button class="more-action danger" data-more-action="reset"><span>RESET CPU</span><b>PC → 0000h</b></button>
+    </div>
+  </section>
+</div>
+<script>
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_BUS=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const ADDRESS_MASK=0xFFFF;
+  const DATA_MASK=0xFF;
+
+  class Shino80Bus {
+    constructor({traceLimit=256,romRanges=[]}={}){
+      this.memory=new Uint8Array(0x10000);
+      this.trace=[];
+      this.traceLimit=traceLimit;
+      this.sequence=0;
+      this.romRanges=(romRanges||[]).map(range=>{
+        const start=Number(range[0])&ADDRESS_MASK,end=Number(range[1])&ADDRESS_MASK;
+        if(end<start)throw new RangeError('ROM range must not wrap');
+        return [start,end];
+      });
+    }
+
+    normalizeAddress(address){return Number(address)&ADDRESS_MASK;}
+    normalizeData(value){return Number(value)&DATA_MASK;}
+    isRomAddress(address){
+      const addr=this.normalizeAddress(address);
+      return this.romRanges.some(([start,end])=>addr>=start&&addr<=end);
+    }
+
+    clearTrace(){this.trace.length=0;}
+
+    emit(event){
+      const record={seq:++this.sequence,...event};
+      this.trace.push(record);
+      if(this.trace.length>this.traceLimit)this.trace.splice(0,this.trace.length-this.traceLimit);
+      return record;
+    }
+
+    cpuRead(address,{tState=0,purpose='MEMORY_READ',signals=['MREQ','RD'],meta={}}={}){
+      const addr=this.normalizeAddress(address);
+      const data=this.memory[addr];
+      this.emit({
+        tState,
+        actor:'CPU',
+        space:'MEMORY',
+        operation:'READ',
+        address:addr,
+        data,
+        purpose,
+        signals:[...signals],
+        meta:{...meta}
+      });
+      return data;
+    }
+
+    cpuWrite(address,value,{tState=0,purpose='MEMORY_WRITE',signals=['MREQ','WR'],meta={}}={}){
+      const addr=this.normalizeAddress(address),data=this.normalizeData(value);
+      if(this.isRomAddress(addr)){
+        this.emit({
+          tState,
+          actor:'CPU',
+          space:'MEMORY',
+          operation:'WRITE_BLOCKED',
+          address:addr,
+          data,
+          purpose:'ROM_WRITE_BLOCKED',
+          signals:[...signals],
+          meta:{...meta,requestedPurpose:purpose}
+        });
+        return data;
+      }
+      this.memory[addr]=data;
+      this.emit({
+        tState,
+        actor:'CPU',
+        space:'MEMORY',
+        operation:'WRITE',
+        address:addr,
+        data,
+        purpose,
+        signals:[...signals],
+        meta:{...meta}
+      });
+      return data;
+    }
+
+    emitRefresh({tState=0,i=0,r=0}={}){
+      const i8=Number(i)&0xFF;
+      const r7=Number(r)&0x7F;
+      // A7 is intentionally not modeled yet. The official manual guarantees I on A15-A8
+      // and the lower seven bits of R as the refresh counter contribution.
+      const address=(i8<<8)|r7;
+      return this.emit({
+        tState,
+        actor:'CPU',
+        space:'MEMORY',
+        operation:'REFRESH',
+        address,
+        data:null,
+        purpose:'MEMORY_REFRESH',
+        signals:['MREQ','RFSH'],
+        meta:{precision:'M_CYCLE_ABSTRACT',i:i8,r7,a7Mode:'NOT_MODELED'}
+      });
+    }
+
+    debugPeek(address){return this.memory[this.normalizeAddress(address)];}
+    debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
+    clearWritableMemory(value=0){
+      const data=this.normalizeData(value);
+      for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;
+    }
+
+    load(bytes,start=0){
+      const base=this.normalizeAddress(start);
+      for(let n=0;n<bytes.length;n++)this.memory[(base+n)&ADDRESS_MASK]=this.normalizeData(bytes[n]);
+    }
+  }
+
+  return {Shino80Bus,ADDRESS_MASK,DATA_MASK};
+});
+
+</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_Z80_FLAGS=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const FLAG_BITS=Object.freeze({S:7,Z:6,Y:5,H:4,X:3,PV:2,N:1,C:0});
+  const FLAG_MASK=Object.freeze({
+    S:0x80,Z:0x40,Y:0x20,H:0x10,X:0x08,PV:0x04,N:0x02,C:0x01
+  });
+
+  function flagState(f){
+    const v=Number(f)&0xFF;
+    return Object.fromEntries(Object.entries(FLAG_BITS).map(([name,bit])=>[name,!!(v&(1<<bit))]));
+  }
+
+  // PHASE 1B policy:
+  // - implement documented INC/DEC flags exactly
+  // - preserve C because Zilog documents C as unaffected
+  // - preserve undocumented Y/X until their real behavior is researched separately
+  function preservedUnaffected(oldF){
+    return Number(oldF)&(FLAG_MASK.C|FLAG_MASK.Y|FLAG_MASK.X);
+  }
+
+  function inc8(oldF,value){
+    const before=Number(value)&0xFF;
+    const result=(before+1)&0xFF;
+    let f=preservedUnaffected(oldF);
+    if(result&0x80)f|=FLAG_MASK.S;
+    if(result===0)f|=FLAG_MASK.Z;
+    if((before&0x0F)===0x0F)f|=FLAG_MASK.H;
+    if(before===0x7F)f|=FLAG_MASK.PV;
+    // N is reset for INC.
+    return {result,f};
+  }
+
+  function dec8(oldF,value){
+    const before=Number(value)&0xFF;
+    const result=(before-1)&0xFF;
+    let f=preservedUnaffected(oldF)|FLAG_MASK.N;
+    if(result&0x80)f|=FLAG_MASK.S;
+    if(result===0)f|=FLAG_MASK.Z;
+    if((before&0x0F)===0x00)f|=FLAG_MASK.H;
+    if(before===0x80)f|=FLAG_MASK.PV;
+    return {result,f};
+  }
+
+  return {FLAG_BITS,FLAG_MASK,flagState,inc8,dec8};
+});</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_Z80_DECODER=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const REG8_NAMES=Object.freeze(['B','C','D','E','H','L','(HL)','A']);
+  const REG8_KEYS=Object.freeze(['b','c','d','e','h','l',null,'a']);
+  const REG16_DD_NAMES=Object.freeze(['BC','DE','HL','SP']);
+
+  function decodeBase(opcode){
+    const op=Number(opcode)&0xFF;
+    if(op===0x00)return {kind:'NOP',family:'CONTROL',mnemonic:'NOP',length:1,tStates:4};
+
+    switch(op){
+      case 0xC3:return {kind:'JP_NN',family:'CONTROL_FLOW',mnemonic:'JP nn',length:3,tStates:10};
+      case 0xCD:return {kind:'CALL_NN',family:'STACK_FLOW',mnemonic:'CALL nn',length:3,tStates:17};
+      case 0xC9:return {kind:'RET',family:'STACK_FLOW',mnemonic:'RET',length:1,tStates:10};
+      case 0x18:return {kind:'JR_E',family:'CONTROL_FLOW',mnemonic:'JR e',length:2,tStates:12};
+      case 0x20:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'NZ',mnemonic:'JR NZ,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x28:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'Z',mnemonic:'JR Z,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x30:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'NC',mnemonic:'JR NC,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x38:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'C',mnemonic:'JR C,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x10:return {kind:'DJNZ_E',family:'CONTROL_FLOW',condition:'B!=0',mnemonic:'DJNZ e',length:2,tStatesTaken:13,tStatesNotTaken:8};
+    }
+
+    if((op&0xC7)===0x04){
+      const target=(op>>3)&7;
+      if(target===6)return {kind:'INC_MEM_HL',family:'INC_DEC',mnemonic:'INC (HL)',length:1,tStates:11};
+      return {kind:'INC_R',family:'INC_DEC',targetCode:target,mnemonic:`INC ${REG8_NAMES[target]}`,length:1,tStates:4};
+    }
+
+    if((op&0xC7)===0x05){
+      const target=(op>>3)&7;
+      if(target===6)return {kind:'DEC_MEM_HL',family:'INC_DEC',mnemonic:'DEC (HL)',length:1,tStates:11};
+      return {kind:'DEC_R',family:'INC_DEC',targetCode:target,mnemonic:`DEC ${REG8_NAMES[target]}`,length:1,tStates:4};
+    }
+
+    if((op&0xC0)===0x40){
+      if(op===0x76)return {kind:'HALT',family:'CONTROL',mnemonic:'HALT',length:1,tStates:4,implemented:false};
+      const dst=(op>>3)&7,src=op&7;
+      if(dst===6)return {kind:'LD_MEM_HL_R',family:'LD',srcCode:src,mnemonic:`LD (HL),${REG8_NAMES[src]}`,length:1,tStates:7};
+      if(src===6)return {kind:'LD_R_MEM_HL',family:'LD',dstCode:dst,mnemonic:`LD ${REG8_NAMES[dst]},(HL)`,length:1,tStates:7};
+      return {kind:'LD_R_R',family:'LD',dstCode:dst,srcCode:src,mnemonic:`LD ${REG8_NAMES[dst]},${REG8_NAMES[src]}`,length:1,tStates:4};
+    }
+
+    if((op&0xC7)===0x06){
+      const dst=(op>>3)&7;
+      if(dst===6)return {kind:'LD_MEM_HL_N',family:'LD',mnemonic:'LD (HL),n',length:2,tStates:10};
+      return {kind:'LD_R_N',family:'LD',dstCode:dst,mnemonic:`LD ${REG8_NAMES[dst]},n`,length:2,tStates:7};
+    }
+
+    if((op&0xCF)===0x01){
+      const pair=(op>>4)&3;
+      return {kind:'LD_DD_NN',family:'LD',pairCode:pair,mnemonic:`LD ${REG16_DD_NAMES[pair]},nn`,length:3,tStates:10};
+    }
+
+    switch(op){
+      case 0x02:return {kind:'LD_MEM_BC_A',family:'LD',mnemonic:'LD (BC),A',length:1,tStates:7};
+      case 0x12:return {kind:'LD_MEM_DE_A',family:'LD',mnemonic:'LD (DE),A',length:1,tStates:7};
+      case 0x0A:return {kind:'LD_A_MEM_BC',family:'LD',mnemonic:'LD A,(BC)',length:1,tStates:7};
+      case 0x1A:return {kind:'LD_A_MEM_DE',family:'LD',mnemonic:'LD A,(DE)',length:1,tStates:7};
+      case 0x32:return {kind:'LD_MEM_NN_A',family:'LD',mnemonic:'LD (nn),A',length:3,tStates:13};
+      case 0x3A:return {kind:'LD_A_MEM_NN',family:'LD',mnemonic:'LD A,(nn)',length:3,tStates:13};
+      default:return null;
+    }
+  }
+
+  return {decodeBase,REG8_NAMES,REG8_KEYS,REG16_DD_NAMES};
+});</script>
+<script>(function(root,factory){
+  const busApi=(typeof module==='object'&&module.exports)?require('../../machine/shino80/shino80-bus.js'):root.SHINO_BUS;
+  const decoderApi=(typeof module==='object'&&module.exports)?require('./z80-decoder.js'):root.SHINO_Z80_DECODER;
+  const flagsApi=(typeof module==='object'&&module.exports)?require('./z80-flags.js'):root.SHINO_Z80_FLAGS;
+  const api=factory(busApi,decoderApi,flagsApi);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_Z80=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(busApi,decoderApi,flagsApi){
+  'use strict';
+  if(!busApi||!busApi.Shino80Bus)throw new Error('SHINO Z80 CORE: bus API missing');
+  if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
+  if(!flagsApi||!flagsApi.inc8||!flagsApi.dec8)throw new Error('SHINO Z80 CORE: flags API missing');
+
+  const {decodeBase,REG8_KEYS}=decoderApi;
+  const {FLAG_BITS,FLAG_MASK,flagState,inc8,dec8}=flagsApi;
+  const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
+  const signed8=value=>{const v=Number(value)&0xFF;return v<0x80?v:v-0x100;};
+  const signedText=value=>{const n=signed8(value);return n>=0?`+${n}`:`${n}`;};
+
+  function coldState(){
+    return {
+      a:0,f:0,b:0,c:0,d:0,e:0,h:0,l:0,
+      aAlt:0,fAlt:0,bAlt:0,cAlt:0,dAlt:0,eAlt:0,hAlt:0,lAlt:0,
+      ix:0,iy:0,sp:0,pc:0,i:0,r:0,
+      iff1:false,iff2:false,im:0,halted:false,
+      intLine:false,nmiLine:false,waitLine:false,
+      tStates:0,instructions:0
+    };
+  }
+
+  class Z80Core{
+    constructor(bus){
+      if(!(bus instanceof busApi.Shino80Bus))throw new TypeError('Z80Core requires Shino80Bus');
+      this.bus=bus;this.state=coldState();this.lastInstruction=null;
+    }
+    reset(){
+      const s=this.state;
+      s.pc=0;s.i=0;s.r=0;s.iff1=false;s.iff2=false;s.im=0;s.halted=false;
+      s.intLine=false;s.nmiLine=false;s.waitLine=false;s.tStates=0;s.instructions=0;
+      this.lastInstruction=null;this.bus.clearTrace();
+      this.bus.emit({tState:0,actor:'BENCH',space:'CONTROL',operation:'RESET',address:null,data:null,purpose:'CPU_RESET',signals:['RESET'],meta:{precision:'FUNCTIONAL'}});
+      return this.snapshot();
+    }
+    incrementR(){const s=this.state;s.r=(s.r&0x80)|(((s.r&0x7F)+1)&0x7F);return s.r;}
+    fetchOpcode(){
+      const s=this.state,address=s.pc&0xFFFF;
+      const opcode=this.bus.cpuRead(address,{tState:s.tStates,purpose:'OPCODE_FETCH',signals:['M1','MREQ','RD'],meta:{precision:'M_CYCLE_ABSTRACT'}});
+      s.pc=(s.pc+1)&0xFFFF;this.incrementR();
+      this.bus.emitRefresh({tState:s.tStates+2,i:s.i,r:s.r});
+      return {address,opcode};
+    }
+    fetchOperandByte(ctx,offsetT=4){
+      const s=this.state,address=s.pc&0xFFFF;
+      const value=this.bus.cpuRead(address,{tState:ctx.startTState+offsetT,purpose:'OPERAND_READ',signals:['MREQ','RD'],meta:{precision:'M_CYCLE_ABSTRACT'}});
+      s.pc=(s.pc+1)&0xFFFF;ctx.bytes.push(value);return value;
+    }
+    fetchOperandWord(ctx,lowOffset=4){const lo=this.fetchOperandByte(ctx,lowOffset),hi=this.fetchOperandByte(ctx,lowOffset+3);return lo|(hi<<8);}
+    readData(address,ctx,offsetT,purpose='DATA_READ'){return this.bus.cpuRead(address,{tState:ctx.startTState+offsetT,purpose,signals:['MREQ','RD'],meta:{precision:'M_CYCLE_ABSTRACT'}});}
+    writeData(address,value,ctx,offsetT,purpose='DATA_WRITE'){return this.bus.cpuWrite(address,value,{tState:ctx.startTState+offsetT,purpose,signals:['MREQ','WR'],meta:{precision:'M_CYCLE_ABSTRACT'}});}
+    getReg8(code){const key=REG8_KEYS[code&7];if(!key)throw new Error('Register code 6 is memory (HL), not an 8-bit register');return this.state[key]&0xFF;}
+    setReg8(code,value){const key=REG8_KEYS[code&7];if(!key)throw new Error('Register code 6 is memory (HL), not an 8-bit register');this.state[key]=Number(value)&0xFF;}
+    getPair16(code){const s=this.state;switch(code&3){case 0:return ((s.b<<8)|s.c)&0xFFFF;case 1:return ((s.d<<8)|s.e)&0xFFFF;case 2:return ((s.h<<8)|s.l)&0xFFFF;case 3:return s.sp&0xFFFF;}}
+    setPair16(code,value){const s=this.state,v=Number(value)&0xFFFF;switch(code&3){case 0:s.b=(v>>8)&0xFF;s.c=v&0xFF;break;case 1:s.d=(v>>8)&0xFF;s.e=v&0xFF;break;case 2:s.h=(v>>8)&0xFF;s.l=v&0xFF;break;case 3:s.sp=v;break;}}
+    getHL(){return ((this.state.h<<8)|this.state.l)&0xFFFF;}
+    getBC(){return ((this.state.b<<8)|this.state.c)&0xFFFF;}
+    getDE(){return ((this.state.d<<8)|this.state.e)&0xFFFF;}
+    pushWord(value,ctx,firstWriteOffset=11){
+      const s=this.state,v=Number(value)&0xFFFF;
+      const hi=(v>>8)&0xFF,lo=v&0xFF;
+      s.sp=(s.sp-1)&0xFFFF;
+      this.writeData(s.sp,hi,ctx,firstWriteOffset,'STACK_WRITE');
+      s.sp=(s.sp-1)&0xFFFF;
+      this.writeData(s.sp,lo,ctx,firstWriteOffset+3,'STACK_WRITE');
+      return s.sp;
+    }
+    popWord(ctx,firstReadOffset=4){
+      const s=this.state;
+      const lo=this.readData(s.sp,ctx,firstReadOffset,'STACK_READ');
+      s.sp=(s.sp+1)&0xFFFF;
+      const hi=this.readData(s.sp,ctx,firstReadOffset+3,'STACK_READ');
+      s.sp=(s.sp+1)&0xFFFF;
+      return lo|(hi<<8);
+    }
+    conditionTrue(condition){
+      const f=this.state.f&0xFF;
+      switch(condition){
+        case 'NZ':return !(f&FLAG_MASK.Z);
+        case 'Z':return !!(f&FLAG_MASK.Z);
+        case 'NC':return !(f&FLAG_MASK.C);
+        case 'C':return !!(f&FLAG_MASK.C);
+        default:throw new Error(`UNKNOWN CONDITION ${condition}`);
+      }
+    }
+    relativeTarget(displacement){return (this.state.pc+signed8(displacement))&0xFFFF;}
+    flowResult(mnemonic,tStates,branchTaken,branchTarget,fallThrough,condition=null){
+      return {mnemonic,tStates,branchTaken,branchTarget,fallThrough,condition};
+    }
+    executeDescriptor(desc,ctx){
+      const s=this.state;
+      switch(desc.kind){
+        case 'NOP':return desc.mnemonic;
+        case 'CALL_NN':{
+          const target=this.fetchOperandWord(ctx,4),returnAddress=s.pc,stackBefore=s.sp;
+          this.pushWord(returnAddress,ctx,11);
+          const stackAfter=s.sp;
+          s.pc=target;
+          return {
+            mnemonic:`CALL ${hex(target,4)}h`,tStates:desc.tStates,
+            branchTaken:true,branchTarget:target,fallThrough:returnAddress,condition:'CALL',
+            stackBefore,stackAfter,returnAddress
+          };
+        }
+        case 'RET':{
+          const fallThrough=s.pc,stackBefore=s.sp,returnAddress=this.popWord(ctx,4),stackAfter=s.sp;
+          s.pc=returnAddress;
+          return {
+            mnemonic:'RET',tStates:desc.tStates,
+            branchTaken:true,branchTarget:returnAddress,fallThrough,condition:'RET',
+            stackBefore,stackAfter,returnAddress
+          };
+        }
+        case 'JP_NN':{
+          const target=this.fetchOperandWord(ctx,4),fallThrough=s.pc;
+          s.pc=target;
+          return this.flowResult(`JP ${hex(target,4)}h`,desc.tStates,true,target,fallThrough,'ALWAYS');
+        }
+        case 'JR_E':{
+          const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
+          s.pc=target;
+          return this.flowResult(`JR ${signedText(e)}`,desc.tStates,true,target,fallThrough,'ALWAYS');
+        }
+        case 'JR_CC_E':{
+          const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
+          const taken=this.conditionTrue(desc.condition);
+          if(taken)s.pc=target;
+          return this.flowResult(`JR ${desc.condition},${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,desc.condition);
+        }
+        case 'DJNZ_E':{
+          const e=this.fetchOperandByte(ctx,5),fallThrough=s.pc,target=this.relativeTarget(e);
+          s.b=(s.b-1)&0xFF;
+          const taken=s.b!==0;
+          if(taken)s.pc=target;
+          return this.flowResult(`DJNZ ${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,'B!=0');
+        }
+        case 'INC_R':{
+          const before=this.getReg8(desc.targetCode),next=inc8(s.f,before);
+          this.setReg8(desc.targetCode,next.result);s.f=next.f;return desc.mnemonic;
+        }
+        case 'DEC_R':{
+          const before=this.getReg8(desc.targetCode),next=dec8(s.f,before);
+          this.setReg8(desc.targetCode,next.result);s.f=next.f;return desc.mnemonic;
+        }
+        case 'INC_MEM_HL':{
+          const address=this.getHL(),before=this.readData(address,ctx,4),next=inc8(s.f,before);
+          this.writeData(address,next.result,ctx,8);s.f=next.f;return desc.mnemonic;
+        }
+        case 'DEC_MEM_HL':{
+          const address=this.getHL(),before=this.readData(address,ctx,4),next=dec8(s.f,before);
+          this.writeData(address,next.result,ctx,8);s.f=next.f;return desc.mnemonic;
+        }
+        case 'LD_R_R':this.setReg8(desc.dstCode,this.getReg8(desc.srcCode));return desc.mnemonic;
+        case 'LD_R_N':{const n=this.fetchOperandByte(ctx,4);this.setReg8(desc.dstCode,n);return desc.mnemonic.replace('n',`${hex(n,2)}h`);}
+        case 'LD_DD_NN':{const nn=this.fetchOperandWord(ctx,4);this.setPair16(desc.pairCode,nn);return desc.mnemonic.replace('nn',`${hex(nn,4)}h`);}
+        case 'LD_R_MEM_HL':{const v=this.readData(this.getHL(),ctx,4);this.setReg8(desc.dstCode,v);return desc.mnemonic;}
+        case 'LD_MEM_HL_R':this.writeData(this.getHL(),this.getReg8(desc.srcCode),ctx,4);return desc.mnemonic;
+        case 'LD_MEM_HL_N':{const n=this.fetchOperandByte(ctx,4);this.writeData(this.getHL(),n,ctx,7);return `LD (HL),${hex(n,2)}h`;}
+        case 'LD_A_MEM_BC':s.a=this.readData(this.getBC(),ctx,4);return desc.mnemonic;
+        case 'LD_A_MEM_DE':s.a=this.readData(this.getDE(),ctx,4);return desc.mnemonic;
+        case 'LD_MEM_BC_A':this.writeData(this.getBC(),s.a,ctx,4);return desc.mnemonic;
+        case 'LD_MEM_DE_A':this.writeData(this.getDE(),s.a,ctx,4);return desc.mnemonic;
+        case 'LD_A_MEM_NN':{const nn=this.fetchOperandWord(ctx,4);s.a=this.readData(nn,ctx,10);return `LD A,(${hex(nn,4)}h)`;}
+        case 'LD_MEM_NN_A':{const nn=this.fetchOperandWord(ctx,4);this.writeData(nn,s.a,ctx,10);return `LD (${hex(nn,4)}h),A`;}
+        case 'HALT':throw new Error(`UNIMPLEMENTED HALT OPCODE 76h at ${hex(ctx.address,4)}h`);
+        default:throw new Error(`UNIMPLEMENTED DECODE KIND ${desc.kind}`);
+      }
+    }
+    step(){
+      const s=this.state;if(s.halted)return {halted:true,tStates:0,mnemonic:'HALT'};
+      const startTState=s.tStates,{address,opcode}=this.fetchOpcode(),desc=decodeBase(opcode);
+      if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
+      const ctx={address,opcode,startTState,bytes:[opcode]},execution=this.executeDescriptor(desc,ctx);
+      const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
+      const actualTStates=detail.tStates??desc.tStates;
+      if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
+      s.tStates+=actualTStates;s.instructions+=1;
+      this.lastInstruction={
+        address,opcode,bytes:[...ctx.bytes],mnemonic:detail.mnemonic,family:desc.family,
+        tStates:actualTStates,startTState,endTState:s.tStates,
+        branchTaken:detail.branchTaken??null,
+        branchTarget:detail.branchTarget??null,
+        fallThrough:detail.fallThrough??null,
+        condition:detail.condition??null,
+        stackBefore:detail.stackBefore??null,
+        stackAfter:detail.stackAfter??null,
+        returnAddress:detail.returnAddress??null
+      };
+      return {...this.lastInstruction,bytes:[...this.lastInstruction.bytes]};
+    }
+    runInstructions(count=1){const n=Math.max(0,Math.floor(Number(count)||0));let result=null;for(let i=0;i<n;i++)result=this.step();return result;}
+    snapshot(){return JSON.parse(JSON.stringify(this.state));}
+  }
+
+  return {Z80Core,coldState,FLAG_BITS,flagState};
+});</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_CGROM=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const GLYPH_WIDTH=8,GLYPH_HEIGHT=16,GLYPH_COUNT=256,CG_ROM_BYTES=GLYPH_HEIGHT*GLYPH_COUNT;
+
+  // Original SHINO-80 5x7 bring-up font, expanded to 8x16 at ROM-build time.
+  const G={
+    ' ':[0,0,0,0,0,0,0],
+    'A':[14,17,17,31,17,17,17],'B':[30,17,17,30,17,17,30],
+    'C':[14,17,16,16,16,17,14],'D':[30,17,17,17,17,17,30],
+    'E':[31,16,16,30,16,16,31],'F':[31,16,16,30,16,16,16],
+    'G':[14,17,16,23,17,17,15],'H':[17,17,17,31,17,17,17],
+    'I':[14,4,4,4,4,4,14],'J':[7,2,2,2,18,18,12],
+    'K':[17,18,20,24,20,18,17],'L':[16,16,16,16,16,16,31],
+    'M':[17,27,21,21,17,17,17],'N':[17,25,21,19,17,17,17],
+    'O':[14,17,17,17,17,17,14],'P':[30,17,17,30,16,16,16],
+    'Q':[14,17,17,17,21,18,13],'R':[30,17,17,30,20,18,17],
+    'S':[15,16,16,14,1,1,30],'T':[31,4,4,4,4,4,4],
+    'U':[17,17,17,17,17,17,14],'V':[17,17,17,17,17,10,4],
+    'W':[17,17,17,21,21,21,10],'X':[17,17,10,4,10,17,17],
+    'Y':[17,17,10,4,4,4,4],'Z':[31,1,2,4,8,16,31],
+    '0':[14,17,19,21,25,17,14],'1':[4,12,4,4,4,4,14],
+    '2':[14,17,1,2,4,8,31],'3':[30,1,1,14,1,1,30],
+    '4':[2,6,10,18,31,2,2],'5':[31,16,16,30,1,1,30],
+    '6':[14,16,16,30,17,17,14],'7':[31,1,2,4,8,8,8],
+    '8':[14,17,17,14,17,17,14],'9':[14,17,17,15,1,1,14],
+    '-':[0,0,0,31,0,0,0],'*':[0,21,14,31,14,21,0],
+    ':':[0,4,4,0,4,4,0],'.':[0,0,0,0,0,12,12],
+    '>':[16,8,4,2,4,8,16],'<':[1,2,4,8,4,2,1],
+    '/':[1,2,2,4,8,8,16],'?':[14,17,1,2,4,0,4],
+    '!':[4,4,4,4,4,0,4],'_':[0,0,0,0,0,0,31]
+  };
+
+  function buildCgRom(){
+    const rom=new Uint8Array(CG_ROM_BYTES);
+    for(const [ch,rows] of Object.entries(G)){
+      const code=ch.charCodeAt(0)&0xFF,base=code*GLYPH_HEIGHT;
+      for(let r=0;r<7;r++){
+        const bits=(rows[r]&0x1F)<<1;
+        const y=1+r*2;
+        rom[base+y]=bits;
+        rom[base+y+1]=bits;
+      }
+    }
+    return rom;
+  }
+
+  const CG_ROM_IMAGE=buildCgRom();
+  return {GLYPH_WIDTH,GLYPH_HEIGHT,GLYPH_COUNT,CG_ROM_BYTES,CG_ROM_IMAGE,buildCgRom};
+});</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_SYSTEM_ROM=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const ROM_SIZE=0x2000;
+  const TEXT_VRAM_BASE=0xC000;
+  const TEXT_COLS=80;
+  const TEXT_ROWS=25;
+  const VRAM_PAGES=8;
+
+  const lo=v=>v&0xFF,hi=v=>(v>>8)&0xFF;
+
+  function buildSystemRom(){
+    const program=[];
+    let textChars=0;
+    const emit=(...bytes)=>program.push(...bytes.map(v=>v&0xFF));
+    const ldSp=nn=>emit(0x31,lo(nn),hi(nn));
+    const ldA=n=>emit(0x3E,n&0xFF);
+    const ldHL=nn=>emit(0x21,lo(nn),hi(nn));
+    const ldB=n=>emit(0x06,n&0xFF);
+    const putAAt=address=>emit(0x32,lo(address),hi(address));
+    const putAt=(address,code)=>{ldA(code);putAAt(address);};
+    const writeText=(row,col,text)=>{
+      let address=TEXT_VRAM_BASE+row*TEXT_COLS+col;
+      for(const ch of text){putAt(address++,ch.charCodeAt(0));textChars++;}
+    };
+    const patchRelative=(operandIndex,target)=>{
+      const after=operandIndex+1;
+      program[operandIndex]=(target-after)&0xFF;
+    };
+
+    // RESET / IPL entry.
+    ldSp(0xF000);
+
+    // DISPLAY / VRAM TEST:
+    // each 256-byte VRAM page is filled with A..H.
+    ldA('A'.charCodeAt(0));
+    ldHL(TEXT_VRAM_BASE);
+    ldB(VRAM_PAGES);
+    const testLoop=program.length;
+    emit(0x77);       // LD (HL),A
+    emit(0x2C);       // INC L
+    emit(0x20,0x00);  // JR NZ,testLoop
+    const testJrNz=program.length-1;
+    emit(0x24);       // INC H
+    emit(0x3C);       // INC A
+    emit(0x10,0x00);  // DJNZ testLoop
+    const testDjnz=program.length-1;
+    patchRelative(testJrNz,testLoop);
+    patchRelative(testDjnz,testLoop);
+    const testDone=program.length;
+
+    // Short machine-side diagnostic hold. In VISUAL observer pace this loop
+    // is intentionally shown slowly enough to inspect the full CRT.
+    ldB(0x00);
+    const testHoldLoop=program.length;
+    emit(0x10,0xFE);  // DJNZ self, 256 iterations from B=00h
+    const testHoldDone=program.length;
+
+    // IPL clears C000h-C7FFh itself after the display test.
+    ldA(0x00);
+    ldHL(TEXT_VRAM_BASE);
+    ldB(VRAM_PAGES);
+    const clearLoop=program.length;
+    emit(0x77);       // LD (HL),A
+    emit(0x2C);       // INC L
+    emit(0x20,0x00);  // JR NZ,clearLoop
+    const clearJrNz=program.length-1;
+    emit(0x24);       // INC H
+    emit(0x10,0x00);  // DJNZ clearLoop
+    const clearDjnz=program.length-1;
+    patchRelative(clearJrNz,clearLoop);
+    patchRelative(clearDjnz,clearLoop);
+    const clearDone=program.length;
+
+    writeText(0,0,'SHINO-80 IPL');
+    writeText(1,0,'VIDEO OK');
+    writeText(2,0,'MON');
+    writeText(3,0,'*');
+
+    const monitorLoop=program.length;
+    emit(0xC3,lo(monitorLoop),hi(monitorLoop)); // JP monitorLoop
+
+    const bytes=new Uint8Array(ROM_SIZE);
+    bytes.fill(0xFF);
+    bytes.set(program,0);
+
+    const testPageInstructions=(256*3)+3;
+    const clearPageInstructions=(256*3)+2;
+    const testInstructions=VRAM_PAGES*testPageInstructions;
+    const holdInstructions=1+256; // LD B,00h + 256 DJNZ
+    const clearInstructions=3+(VRAM_PAGES*clearPageInstructions);
+    const instructionsBeforeLoop=4+testInstructions+holdInstructions+clearInstructions+(textChars*2);
+
+    return {
+      bytes,
+      labels:Object.freeze({
+        RESET:0x0000,
+        VRAM_TEST_LOOP:testLoop,
+        VRAM_TEST_DONE:testDone,
+        VRAM_TEST_HOLD_LOOP:testHoldLoop,
+        VRAM_TEST_HOLD_DONE:testHoldDone,
+        VRAM_CLEAR_LOOP:clearLoop,
+        VRAM_CLEAR_DONE:clearDone,
+        MONITOR_LOOP:monitorLoop
+      }),
+      meta:Object.freeze({
+        romSize:ROM_SIZE,
+        textVramBase:TEXT_VRAM_BASE,
+        textCols:TEXT_COLS,
+        textRows:TEXT_ROWS,
+        vramBytes:VRAM_PAGES*256,
+        testPageInstructions,
+        clearPageInstructions,
+        textChars,
+        instructionsBeforeLoop
+      })
+    };
+  }
+
+  return {ROM_SIZE,TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,VRAM_PAGES,buildSystemRom};
+});</script>
+<script>(function(root,factory){
+  const cgApi=(typeof module==='object'&&module.exports)?require('../../firmware/shino80/shino80-cgrom.js'):root.SHINO_CGROM;
+  const api=factory(cgApi);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_VIDEO=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(cgApi){
+  'use strict';
+  if(!cgApi||!cgApi.CG_ROM_IMAGE)throw new Error('SHINO VIDEO: CG-ROM missing');
+
+  const TEXT_VRAM_BASE=0xC000,COLS=80,ROWS=25,CELL_COUNT=COLS*ROWS;
+  const GW=cgApi.GLYPH_WIDTH,GH=cgApi.GLYPH_HEIGHT;
+  const SCREEN_W=COLS*GW,SCREEN_H=ROWS*GH;
+  const VIDEO_SIGNAL=Object.freeze({
+    interface:'DIGITAL_MONO',
+    width:SCREEN_W,
+    height:SCREEN_H,
+    pixelAspect:1,
+    textColumns:COLS,
+    textRows:ROWS
+  });
+
+  class Shino80TextVideo{
+    constructor(bus,canvas,{vramBase=TEXT_VRAM_BASE,cgRom=cgApi.CG_ROM_IMAGE}={}){
+      if(!bus)throw new TypeError('Shino80TextVideo requires bus');
+      if(!canvas||typeof canvas.getContext!=='function')throw new TypeError('Shino80TextVideo requires canvas');
+      this.bus=bus;this.canvas=canvas;this.vramBase=vramBase&0xFFFF;this.cgRom=cgRom;this.signal=VIDEO_SIGNAL;
+      canvas.width=SCREEN_W;canvas.height=SCREEN_H;
+      this.ctx=canvas.getContext('2d',{alpha:false});
+      this.ctx.imageSmoothingEnabled=false;
+      this.lastCells=new Uint8Array(CELL_COUNT);
+      this.powered=false;
+      this.clearScreen();
+    }
+    clearScreen(){
+      this.ctx.fillStyle='#06100A';
+      this.ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
+      this.lastCells.fill(0);
+    }
+    setPower(on){
+      this.powered=!!on;
+      this.clearScreen();
+      return this.powered;
+    }
+    drawCell(index,code){
+      const col=index%COLS,row=Math.floor(index/COLS),x0=col*GW,y0=row*GH;
+      this.ctx.fillStyle='#06100A';
+      this.ctx.fillRect(x0,y0,GW,GH);
+      const base=(code&0xFF)*GH;
+      this.ctx.fillStyle='#8FFFAE';
+      for(let y=0;y<GH;y++){
+        const bits=this.cgRom[base+y];
+        if(!bits)continue;
+        for(let x=0;x<GW;x++)if(bits&(0x80>>x))this.ctx.fillRect(x0+x,y0+y,1,1);
+      }
+    }
+    render(){
+      if(!this.powered)return 0;
+      let changed=0;
+      for(let i=0;i<CELL_COUNT;i++){
+        const code=this.bus.debugPeek(this.vramBase+i);
+        if(code===this.lastCells[i])continue;
+        this.lastCells[i]=code;
+        this.drawCell(i,code);
+        changed++;
+      }
+      return changed;
+    }
+    readRow(row){
+      const r=Math.max(0,Math.min(ROWS-1,Number(row)|0));
+      let out='';
+      for(let c=0;c<COLS;c++){
+        const code=this.bus.debugPeek(this.vramBase+r*COLS+c);
+        out+=code>=32&&code<=126?String.fromCharCode(code):' ';
+      }
+      return out;
+    }
+  }
+
+  return {Shino80TextVideo,TEXT_VRAM_BASE,COLS,ROWS,CELL_COUNT,SCREEN_W,SCREEN_H,VIDEO_SIGNAL};
+});</script>
+<script>(function(){
+  'use strict';
+  const {Shino80Bus}=globalThis.SHINO_BUS;
+  const {Z80Core,flagState}=globalThis.SHINO_Z80;
+  const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
+  const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
+  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]]});
+  const cpu=new Z80Core(bus);
+  const systemRom=buildSystemRom();
+  bus.load(systemRom.bytes,0x0000);
+  cpu.reset();
+
+  const queryOne=s=>document.querySelector(s);
+  const queryAll=s=>[...document.querySelectorAll(s)];
+  const video=new Shino80TextVideo(bus,queryOne('#crtCanvas'));
+  video.setPower(false);
+  function syncDisplayGeometry(){
+    const signal=video.signal;
+    const crt=queryOne('#crtViewport');
+    if(crt)crt.style.aspectRatio=`${signal.width} / ${signal.height}`;
+    const status=queryOne('#statusVideo');
+    if(status)status.textContent=`VIDEO ${signal.width}×${signal.height} ${signal.interface.replace('_',' ')}`;
+  }
+  const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
+  const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
+
+  const ui={view:'display',running:false,powered:false,paceIndex:0,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'display',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
+  const paces=[{label:'VISUAL',mode:'interval',ms:125,batch:1},{label:'FAST',mode:'interval',ms:16,batch:8},{label:'MAX',mode:'raf',ms:0,batch:256}];
+  let runTimer=null;
+  let morePreviousFocus=null;
+
+  const devices=[
+    {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
+    {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
+    {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
+    {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
+    {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
+    {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
+    {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
+    {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
+  ];
+
+  function makeLeds(container,width,color='green'){
+    container.innerHTML='';
+    for(let i=0;i<width;i++){const e=document.createElement('span');e.className=`led ${color}`;container.appendChild(e);}
+  }
+  function setLeds(container,value,width){const b=bits(value,width);[...container.children].forEach((e,i)=>e.classList.toggle('on',b[i]));}
+
+  const regDefs=[['A',8,'a'],['F',8,'f'],['B',8,'b'],['C',8,'c'],['D',8,'d'],['E',8,'e'],['H',8,'h'],['L',8,'l'],["A'",8,'aAlt'],["F'",8,'fAlt'],["B'",8,'bAlt'],["C'",8,'cAlt'],["D'",8,'dAlt'],["E'",8,'eAlt'],["H'",8,'hAlt'],["L'",8,'lAlt'],['IX',16,'ix'],['IY',16,'iy'],['SP',16,'sp'],['PC',16,'pc'],['I',8,'i'],['R',8,'r']];
+  const flagDefs=['S','Z','Y','H','X','PV','N','C'];
+
+  function buildStaticUi(){
+    makeLeds(queryOne('#addrLeds'),16,'amber');makeLeds(queryOne('#dataLeds'),8,'green');
+    const rg=queryOne('#regGrid');
+    regDefs.forEach(([label,width,key])=>{const row=document.createElement('div');row.className='regrow';row.dataset.key=key;row.dataset.width=width;row.innerHTML=`<span class="regname">${label}</span><span class="reghex">${'0'.repeat(width===16?4:2)}</span><span class="leds"></span>`;makeLeds(row.querySelector('.leds'),width,width===16?'amber':'green');rg.appendChild(row);});
+    const fg=queryOne('#flagGrid');flagDefs.forEach(name=>{const e=document.createElement('div');e.className='flag';e.dataset.flag=name;e.innerHTML=`<span class="led green"></span>${name==='PV'?'P/V':name}`;fg.appendChild(e);});
+    const bsg=queryOne('#busSignalGrid');['M1','MREQ','IORQ','RD','WR','RFSH','HALT','WAIT','INT','NMI'].forEach(name=>{const color=name==='RFSH'?'blue':(['HALT','WAIT','INT','NMI'].includes(name)?'amber':'green');const e=document.createElement('div');e.className='signal';e.dataset.signal=name;e.innerHTML=`<span class="led ${color}"></span>${name}`;bsg.appendChild(e);});
+    renderDevices();
+  }
+
+  function renderDevices(){
+    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
+  }
+
+  function setView(view){
+    ui.view=view;queryAll('[data-view-panel]').forEach(e=>e.classList.toggle('active',e.dataset.viewPanel===view));queryAll('[data-view]').forEach(e=>e.setAttribute('aria-selected',String(e.dataset.view===view)));ui.dirty=true;renderInspector();
+  }
+
+  function updateRegisters(){
+    const s=cpu.state;queryAll('#regGrid .regrow').forEach(row=>{const width=Number(row.dataset.width),v=s[row.dataset.key];row.querySelector('.reghex').textContent=hex(v,width===16?4:2);setLeds(row.querySelector('.leds'),v,width);});
+    const f=flagState(s.f);queryAll('#flagGrid .flag').forEach(e=>e.querySelector('.led').classList.toggle('on',!!f[e.dataset.flag]));
+    queryOne('#iff1').textContent=s.iff1?'1':'0';queryOne('#iff2').textContent=s.iff2?'1':'0';queryOne('#im').textContent=String(s.im);queryOne('#tstates').textContent=String(s.tStates);queryOne('#icount').textContent=String(s.instructions);
+    queryOne('#statusPc').textContent=hex(s.pc,4);queryOne('#statusR').textContent=hex(s.r,2);queryOne('#statusT').textContent=String(s.tStates);
+    queryOne('#statusLast').textContent=cpu.lastInstruction?cpu.lastInstruction.mnemonic:'RESET';
+  }
+
+  function lastFetch(){return [...bus.trace].reverse().find(e=>e.purpose==='OPCODE_FETCH')||null;}
+  function updateBusLeds(){const f=lastFetch();if(f){ui.lastFetchAddress=f.address;setLeds(queryOne('#addrLeds'),f.address,16);setLeds(queryOne('#dataLeds'),f.data,8);queryOne('#addrHex').textContent=hex(f.address,4);queryOne('#dataHex').textContent=hex(f.data,2);queryOne('#busLastAddr').textContent=hex(f.address,4);queryOne('#busLastData').textContent=hex(f.data,2);}}
+  function updateSignalLamps(){const now=performance.now(),active=now<ui.pulseUntil?ui.activeSignals:new Set();queryAll('[data-signal]').forEach(e=>{const lamp=e.querySelector('.led');if(lamp)lamp.classList.toggle('on',active.has(e.dataset.signal));});}
+
+  function traceHtml(events){return events.map(t=>{const addr=t.address==null?'----':hex(t.address,4),data=t.data==null?'--':hex(t.data,2);return `<div class="trace-line"><span class="t">T+${t.tState}</span><span class="kind">${t.purpose}</span><span class="addr">${addr}:${data}</span><span class="sig">${(t.signals||[]).join(' ')}</span></div>`;}).join('');}
+  function updateTrace(){const rows=bus.trace.slice(-120);queryOne('#busTrace').innerHTML=traceHtml(rows);queryOne('#tracePanelBody').innerHTML=traceHtml(rows.slice(-40));queryOne('#traceSummary').textContent=`${bus.trace.length} events`;}
+
+  function updateMemory(){const root=queryOne('#memoryGrid');let html='';for(let base=0;base<0x100;base+=16){const cells=[];for(let i=0;i<16;i++){const a=base+i,v=bus.debugPeek(a);cells.push(`<span class="${a===ui.lastFetchAddress?'hot':''}">${hex(v,2)}</span>`);}html+=`<div class="memline"><span class="memaddr">${hex(base,4)}</span><span class="membytes">${cells.join(' ')}</span></div>`;}root.innerHTML=html;}
+
+  function renderInspector(){
+    const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
+    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
+    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE / LD / INC / DEC / FLOW / STACK ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1D adds CALL/RET. Watch PC jump into nested subroutines while SP descends through RAM and returns climb back out.</div>`;}
+    if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
+    if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
+    if(ui.view==='devices'){
+      const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
+      const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;
+      html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${state}</b></div></div>`;
+      if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
+      else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
+      else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
+    }
+    root.innerHTML=html;
+  }
+
+  function render(){
+    syncDisplayGeometry();video.render();updateRegisters();updateBusLeds();updateSignalLamps();updateTrace();updateMemory();renderInspector();
+    const state=!ui.powered?'POWER OFF':(ui.running?'RUNNING':'READY');
+    queryOne('#machineState').textContent=state;queryOne('#statusRun').textContent=state;
+    queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);
+    queryOne('#powerBtn').classList.toggle('on',ui.powered);queryOne('#powerBtn').setAttribute('aria-pressed',String(ui.powered));
+    queryOne('#app').classList.toggle('power-off',!ui.powered);
+    queryOne('#runPauseBtn').disabled=!ui.powered;queryOne('#stepBtn').disabled=!ui.powered;queryOne('#resetBtn').disabled=!ui.powered;
+    queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();
+    queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;
+  }
+  function markSignals(events){ui.activeSignals=new Set(events.flatMap(e=>e.signals||[]));ui.pulseUntil=performance.now()+180;}
+  function stepBatch(count){
+    if(!ui.powered)return;
+    const before=bus.trace.length;
+    try{cpu.runInstructions(count);markSignals(bus.trace.slice(before));ui.dirty=true;}
+    catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);}
+  }
+  function stepOne(){stepBatch(1);}
+  function visualBatch(){
+    const pc=cpu.state.pc&0xFFFF;
+    if(pc===systemRom.labels.VRAM_TEST_LOOP)return systemRom.meta.testPageInstructions;
+    if(pc===systemRom.labels.VRAM_TEST_HOLD_LOOP)return 32;
+    if(pc===systemRom.labels.VRAM_CLEAR_LOOP)return systemRom.meta.clearPageInstructions;
+    return 1;
+  }
+  function scheduleRun(){
+    clearRunHandle();if(!ui.running||!ui.powered)return;const p=paces[ui.paceIndex];
+    if(p.mode==='interval')runTimer=setInterval(()=>stepBatch(ui.paceIndex===0?visualBatch():p.batch),p.ms);
+    else{const loop=()=>{if(!ui.running||!ui.powered)return;stepBatch(p.batch);runTimer=requestAnimationFrame(loop);};runTimer=requestAnimationFrame(loop);}
+  }
+  function clearRunHandle(){if(runTimer==null)return;clearInterval(runTimer);cancelAnimationFrame(runTimer);runTimer=null;}
+  function startRun(){if(!ui.powered)return;ui.running=true;scheduleRun();ui.dirty=true;}
+  function stopRun(){ui.running=false;clearRunHandle();ui.dirty=true;}
+  function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
+  function resetCpu(){
+    if(!ui.powered)return;
+    stopRun();cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+  }
+  function powerOn(){
+    if(ui.powered)return;
+    stopRun();bus.clearWritableMemory(0);cpu.reset();video.setPower(true);ui.powered=true;
+    ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
+  }
+  function powerOff(){
+    if(!ui.powered)return;
+    stopRun();ui.powered=false;bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
+  }
+  function togglePower(){ui.powered?powerOff():powerOn();}
+  function cyclePace(){const was=ui.running;stopRun();ui.paceIndex=(ui.paceIndex+1)%paces.length;if(was)startRun();ui.dirty=true;}
+  function toggleTrace(){ui.traceOpen=!ui.traceOpen;ui.dirty=true;}
+
+  function syncMoreSheet(){
+    const menu=queryOne('#moreMenu');
+    if(!menu)return;
+    queryOne('#morePaceValue').textContent=paces[ui.paceIndex].label;
+  }
+
+  function openMore(){
+    const menu=queryOne('#moreMenu');
+    if(!menu)return;
+    morePreviousFocus=document.activeElement;
+    syncMoreSheet();
+    menu.hidden=false;
+    menu.setAttribute('aria-hidden','false');
+    requestAnimationFrame(()=>menu.classList.add('open'));
+    const close=queryOne('#moreCloseBtn');
+    if(close)close.focus({preventScroll:true});
+  }
+
+  function closeMore(){
+    const menu=queryOne('#moreMenu');
+    if(!menu||menu.hidden)return;
+    menu.classList.remove('open');
+    menu.setAttribute('aria-hidden','true');
+    setTimeout(()=>{menu.hidden=true;},180);
+    if(morePreviousFocus&&typeof morePreviousFocus.focus==='function')morePreviousFocus.focus({preventScroll:true});
+  }
+
+  function moreAction(action){
+    if(action==='reset')resetCpu();
+    if(action==='burst')stepBatch(256);
+    if(action==='clear'){bus.clearTrace();ui.dirty=true;}
+    if(action==='pace')cyclePace();
+    syncMoreSheet();
+    if(action!=='pace')closeMore();
+  }
+
+  function bind(){
+    queryAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    queryOne('#powerBtn').addEventListener('click',togglePower);
+    queryOne('#runPauseBtn').addEventListener('click',toggleRun);
+    queryOne('#stepBtn').addEventListener('click',stepOne);
+    queryOne('#paceBtn').addEventListener('click',cyclePace);
+    queryOne('#resetBtn').addEventListener('click',resetCpu);
+    queryOne('#moreBtn').addEventListener('click',openMore);
+    queryOne('#moreCloseBtn').addEventListener('click',closeMore);
+    queryOne('#moreBackdrop').addEventListener('click',closeMore);
+    queryAll('[data-more-action]').forEach(b=>b.addEventListener('click',()=>moreAction(b.dataset.moreAction)));
+    queryOne('#burstBtn').addEventListener('click',()=>stepBatch(256));
+    queryOne('#clearTraceBtn').addEventListener('click',()=>{bus.clearTrace();ui.dirty=true;});
+    queryOne('#traceToggleBtn').addEventListener('click',toggleTrace);
+    addEventListener('resize',()=>{ui.dirty=true;});
+    addEventListener('keydown',e=>{if(e.key==='Escape')closeMore();});
+  }
+
+  function selfTest(){
+    const tb=new Shino80Bus({romRanges:[[0x0000,0x1FFF]]}),tc=new Z80Core(tb),rom=buildSystemRom();
+    tb.load(rom.bytes,0);tb.clearWritableMemory(0xA5);tc.reset();tb.clearTrace();
+    tc.runInstructions(rom.meta.instructionsBeforeLoop);
+    const firstChar=tb.debugPeek(TEXT_VRAM_BASE),lastClear=tb.debugPeek(TEXT_VRAM_BASE+0x7FF);
+    const romByte=tb.debugPeek(0);tb.cpuWrite(0,0x00,{purpose:'SELFTEST_ROM_WRITE'});
+    return firstChar===0x53&&lastClear===0x00&&tc.state.pc===rom.labels.MONITOR_LOOP&&
+      tb.debugPeek(0)===romByte&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
+  }
+  function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
+
+  buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 2A.1 SELF TEST PASS':'SELF TEST FAIL';setView('display');powerOff();render();requestAnimationFrame(observerLoop);
+})();
+</script>
+</body>
+</html>

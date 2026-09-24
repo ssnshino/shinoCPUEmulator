@@ -1,6 +1,6 @@
 # tests
 
-CPU regression chain:
+CPU regression:
 - z80_core_v0.0.1.test.cjs
 - z80_phase1a_ld.test.cjs
 - z80_phase1b_inc_dec_flags.test.cjs
@@ -9,10 +9,11 @@ CPU regression chain:
 
 Machine regression:
 - shino80_phase2a_video_ipl.test.cjs
+- shino80_phase2a1_power_reset.test.cjs
 
-Current source/artifact QA:
-- v0.0.7_static.test.cjs
-- v0.0.7_artifact.test.cjs
-- browser_smoke_v0.0.7.py
+Current QA:
+- v0.0.8_static.test.cjs
+- v0.0.8_artifact.test.cjs
+- browser_smoke_v0.0.8.py
 
 Run `npm test`.
