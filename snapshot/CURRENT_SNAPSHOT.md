@@ -1,63 +1,40 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T20:18:00+09:00
+Last updated: 2026-09-24T20:35:00+09:00
 
-## Stack
+## Stacked development
 
-- main reviewed through PR #5
-- PR #6 PHASE 1A: Human smartphone PASS
-- PR #7 PHASE 1B: stacked on #6
-- PHASE 1C branch: stacked on PHASE 1B
+- PR #6 PHASE 1A — LD / Human smartphone PASS
+- PR #7 PHASE 1B — INC/DEC + Flags
+- PR #8 PHASE 1C — Control Flow / Human smartphone PASS
+- PHASE 1D stacked on PHASE 1C
 
 ## Active candidate
 
-- Branch: `feature/z80-phase1c-control-flow-20260924`
-- Candidate: **SHINO Z80 CORE v0.0.5 — PHASE 1C CONTROL FLOW**
-- Artifact: `deploy/one_page_shino80_v0.0.5_z80_phase1c.html`
-- Exact semantic QA: PASS
-- Artifact integrity: PASS
+- Branch: `feature/z80-phase1d-call-ret-stack-20260924`
+- Candidate: **SHINO Z80 CORE v0.0.6 — PHASE 1D**
+- Scope: CALL / RET + stack
+- Artifact: `deploy/one_page_shino80_v0.0.6_z80_phase1d.html`
 - Human real-device review: PENDING
 
-## Executable BASE encodings
+## Executable BASE count
 
-- NOP: 1
-- LD: 81
-- INC/DEC: 16
-- PHASE 1C control flow: 7
-- total: **105**
+**107**
 
-## New instructions
+## New visible behavior
 
-- JP nn
-- JR e
-- JR NZ,e
-- JR Z,e
-- JR NC,e
-- JR C,e
-- DJNZ e
-
-## Visible teaching effect
-
-The PC now revisits addresses:
+Nested subroutines:
 
 ```text
-0004 -> 0005 -> 0004 -> 0005 -> 0004 ...
+PC 0005 -> 0010 -> 0011 -> 0020 -> 0021 -> 0014 -> 0015 -> 0008
+SP F000 -> EFFE -> EFFC -> EFFE -> F000
 ```
 
-Conditional branches expose:
-- TAKEN -> target
-- NOT TAKEN -> fall-through
+Stack bytes remain observable in RAM after return.
 
-## Timing
+## Video status
 
-- JP nn 10T
-- JR e 12T
-- JR cc 12T taken / 7T not
-- DJNZ 13T taken / 8T not
+No video device or BIOS exists yet.
 
-## Next gate
-
-Human smartphone review of v0.0.5.
-
-After acceptance, CALL/RET + stack is the most visually interesting next control-flow step.
+Writes to future text VRAM are currently ordinary memory writes and produce no display output.

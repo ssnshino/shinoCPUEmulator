@@ -21,10 +21,10 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Current development source: `src/`
 - Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
 - Source/deploy split: **MERGED via PR #5**
-- Active stacked CPU candidate: **Z80 PHASE 1C / v0.0.5 — CONTROL FLOW**
-- Candidate branch: `feature/z80-phase1c-control-flow-20260924`
-- Candidate artifact: `deploy/one_page_shino80_v0.0.5_z80_phase1c.html`
-- Current executable BASE encodings: **105** (81 LD + 16 INC/DEC + 7 control-flow + NOP)
+- Active stacked CPU candidate: **Z80 PHASE 1D / v0.0.6 — CALL / RET + STACK**
+- Candidate branch: `feature/z80-phase1d-call-ret-stack-20260924`
+- Candidate artifact: `deploy/one_page_shino80_v0.0.6_z80_phase1d.html`
+- Current executable BASE encodings: **107**
 - CPU PR #2 remains open as historical first-heartbeat candidate
 
 PHASE 0 research remains active alongside PHASE 1 implementation. The reviewed UI shell now visualizes non-linear PC movement and taken/not-taken branch decisions in v0.0.5.

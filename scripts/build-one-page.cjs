@@ -20,6 +20,6 @@ let html=read(source.template)
   .replace('/*__CPU__*/',read(source.cpu))
   .replace('/*__APP__*/',read(source.app));
 const dir=path.join(root,'deploy');fs.mkdirSync(dir,{recursive:true});
-const out=path.join(dir,'one_page_shino80_v0.0.5_z80_phase1c.html');
+const out=path.join(dir,'one_page_shino80_v0.0.6_z80_phase1d.html');
 fs.writeFileSync(out,html);
 console.log(`built ${out} (${Buffer.byteLength(html)} bytes)`);

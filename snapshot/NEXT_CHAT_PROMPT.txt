@@ -1,29 +1,28 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
-Current stacked candidate:
-SHINO Z80 CORE v0.0.5 PHASE 1C CONTROL FLOW
+Current candidate:
+SHINO Z80 CORE v0.0.6 PHASE 1D CALL / RET + STACK
 
 Branch:
-feature/z80-phase1c-control-flow-20260924
+feature/z80-phase1d-call-ret-stack-20260924
 
 Artifact:
-deploy/one_page_shino80_v0.0.5_z80_phase1c.html
+deploy/one_page_shino80_v0.0.6_z80_phase1d.html
 
 Implemented:
-- JP nn
-- JR e
-- JR NZ/Z/NC/C,e
-- DJNZ e
-- branchTaken / branchTarget / fallThrough metadata
-- dynamic branch timing
-- 105 executable BASE encodings
+- CALL nn
+- RET
+- pushWord/popWord
+- STACK_WRITE/STACK_READ bus trace
+- nested CALL teaching program
+- 107 executable BASE encodings
 
-Teaching PC loop:
-0004 -> 0005 -> 0004 -> 0005 -> ...
+Expected visible SP:
+F000 -> EFFE -> EFFC -> EFFE -> F000
 
-Read PHASE 1C PLAN/SPEC/RESEARCH/QA first.
+Video/BIOS are still not implemented.
+Future text-VRAM writes do not yet render.
 
-Human smartphone review pending.
-
-After acceptance, strong next candidate:
-CALL / RET + stack so PC, SP and RAM move together.
+After Human acceptance, likely next options:
+- PUSH / POP / RST
+- or begin minimal VIDEO DEVICE + original monitor/BIOS path

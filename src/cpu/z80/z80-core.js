@@ -64,6 +64,23 @@
     getHL(){return ((this.state.h<<8)|this.state.l)&0xFFFF;}
     getBC(){return ((this.state.b<<8)|this.state.c)&0xFFFF;}
     getDE(){return ((this.state.d<<8)|this.state.e)&0xFFFF;}
+    pushWord(value,ctx,firstWriteOffset=11){
+      const s=this.state,v=Number(value)&0xFFFF;
+      const hi=(v>>8)&0xFF,lo=v&0xFF;
+      s.sp=(s.sp-1)&0xFFFF;
+      this.writeData(s.sp,hi,ctx,firstWriteOffset,'STACK_WRITE');
+      s.sp=(s.sp-1)&0xFFFF;
+      this.writeData(s.sp,lo,ctx,firstWriteOffset+3,'STACK_WRITE');
+      return s.sp;
+    }
+    popWord(ctx,firstReadOffset=4){
+      const s=this.state;
+      const lo=this.readData(s.sp,ctx,firstReadOffset,'STACK_READ');
+      s.sp=(s.sp+1)&0xFFFF;
+      const hi=this.readData(s.sp,ctx,firstReadOffset+3,'STACK_READ');
+      s.sp=(s.sp+1)&0xFFFF;
+      return lo|(hi<<8);
+    }
     conditionTrue(condition){
       const f=this.state.f&0xFF;
       switch(condition){
@@ -82,6 +99,26 @@
       const s=this.state;
       switch(desc.kind){
         case 'NOP':return desc.mnemonic;
+        case 'CALL_NN':{
+          const target=this.fetchOperandWord(ctx,4),returnAddress=s.pc,stackBefore=s.sp;
+          this.pushWord(returnAddress,ctx,11);
+          const stackAfter=s.sp;
+          s.pc=target;
+          return {
+            mnemonic:`CALL ${hex(target,4)}h`,tStates:desc.tStates,
+            branchTaken:true,branchTarget:target,fallThrough:returnAddress,condition:'CALL',
+            stackBefore,stackAfter,returnAddress
+          };
+        }
+        case 'RET':{
+          const fallThrough=s.pc,stackBefore=s.sp,returnAddress=this.popWord(ctx,4),stackAfter=s.sp;
+          s.pc=returnAddress;
+          return {
+            mnemonic:'RET',tStates:desc.tStates,
+            branchTaken:true,branchTarget:returnAddress,fallThrough,condition:'RET',
+            stackBefore,stackAfter,returnAddress
+          };
+        }
         case 'JP_NN':{
           const target=this.fetchOperandWord(ctx,4),fallThrough=s.pc;
           s.pc=target;
@@ -152,7 +189,10 @@
         branchTaken:detail.branchTaken??null,
         branchTarget:detail.branchTarget??null,
         fallThrough:detail.fallThrough??null,
-        condition:detail.condition??null
+        condition:detail.condition??null,
+        stackBefore:detail.stackBefore??null,
+        stackAfter:detail.stackAfter??null,
+        returnAddress:detail.returnAddress??null
       };
       return {...this.lastInstruction,bytes:[...this.lastInstruction.bytes]};
     }
