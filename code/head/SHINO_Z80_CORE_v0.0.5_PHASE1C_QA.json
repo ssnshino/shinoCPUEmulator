@@ -1,0 +1,36 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "component":"SHINO Z80 CORE",
+  "version":"v0.0.5",
+  "phase":"1C CONTROL FLOW",
+  "created":"2026-09-24T20:12:00+09:00",
+  "implemented_base_encodings":105,
+  "added_phase1c_encodings":7,
+  "tests":{
+    "jp_nn":"PASS",
+    "jr_positive":"PASS",
+    "jr_negative":"PASS",
+    "jr_16bit_wrap":"PASS",
+    "jr_nz_taken_not_taken":"PASS",
+    "jr_z_taken_not_taken":"PASS",
+    "jr_nc_taken_not_taken":"PASS",
+    "jr_c_taken_not_taken":"PASS",
+    "conditional_12t_7t":"PASS",
+    "djnz_taken_13t":"PASS",
+    "djnz_not_taken_8t":"PASS",
+    "djnz_flags_unchanged":"PASS",
+    "teaching_pc_loop_sequence":"PASS",
+    "artifact_inline_scripts":"PASS_5",
+    "artifact_html_terminator":"PASS",
+    "artifact_external_dependency":"PASS_NONE",
+    "artifact_prompt":"PASS_NONE"
+  },
+  "accuracy":{
+    "control_flow_semantics":"IMPLEMENTED_FOR_PHASE1C_SET",
+    "timing_totals":"DOCUMENTED_TOTALS_IMPLEMENTED",
+    "bus":"M_CYCLE_ABSTRACT",
+    "cycle_perfect":false
+  },
+  "human_review":"PENDING",
+  "result":"PASS_FOR_PHASE1C_CANDIDATE_REVIEW"
+}

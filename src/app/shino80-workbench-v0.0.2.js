@@ -6,19 +6,22 @@
   const cpu=new Z80Core(bus);
   bus.load(new Uint8Array(0x10000).fill(0x00));
   const teachingProgram=new Uint8Array([
-    0x3E,0x7F,      // LD A,7Fh
-    0x3C,           // INC A  -> 80h : S/H/PV
-    0x06,0xFF,      // LD B,FFh
-    0x04,           // INC B  -> 00h : Z/H
-    0x0E,0x80,      // LD C,80h
-    0x0D,           // DEC C  -> 7Fh : H/PV/N
-    0x16,0x00,      // LD D,00h
-    0x15,           // DEC D  -> FFh : S/H/N
-    0x21,0x80,0x00, // LD HL,0080h
-    0x36,0x7F,      // LD (HL),7Fh
-    0x34,           // INC (HL) -> 80h
-    0x35,           // DEC (HL) -> 7Fh
-    0x00            // NOP
+    0x06,0x04,      // 0000: LD B,04h
+    0x3E,0x7E,      // 0002: LD A,7Eh
+    0x3C,           // 0004: LOOP: INC A
+    0x10,0xFD,      // 0005: DJNZ -3 -> 0004h (taken three times)
+    0x0E,0xFF,      // 0007: LD C,FFh
+    0x0C,           // 0009: INC C -> 00h, Z=1
+    0x20,0x02,      // 000A: JR NZ,+2 (NOT TAKEN)
+    0x28,0x02,      // 000C: JR Z,+2  (TAKEN -> 0010h)
+    0x16,0x11,      // 000E: LD D,11h (skipped)
+    0x16,0x22,      // 0010: LD D,22h
+    0x18,0x02,      // 0012: JR +2 -> 0016h
+    0x1E,0x33,      // 0014: LD E,33h (skipped)
+    0x1E,0x44,      // 0016: LD E,44h
+    0xC3,0x1C,0x00,// 0018: JP 001Ch
+    0x00,           // 001B: NOP (skipped)
+    0x00            // 001C: NOP (target)
   ]);
   bus.load(teachingProgram,0x0000);
   cpu.reset();
@@ -88,7 +91,7 @@
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ok"></span>CPU HEARTBEAT</div><div class="inspector-chip"><span class="dot info"></span>VIDEO RESERVED</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div></div><div class="inspector-section inspector-note">DISPLAY is the future primary human interface to SHINO-80. This placeholder is intentionally separate from CPU/Bus observation tools.</div>`;
-    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE / LD / INC / DEC ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1B adds the first real Flags Engine. Step through INC/DEC and watch S/Z/H/P/V/N change while C remains untouched.</div>`;}
+    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE / LD / INC / DEC / FLOW ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1C makes PC non-linear. Branches expose TAKEN / NOT TAKEN decisions and targets while FLAGS remain the decision inputs.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0];html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${d.state}</b></div></div><div class="inspector-section inspector-note">The Device Dock reserves information architecture only. No FDD/UART/Printer behavior is implemented yet.</div>`;}
@@ -163,12 +166,12 @@
 
   function selfTest(){
     const tb=new Shino80Bus(),tc=new Z80Core(tb);
-    tb.load([0x3E,0x7F,0x3C]);tc.reset();tb.clearTrace();tc.state.f=0x01;
-    tc.step();tc.step();
-    const f=flagState(tc.state.f);
-    return tc.state.a===0x80&&f.S&&f.H&&f.PV&&!f.Z&&!f.N&&f.C&&tc.state.tStates===11;
+    tb.load([0x06,0x02,0x10,0xFE]);tc.reset();tb.clearTrace();
+    tc.step();
+    const first=tc.step();
+    return tc.state.b===1&&tc.state.pc===2&&first.branchTaken===true&&first.branchTarget===2&&tc.state.tStates===20;
   }
   function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
 
-  buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 1B SELF TEST PASS':'SELF TEST FAIL';setView('display');render();requestAnimationFrame(observerLoop);
+  buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 1C SELF TEST PASS':'SELF TEST FAIL';setView('display');render();requestAnimationFrame(observerLoop);
 })();

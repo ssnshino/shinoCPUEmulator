@@ -21,13 +21,13 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Current development source: `src/`
 - Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
 - Source/deploy split: **MERGED via PR #5**
-- Active stacked CPU candidate: **Z80 PHASE 1B / v0.0.4 — INC / DEC + FLAGS ENGINE**
-- Candidate branch: `feature/z80-phase1b-inc-dec-flags-20260924`
-- Candidate artifact: `deploy/one_page_shino80_v0.0.4_z80_phase1b.html`
-- Current executable BASE encodings: **98** (81 LD + 16 INC/DEC + NOP)
+- Active stacked CPU candidate: **Z80 PHASE 1C / v0.0.5 — CONTROL FLOW**
+- Candidate branch: `feature/z80-phase1c-control-flow-20260924`
+- Candidate artifact: `deploy/one_page_shino80_v0.0.5_z80_phase1c.html`
+- Current executable BASE encodings: **105** (81 LD + 16 INC/DEC + 7 control-flow + NOP)
 - CPU PR #2 remains open as historical first-heartbeat candidate
 
-PHASE 0 research remains active alongside PHASE 1 implementation. The reviewed v0.0.2 UI shell is preserved while v0.0.4 gives the first real FLAGS semantics to INC/DEC.
+PHASE 0 research remains active alongside PHASE 1 implementation. The reviewed UI shell now visualizes non-linear PC movement and taken/not-taken branch decisions in v0.0.5.
 
 ## UI core direction
 
@@ -222,3 +222,5 @@ VIRTUAL MICROCOMPUTER LAB
 - 2026-09-24T17:18:00+09:00 — ChatGPT — Z80 PHASE 1A candidateを追加。Decoder分離とLD命令群81 encodingを実装し、v0.0.3 teaching artifactを追加。
 
 - 2026-09-24T18:22:00+09:00 — ChatGPT — PHASE 1B candidateを追加。INC/DEC 16 encodingと初のFlags Engineを実装し、v0.0.4 teaching artifactを追加。
+
+- 2026-09-24T20:18:00+09:00 — ChatGPT — PHASE 1C candidateを追加。JP/JR/JR cc/DJNZとdynamic branch timingを実装し、PC/ADDRESSの非線形挙動を可視化。

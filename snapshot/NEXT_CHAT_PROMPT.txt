@@ -1,41 +1,29 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
-Repository: ssnshino/shinoCPUEmulator
+Current stacked candidate:
+SHINO Z80 CORE v0.0.5 PHASE 1C CONTROL FLOW
 
-Stacked branches:
-- PHASE 1A: feature/z80-phase1a-instruction-architecture-20260924
-- PHASE 1B: feature/z80-phase1b-inc-dec-flags-20260924
-
-Current candidate:
-SHINO Z80 CORE v0.0.4 PHASE 1B
+Branch:
+feature/z80-phase1c-control-flow-20260924
 
 Artifact:
-deploy/one_page_shino80_v0.0.4_z80_phase1b.html
+deploy/one_page_shino80_v0.0.5_z80_phase1c.html
 
-Read:
-1. README.md
-2. snapshot/CURRENT_SNAPSHOT.md
-3. plan/head/SHINO_Z80_CORE_PHASE1B_INC_DEC_FLAGS_PLAN.md
-4. docs/head/SHINO_Z80_CORE_v0.0.4_PHASE1B_SPEC.md
-5. research/z80/Z80_PHASE1B_INC_DEC_FLAGS_RESEARCH_NOTE_v0.1.md
-6. research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.2.md
-7. code/head/SHINO_Z80_CORE_v0.0.4_PHASE1B_QA.json
+Implemented:
+- JP nn
+- JR e
+- JR NZ/Z/NC/C,e
+- DJNZ e
+- branchTaken / branchTarget / fallThrough metadata
+- dynamic branch timing
+- 105 executable BASE encodings
 
-PHASE 1B:
-- z80-flags.js added
-- INC/DEC r and (HL)
-- 98 executable BASE encodings total
-- documented S/Z/H/PV/N implemented
-- C preserved
-- Y/X preserved as temporary policy
-- INC/DEC (HL) = 11T
-- bus remains M_CYCLE_ABSTRACT
+Teaching PC loop:
+0004 -> 0005 -> 0004 -> 0005 -> ...
 
-Human should STEP through:
-LD A,7Fh -> INC A
-LD B,FFh -> INC B
-LD C,80h -> DEC C
-LD D,00h -> DEC D
+Read PHASE 1C PLAN/SPEC/RESEARCH/QA first.
 
-Next after acceptance:
-choose between general 8-bit ALU or control flow.
+Human smartphone review pending.
+
+After acceptance, strong next candidate:
+CALL / RET + stack so PC, SP and RAM move together.

@@ -12,8 +12,10 @@
   if(!flagsApi||!flagsApi.inc8||!flagsApi.dec8)throw new Error('SHINO Z80 CORE: flags API missing');
 
   const {decodeBase,REG8_KEYS}=decoderApi;
-  const {FLAG_BITS,flagState,inc8,dec8}=flagsApi;
+  const {FLAG_BITS,FLAG_MASK,flagState,inc8,dec8}=flagsApi;
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
+  const signed8=value=>{const v=Number(value)&0xFF;return v<0x80?v:v-0x100;};
+  const signedText=value=>{const n=signed8(value);return n>=0?`+${n}`:`${n}`;};
 
   function coldState(){
     return {
@@ -62,10 +64,47 @@
     getHL(){return ((this.state.h<<8)|this.state.l)&0xFFFF;}
     getBC(){return ((this.state.b<<8)|this.state.c)&0xFFFF;}
     getDE(){return ((this.state.d<<8)|this.state.e)&0xFFFF;}
+    conditionTrue(condition){
+      const f=this.state.f&0xFF;
+      switch(condition){
+        case 'NZ':return !(f&FLAG_MASK.Z);
+        case 'Z':return !!(f&FLAG_MASK.Z);
+        case 'NC':return !(f&FLAG_MASK.C);
+        case 'C':return !!(f&FLAG_MASK.C);
+        default:throw new Error(`UNKNOWN CONDITION ${condition}`);
+      }
+    }
+    relativeTarget(displacement){return (this.state.pc+signed8(displacement))&0xFFFF;}
+    flowResult(mnemonic,tStates,branchTaken,branchTarget,fallThrough,condition=null){
+      return {mnemonic,tStates,branchTaken,branchTarget,fallThrough,condition};
+    }
     executeDescriptor(desc,ctx){
       const s=this.state;
       switch(desc.kind){
         case 'NOP':return desc.mnemonic;
+        case 'JP_NN':{
+          const target=this.fetchOperandWord(ctx,4),fallThrough=s.pc;
+          s.pc=target;
+          return this.flowResult(`JP ${hex(target,4)}h`,desc.tStates,true,target,fallThrough,'ALWAYS');
+        }
+        case 'JR_E':{
+          const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
+          s.pc=target;
+          return this.flowResult(`JR ${signedText(e)}`,desc.tStates,true,target,fallThrough,'ALWAYS');
+        }
+        case 'JR_CC_E':{
+          const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
+          const taken=this.conditionTrue(desc.condition);
+          if(taken)s.pc=target;
+          return this.flowResult(`JR ${desc.condition},${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,desc.condition);
+        }
+        case 'DJNZ_E':{
+          const e=this.fetchOperandByte(ctx,5),fallThrough=s.pc,target=this.relativeTarget(e);
+          s.b=(s.b-1)&0xFF;
+          const taken=s.b!==0;
+          if(taken)s.pc=target;
+          return this.flowResult(`DJNZ ${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,'B!=0');
+        }
         case 'INC_R':{
           const before=this.getReg8(desc.targetCode),next=inc8(s.f,before);
           this.setReg8(desc.targetCode,next.result);s.f=next.f;return desc.mnemonic;
@@ -102,9 +141,19 @@
       const s=this.state;if(s.halted)return {halted:true,tStates:0,mnemonic:'HALT'};
       const startTState=s.tStates,{address,opcode}=this.fetchOpcode(),desc=decodeBase(opcode);
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
-      const ctx={address,opcode,startTState,bytes:[opcode]},mnemonic=this.executeDescriptor(desc,ctx);
-      s.tStates+=desc.tStates;s.instructions+=1;
-      this.lastInstruction={address,opcode,bytes:[...ctx.bytes],mnemonic,family:desc.family,tStates:desc.tStates,startTState,endTState:s.tStates};
+      const ctx={address,opcode,startTState,bytes:[opcode]},execution=this.executeDescriptor(desc,ctx);
+      const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
+      const actualTStates=detail.tStates??desc.tStates;
+      if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
+      s.tStates+=actualTStates;s.instructions+=1;
+      this.lastInstruction={
+        address,opcode,bytes:[...ctx.bytes],mnemonic:detail.mnemonic,family:desc.family,
+        tStates:actualTStates,startTState,endTState:s.tStates,
+        branchTaken:detail.branchTaken??null,
+        branchTarget:detail.branchTarget??null,
+        fallThrough:detail.fallThrough??null,
+        condition:detail.condition??null
+      };
       return {...this.lastInstruction,bytes:[...this.lastInstruction.bytes]};
     }
     runInstructions(count=1){const n=Math.max(0,Math.floor(Number(count)||0));let result=null;for(let i=0;i<n;i++)result=this.step();return result;}

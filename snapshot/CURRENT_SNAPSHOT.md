@@ -1,78 +1,63 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T18:22:00+09:00
+Last updated: 2026-09-24T20:18:00+09:00
 
-## Reviewed / stacked baseline
+## Stack
 
 - main reviewed through PR #5
-- PHASE 1A branch / PR #6: Human smartphone PASS
-- PHASE 1B branch is stacked on PHASE 1A
-- UI baseline remains SHINO-80 v0.0.2
+- PR #6 PHASE 1A: Human smartphone PASS
+- PR #7 PHASE 1B: stacked on #6
+- PHASE 1C branch: stacked on PHASE 1B
 
-## Active stacked candidate
+## Active candidate
 
-- Branch: `feature/z80-phase1b-inc-dec-flags-20260924`
-- Base branch: `feature/z80-phase1a-instruction-architecture-20260924`
-- Candidate: **SHINO Z80 CORE v0.0.4 — PHASE 1B**
-- Scope: INC / DEC + first real FLAGS ENGINE
-- Artifact: `deploy/one_page_shino80_v0.0.4_z80_phase1b.html`
-- Exact blob semantic QA: PASS
-- Deploy inline syntax: PASS
+- Branch: `feature/z80-phase1c-control-flow-20260924`
+- Candidate: **SHINO Z80 CORE v0.0.5 — PHASE 1C CONTROL FLOW**
+- Artifact: `deploy/one_page_shino80_v0.0.5_z80_phase1c.html`
+- Exact semantic QA: PASS
+- Artifact integrity: PASS
 - Human real-device review: PENDING
 
-## New source boundary
-
-```text
-src/cpu/z80/
-├ z80-core.js
-├ z80-decoder.js
-└ z80-flags.js
-```
-
-This split is implementation-driven, not speculative.
-
-## Current executable BASE encodings
+## Executable BASE encodings
 
 - NOP: 1
 - LD: 81
-- INC/DEC 8-bit + (HL): 16
-- total: **98**
+- INC/DEC: 16
+- PHASE 1C control flow: 7
+- total: **105**
 
-## PHASE 1B flags semantics
+## New instructions
 
-INC:
-- S/Z/H/PV updated
-- N reset
-- C preserved
+- JP nn
+- JR e
+- JR NZ,e
+- JR Z,e
+- JR NC,e
+- JR C,e
+- DJNZ e
 
-DEC:
-- S/Z/H/PV updated
-- N set
-- C preserved
+## Visible teaching effect
 
-Undocumented Y/X:
-- preserved in PHASE 1B
-- not claimed hardware-accurate yet
-
-## Key teaching transitions
+The PC now revisits addresses:
 
 ```text
-7F -> 80  INC : S H PV
-FF -> 00  INC : Z H
-80 -> 7F  DEC : H PV N
-00 -> FF  DEC : S H N
+0004 -> 0005 -> 0004 -> 0005 -> 0004 ...
 ```
 
-## Memory form
+Conditional branches expose:
+- TAKEN -> target
+- NOT TAKEN -> fall-through
 
-INC/DEC (HL):
-- 11 T-states
-- current trace: FETCH / REFRESH / READ / WRITE
-- read at +4, write at +8
+## Timing
+
+- JP nn 10T
+- JR e 12T
+- JR cc 12T taken / 7T not
+- DJNZ 13T taken / 8T not
 
 ## Next gate
 
-Human steps through v0.0.4 and confirms the FLAGS lamps behave visibly and intuitively.
+Human smartphone review of v0.0.5.
 
-Do not expand into general ALU before this human gate.
+After acceptance, CALL/RET + stack is the most visually interesting next control-flow step.

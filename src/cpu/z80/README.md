@@ -1,8 +1,6 @@
 # src/cpu/z80
 
-Z80 CPU implementation.
-
-## Current stacked candidate: PHASE 1B
+Current stacked candidate: **PHASE 1C CONTROL FLOW**
 
 ```text
 z80/
@@ -11,39 +9,23 @@ z80/
 └ z80-flags.js
 ```
 
-### z80-decoder.js
+Current responsibilities:
 
-Recognizes current BASE opcode subset:
-- NOP
-- PHASE 1A LD
-- PHASE 1B INC/DEC
+- decoder: BASE opcode recognition
+- flags: documented INC/DEC flag behavior
+- core: state, fetch, execution, dynamic branch timing, bus access
 
-### z80-flags.js
-
-First real flags subsystem.
-
-Current responsibility:
-- documented INC/DEC flags
-- carry preservation
-- temporary PHASE 1B policy to preserve undocumented Y/X
-
-### z80-core.js
-
-Owns:
-- architectural state
-- fetch / operand access
-- execution
-- timing totals
-- bus access
+PHASE 1C adds:
+- JP nn
+- JR e
+- JR NZ/Z/NC/C,e
+- DJNZ e
+- branch outcome metadata
 
 CPU code remains independent from DOM/UI.
 
-## Next natural pressure
+Next natural implementation pressure is likely:
+- CALL/RET + stack
+- or general ALU
 
-Likely next files/areas:
-
-- ALU helpers when ADD/SUB/etc arrive
-- control-flow helpers when JP/JR/CALL/RET arrive
-- prefix modules when CB/ED/DD/FD arrive
-
-Do not split further until implementation pressure justifies it.
+Do not split a new module until one of those scopes creates a real boundary.
