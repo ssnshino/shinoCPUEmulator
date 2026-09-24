@@ -1,0 +1,37 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version":"v0.0.9",
+  "phase":"1E BASE COMPLETE",
+  "base_slots_decoded":256,
+  "base_nonprefix_executable":252,
+  "prefix_entry_points_recognized":4,
+  "tests":{
+    "base_decode_256_of_256":"PASS",
+    "base_nonprefix_execute_252_of_252":"PASS",
+    "general_alu":"PASS",
+    "daa":"PASS",
+    "16bit_alu":"PASS",
+    "conditional_jp_all_8":"PASS",
+    "conditional_call_all_8":"PASS",
+    "conditional_ret_all_8":"PASS",
+    "rst_all_8":"PASS",
+    "push_pop_all_pairs":"PASS",
+    "exchange_family":"PASS",
+    "io_immediate":"PASS",
+    "halt_functional_cycle":"PASS",
+    "di_ei_functional_state":"PASS",
+    "singlesteptests_representative_cases":23000,
+    "singlesteptests_representative_failures":0
+  },
+  "accuracy":{
+    "documented_base_functional":"COMPLETE",
+    "documented_base_flags":"IMPLEMENTED",
+    "documented_total_tstates":"IMPLEMENTED",
+    "undocumented_xy":"DEFERRED",
+    "wz_p_q_internal":"DEFERRED",
+    "prefix_execution":"DEFERRED",
+    "interrupt_acceptance":"DEFERRED",
+    "bus_precision":"M_CYCLE_ABSTRACT"
+  },
+  "result":"PASS_FOR_PHASE1E_REVIEW"
+}

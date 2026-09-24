@@ -1,6 +1,6 @@
 {
   "name": "shino-cpu-emulator",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "description": "ONE-PAGE Z80 COMPUTER / SHINO-80",
   "scripts": {
@@ -8,12 +8,13 @@
     "test:nop": "node tests/z80_core_v0.0.1.test.cjs",
     "test:phase1a": "node tests/z80_phase1a_ld.test.cjs",
     "test:phase1b": "node tests/z80_phase1b_inc_dec_flags.test.cjs",
-    "test:source": "node tests/v0.0.8_static.test.cjs",
-    "test:artifact": "node tests/v0.0.8_artifact.test.cjs",
-    "test": "npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:phase1c && npm run test:phase1d && npm run test:phase2a && npm run test:phase2a1 && npm run test:source && npm run build && npm run test:artifact",
+    "test:source": "node tests/v0.0.9_static.test.cjs",
+    "test:artifact": "node tests/v0.0.9_artifact.test.cjs",
+    "test": "npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:phase1c && npm run test:phase1d && npm run test:phase1e && npm run test:phase2a && npm run test:phase2a1 && npm run test:source && npm run build && npm run test:artifact",
     "test:phase1c": "node tests/z80_phase1c_control_flow.test.cjs",
     "test:phase1d": "node tests/z80_phase1d_call_ret_stack.test.cjs",
     "test:phase2a": "node tests/shino80_phase2a_video_ipl.test.cjs",
-    "test:phase2a1": "node tests/shino80_phase2a1_power_reset.test.cjs"
+    "test:phase2a1": "node tests/shino80_phase2a1_power_reset.test.cjs",
+    "test:phase1e": "node tests/z80_phase1e_base_complete.test.cjs"
   }
 }

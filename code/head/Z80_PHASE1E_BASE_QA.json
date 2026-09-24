@@ -1,0 +1,30 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version": "v0.0.9",
+  "phase": "1E COMPLETE BASE OPCODES",
+  "base_decode_slots": 256,
+  "base_non_prefix_executable": 252,
+  "prefix_introducers_recognized": [
+    "CB",
+    "DD",
+    "ED",
+    "FD"
+  ],
+  "local_exhaustive_one_step": "PASS_252_OF_252",
+  "single_step_oracle": {
+    "source": "SingleStepTests/z80 v1",
+    "opcode_files_checked": 50,
+    "cases_per_opcode": 1000,
+    "cases_total": 50000,
+    "cases_passed": 50000,
+    "cases_failed": 0,
+    "comparison_scope": "documented architectural state + RAM + IO + total T-states + EI delay where applicable",
+    "excluded_for_later_accuracy": [
+      "Y/X",
+      "WZ",
+      "P/Q",
+      "pin-perfect cycle waveform"
+    ]
+  },
+  "status": "ORACLE_CHECKPOINT_02_PASS"
+}
