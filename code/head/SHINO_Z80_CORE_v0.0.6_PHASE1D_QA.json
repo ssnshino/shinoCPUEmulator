@@ -1,0 +1,26 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version":"v0.0.6",
+  "phase":"1D CALL / RET + STACK",
+  "created":"2026-09-24T20:35:00+09:00",
+  "implemented_base_encodings":107,
+  "added_phase1d_encodings":2,
+  "tests":{
+    "call_target":"PASS",
+    "call_return_address_push":"PASS",
+    "call_high_then_low_write_order":"PASS",
+    "call_17t":"PASS",
+    "ret_pop_order":"PASS",
+    "ret_10t":"PASS",
+    "flags_unchanged":"PASS",
+    "stack_wrap":"PASS",
+    "nested_call_stack_path":"PASS",
+    "nested_call_final_state":"PASS",
+    "artifact_inline_script_parse":"PASS",
+    "artifact_html_end":"PASS",
+    "artifact_external_runtime_dependency":"PASS_NONE"
+  },
+  "bus_precision":"M_CYCLE_ABSTRACT",
+  "human_review":"PENDING",
+  "result":"PASS_FOR_PHASE1D_CANDIDATE_REVIEW"
+}

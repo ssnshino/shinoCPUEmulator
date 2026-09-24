@@ -1,6 +1,6 @@
 # src/cpu/z80
 
-Current stacked candidate: **PHASE 1C CONTROL FLOW**
+Current stacked candidate: PHASE 1D
 
 ```text
 z80/
@@ -11,21 +11,12 @@ z80/
 
 Current responsibilities:
 
-- decoder: BASE opcode recognition
-- flags: documented INC/DEC flag behavior
-- core: state, fetch, execution, dynamic branch timing, bus access
+- decoder: BASE instruction recognition
+- flags: current documented INC/DEC flags
+- core: CPU state, memory/bus access, control flow and stack semantics
 
-PHASE 1C adds:
-- JP nn
-- JR e
-- JR NZ/Z/NC/C,e
-- DJNZ e
-- branch outcome metadata
+PHASE 1D adds internal `pushWord()` / `popWord()` because CALL/RET now require a real stack.
 
-CPU code remains independent from DOM/UI.
+These helpers use normal bus memory traffic and are intended to support later PUSH/POP, RST and interrupt work.
 
-Next natural implementation pressure is likely:
-- CALL/RET + stack
-- or general ALU
-
-Do not split a new module until one of those scopes creates a real boundary.
+Do not split into a separate stack module unless future implementation pressure justifies it.

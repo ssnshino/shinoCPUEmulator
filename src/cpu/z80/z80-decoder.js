@@ -14,6 +14,8 @@
 
     switch(op){
       case 0xC3:return {kind:'JP_NN',family:'CONTROL_FLOW',mnemonic:'JP nn',length:3,tStates:10};
+      case 0xCD:return {kind:'CALL_NN',family:'STACK_FLOW',mnemonic:'CALL nn',length:3,tStates:17};
+      case 0xC9:return {kind:'RET',family:'STACK_FLOW',mnemonic:'RET',length:1,tStates:10};
       case 0x18:return {kind:'JR_E',family:'CONTROL_FLOW',mnemonic:'JR e',length:2,tStates:12};
       case 0x20:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'NZ',mnemonic:'JR NZ,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
       case 0x28:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'Z',mnemonic:'JR Z,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
