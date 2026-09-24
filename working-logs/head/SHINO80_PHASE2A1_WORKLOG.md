@@ -29,3 +29,5 @@ Retained:
 - IPL VRAM clear
 - CG-ROM top/bottom blank scanlines
 - MONITOR_LOOP 009Ch
+
+Human correction: monitor frame/bezel stays rounded, but the actual raster viewport must have square corners. Updated DM-80 so the logical display area has border-radius 0 while the physical bezel retains its radius.
