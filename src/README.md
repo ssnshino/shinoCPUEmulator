@@ -1,26 +1,30 @@
 # src
 
-SHINO-80 implementation source.
+**Development source of truth for SHINO-80.**
 
-## Current candidate: v0.0.2 UI FOUNDATION
+The standalone one-page HTML is now a build artifact under `deploy/`; it is not the primary editing surface.
+
+## Current source
 
 ```text
 src/
+├ app/
+│  ├ shino80-workbench-v0.0.2.template.html
+│  └ shino80-workbench-v0.0.2.js
 ├ cpu/
 │  └ z80/
 │     └ z80-core.js
 ├ machine/
 │  └ shino80/
 │     └ shino80-bus.js
-├ app/
-│  ├ shino80-workbench-v0.0.2.template.html
-│  └ shino80-workbench-v0.0.2.js
 └ ui/
    └ shino80-workbench-v0.0.2.css
 ```
 
-The CPU implementation remains intentionally tiny: documented RESET subset + opcode fetch + `00h NOP` + PC/R/T-state accounting + abstract M1/refresh trace.
+Future implementation domains are documented in:
 
-The v0.0.2 change is primarily the **Modern Shell / Retro Machine** adaptive workbench.
+`docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md`
 
-Do not add BIOS/FDD/UART/Printer behavior merely to populate UI placeholders.
+Do not create speculative abstractions merely to populate planned folders.
+
+As CPU code grows, split by responsibility when a boundary becomes real: decoder, ALU/flags, prefix handling, timing, interrupts, etc.

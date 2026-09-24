@@ -1,48 +1,39 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T16:42:00+09:00
+Updated: 2026-09-24T16:50:00+09:00
 
-## Candidate
+## Task
 
-SHINO-80 v0.0.2 UI FOUNDATION / PR #4
+Prepare SHINO-80 for substantial code growth by separating modular development source from the standalone one-page distribution artifact.
 
-## Automated result
+## Result
 
-PASS:
+Candidate repository model:
 
-- Node CPU regression
-- source syntax
-- one-page build
-- inline JS
-- safe-area / reduced-motion
-- exact Chromium adaptive smoke
-- Desktop / Tablet / Phone portrait / Phone landscape
-- state preservation
-- zero page errors
+```text
+src/      -> edit here
+scripts/  -> build here
+tests/    -> verify here
+deploy/   -> distribute from here
+```
 
-## Human real-device result
+The current reviewed v0.0.2 standalone HTML content is preserved unchanged, but its canonical path moves from repository root to:
 
-**PASS**
+`deploy/one_page_shino80_v0.0.2_ui_foundation.html`
 
-Human tested the standalone HTML on smartphone and supplied a screen recording.
+## Build
 
-Confirmed in recording:
+```bash
+npm run build
+```
 
-- Edge external-file standalone execution
-- DISPLAY view
-- CPU Debug Lab
-- RUN / PAUSE
-- active CPU/LED visualization
+now writes to `deploy/`.
 
-Human verdict:
+## Runtime
 
-> 大満足 / 非の打ち所が無い
+No CPU / bus / UI runtime behavior changed.
 
-## Project consequence
+## Next
 
-The UI shell is no longer the primary unknown.
-
-Next project risk and engineering focus move to **internal Z80 correctness and completeness**.
-
-PR #4 remains unmerged until explicit Human merge authorization.
+After Human accepts this repository layout, begin Z80 Instruction Architecture work in modular `src/cpu/z80/`.

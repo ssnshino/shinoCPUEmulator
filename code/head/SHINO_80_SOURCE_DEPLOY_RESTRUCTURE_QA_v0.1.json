@@ -1,0 +1,19 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "topic":"source-deploy-layout",
+  "version":"v0.1",
+  "created":"2026-09-24T16:50:00+09:00",
+  "runtimeBehaviorChanged":false,
+  "checks":{
+    "src_is_source_of_truth":"PASS",
+    "deploy_directory_defined":"PASS",
+    "build_outputs_to_deploy":"PASS",
+    "artifact_test_targets_deploy":"PASS",
+    "browser_smoke_targets_deploy":"PASS",
+    "root_artifact_removed":"PASS",
+    "deploy_artifact_same_blob_as_previous_reviewed_artifact":"PASS",
+    "one_page_distribution_preserved":"PASS",
+    "no_new_external_dependency":"PASS"
+  },
+  "result":"PASS_FOR_REPOSITORY_LAYOUT_REVIEW"
+}
