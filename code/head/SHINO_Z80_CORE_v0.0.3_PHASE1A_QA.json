@@ -1,0 +1,42 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "component": "SHINO Z80 CORE",
+  "version": "v0.0.3",
+  "phase": "1A Instruction Architecture / LD",
+  "created": "2026-09-24T16:58:00+09:00",
+  "implemented_base_encodings": 82,
+  "implemented_ld_encodings": 81,
+  "tests": {
+    "nop_regression": "PASS",
+    "ld_r_n_all_7": "PASS",
+    "ld_r_r_register_matrix_49": "PASS",
+    "ld_dd_nn_all_4": "PASS",
+    "ld_hl_memory_forms": "PASS",
+    "bc_de_indirect": "PASS",
+    "absolute_nn_accumulator": "PASS",
+    "flags_unchanged": "PASS",
+    "r_opcode_fetch_only": "PASS",
+    "pc_tstate_totals": "PASS",
+    "unsupported_halt_fault": "PASS",
+    "source_syntax": "PASS",
+    "deploy_inline_script_parse": "PASS",
+    "deploy_external_runtime_dependency": "PASS_NONE",
+    "exact_github_blob_semantic_execution": "PASS",
+    "chromium_teaching_program_smoke": "PASS",
+    "mobile_more_sheet": "PASS",
+    "browser_prompt_removed": "PASS",
+    "more_sheet_reset": "PASS",
+    "more_sheet_pace": "PASS",
+    "human_mobile_more_sheet": "PASS",
+    "human_mobile_register_step_observation": "PASS"
+  },
+  "accuracy": {
+    "instruction_functional": "PHASE1A_PASS",
+    "flags": "PRESERVED_ONLY_NO_ALU_ENGINE",
+    "timing_totals": "PASS_FOR_IMPLEMENTED_LD_FORMS",
+    "bus": "M_CYCLE_ABSTRACT",
+    "cycle_perfect": false
+  },
+  "result": "PASS_FOR_PHASE1A_HUMAN_ACCEPTED",
+  "updated": "2026-09-24T18:03:00+09:00"
+}

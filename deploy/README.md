@@ -1,33 +1,18 @@
 # deploy
 
-Distribution/build output for SHINO-80.
+Generated standalone SHINO-80 distribution artifacts.
 
-## Rule
+Do not hand-edit these files.
 
-**Do not hand-edit generated HTML in this directory.**
-
-The development source of truth is under `src/`.
-
-Build:
+Build from `src/` with:
 
 ```bash
 npm run build
 ```
 
-Current output:
+Current artifacts:
 
-```text
-deploy/
-└── one_page_shino80_v0.0.2_ui_foundation.html
-```
+- `one_page_shino80_v0.0.2_ui_foundation.html` — accepted UI foundation baseline
+- `one_page_shino80_v0.0.3_z80_phase1a.html` — PHASE 1A instruction candidate
 
-This file is the standalone one-page artifact used for:
-
-- smartphone local execution
-- desktop browser review
-- release candidate distribution
-- manual QA
-
-The generated artifact may be committed because the one-page HTML itself is a project deliverable, but fixes must be made in `src/` and regenerated.
-
-Future releases may keep versioned standalone artifacts here. Do not turn `deploy/` into a second source tree.
+One-page remains the distribution promise; modular `src/` remains the development source of truth.

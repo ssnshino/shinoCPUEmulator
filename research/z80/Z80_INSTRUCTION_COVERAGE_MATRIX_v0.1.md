@@ -1,0 +1,49 @@
+# Z80 INSTRUCTION COVERAGE MATRIX v0.1
+
+Created: 2026-09-24T16:58:00+09:00
+
+Legend:
+- ✅ executable
+- ◐ decoded / reserved but not executable
+- ⬜ not yet implemented
+
+## Base table
+
+| Family | Status | Current coverage |
+| --- | --- | --- |
+| NOP | ✅ | 00h |
+| LD r,r' | ✅ | 49 register-only encodings |
+| LD r,(HL) | ✅ | 7 encodings |
+| LD (HL),r | ✅ | 7 encodings |
+| LD r,n | ✅ | 7 encodings |
+| LD (HL),n | ✅ | 36h |
+| LD dd,nn | ✅ | BC / DE / HL / SP |
+| LD A,(BC)/(DE) | ✅ | 0Ah / 1Ah |
+| LD (BC)/(DE),A | ✅ | 02h / 12h |
+| LD A,(nn) | ✅ | 3Ah |
+| LD (nn),A | ✅ | 32h |
+| HALT | ◐ | 76h recognized; execution intentionally pending |
+| INC / DEC | ⬜ | pending |
+| ALU | ⬜ | pending |
+| JP / JR / DJNZ | ⬜ | pending |
+| CALL / RET / RST | ⬜ | pending |
+| PUSH / POP / EX | ⬜ | pending |
+
+## Prefix families
+
+| Prefix | Status |
+| --- | --- |
+| CB | ⬜ |
+| ED | ⬜ |
+| DD | ⬜ |
+| FD | ⬜ |
+| DDCB | ⬜ |
+| FDCB | ⬜ |
+
+## Current executable count
+
+- LD opcode encodings: **81**
+- NOP: **1**
+- total executable base encodings: **82**
+
+This count refers to opcode encodings in the current implementation, not distinct English mnemonic names.
