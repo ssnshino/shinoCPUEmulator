@@ -1,0 +1,33 @@
+ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
+
+Repository: ssnshino/shinoCPUEmulator
+Default branch: main
+Current candidate branch: chore/repository-bootstrap-20260924
+Current phase: PHASE 0 — Research / Architecture
+Emulator implementation: NOT STARTED
+
+最初に読む:
+1. README.md
+2. AGENTS.md
+3. snapshot/CURRENT_SNAPSHOT.md
+4. snapshot/LAST_RUN.md
+5. plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md
+6. docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md
+7. docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md
+8. docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md
+9. research/z80/README.md
+
+重要:
+- PC-88/MSX等の既存PC互換機を作るのではない。
+- Z80を使った新しい架空PC SHINO-80を設計する。
+- CPU Coreは徐々に精度を上げる。
+- Debuggerは観測者。CPU accessとdebug peekを混ぜない。
+- Busは一級概念。
+- 将来CPU交換可能にするが、最初からGeneric CPU Frameworkへ過剰抽象化しない。
+- ONE-PAGE IMP/WebRTCはZ80へ直接見せず、UART→RS-232C→Virtual Modemの先へ隠す。
+- 既存ROM/市販ROMをRepositoryへ入れない。
+
+次の作業:
+PHASE 0 PLANに従ってZ80 official documentation、instruction set、flags、interrupts、bus signals、T-state/M-cycle、R register、HALT/EI behavior、test methodologyを調査し、Architecture Draftの候補を検証する。
+
+まだ本格CPUコードへ進まない。

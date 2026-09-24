@@ -1,0 +1,27 @@
+.DS_Store
+._*
+Thumbs.db
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Dependencies / generated local tooling
+node_modules/
+coverage/
+
+# Logs / temporary
+logs/
+tmp/
+*.log
+
+# Editor / OS local state
+.vscode/
+.idea/
+*.swp
+
+# Local-only research downloads.
+# Do not commit ROM dumps, proprietary firmware, or unreviewed third-party binaries.
+local/
+references/raw/
