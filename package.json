@@ -1,0 +1,12 @@
+{
+  "name": "shino-cpu-emulator",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ONE-PAGE Z80 COMPUTER / SHINO-80 research project",
+  "scripts": {
+    "build": "node scripts/build-one-page.cjs",
+    "test:cpu": "node tests/z80_core_v0.0.1.test.cjs",
+    "test:onepage": "node tests/one_page_v0.0.1_static.test.cjs",
+    "test": "npm run test:cpu && npm run build && npm run test:onepage"
+  }
+}

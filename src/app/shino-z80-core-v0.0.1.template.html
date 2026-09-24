@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SHINO Z80 CORE v0.0.1 — FIRST HEARTBEAT</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="topbar">
+    <div class="brand">
+      <h1>SHINO Z80 CORE / FIRST HEARTBEAT</h1>
+      <div class="sub">v0.0.1 · Z80 NOP TEST BENCH · TRANSPARENT CPU EXPERIMENT</div>
+    </div>
+    <div class="statusline">
+      MODEL CLOCK <b>4.000 MHz</b><br>
+      UI RUN is intentionally slowed for observation · <span id="runState">READY</span>
+    </div>
+    <div class="controls">
+      <button id="resetBtn" class="danger">RESET</button>
+      <button id="stepBtn">STEP</button>
+      <button id="runBtn" class="run">RUN VISUAL</button>
+      <button id="pauseBtn" class="pause">PAUSE</button>
+      <button id="burstBtn">BURST ×256</button>
+      <button id="clearBtn">CLEAR TRACE</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div style="display:grid;gap:12px;align-content:start">
+      <section class="card">
+        <div class="cardHead"><span>FRONT PANEL / SYSTEM BUS</span><span class="badge" id="selfTest">SELF TEST</span></div>
+        <div class="cardBody busPanel">
+          <div class="bitLabels"><span>15</span><span>14</span><span>13</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span></div>
+          <div class="busRow"><div class="busLabel">ADDRESS</div><div id="addrLeds" class="leds"></div><div id="addrHex" class="hex">0000</div></div>
+          <div class="busRow"><div class="busLabel">DATA</div><div id="dataLeds" class="leds"></div><div id="dataHex" class="hex">00</div></div>
+          <div class="signalGrid">
+            <div class="signal" data-signal="M1"><span class="led red"></span>M1</div>
+            <div class="signal" data-signal="MREQ"><span class="led red"></span>MREQ</div>
+            <div class="signal" data-signal="IORQ"><span class="led red"></span>IORQ</div>
+            <div class="signal" data-signal="RD"><span class="led red"></span>RD</div>
+            <div class="signal" data-signal="WR"><span class="led red"></span>WR</div>
+            <div class="signal" data-signal="RFSH"><span class="led blue"></span>RFSH</div>
+            <div class="signal" data-signal="HALT"><span class="led amber"></span>HALT</div>
+            <div class="signal" data-signal="WAIT"><span class="led amber"></span>WAIT</div>
+            <div class="signal" data-signal="INT"><span class="led amber"></span>INT</div>
+            <div class="signal" data-signal="NMI"><span class="led amber"></span>NMI</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardHead"><span>REGISTER BANK</span><span class="tiny">LED = bit state / hex = exact value</span></div>
+        <div class="cardBody"><div id="regGrid" class="regGrid"></div></div>
+      </section>
+
+      <section class="card">
+        <div class="cardHead"><span>FLAGS / INTERRUPT STATE</span><span class="tiny">Y/X are undocumented flag bits</span></div>
+        <div class="cardBody" style="display:grid;gap:10px">
+          <div class="flags">
+            <div class="flag" data-flag="S"><span class="led green"></span>S</div>
+            <div class="flag" data-flag="Z"><span class="led green"></span>Z</div>
+            <div class="flag undoc" data-flag="Y"><span class="led blue"></span>Y</div>
+            <div class="flag" data-flag="H"><span class="led green"></span>H</div>
+            <div class="flag undoc" data-flag="X"><span class="led blue"></span>X</div>
+            <div class="flag" data-flag="PV"><span class="led green"></span>P/V</div>
+            <div class="flag" data-flag="N"><span class="led green"></span>N</div>
+            <div class="flag" data-flag="C"><span class="led green"></span>C</div>
+          </div>
+          <div class="monoBox" style="display:flex;gap:18px;flex-wrap:wrap;font-size:10px"><span>IFF1 <b id="iff1">0</b></span><span>IFF2 <b id="iff2">0</b></span><span>IM <b id="im">0</b></span><span>T-STATES <b id="tstates">000000000</b></span><span>INSTRUCTIONS <b id="icount">0000000</b></span></div>
+        </div>
+      </section>
+    </div>
+
+    <div style="display:grid;gap:12px;align-content:start">
+      <section class="card">
+        <div class="cardHead"><span>CURRENT INSTRUCTION</span><span class="badge">LEVEL 1 HEARTBEAT</span></div>
+        <div class="cardBody instruction"><div id="instPc" class="pc">0000</div><div><div id="instMnemonic" class="mn">RESET</div><div class="tiny">OPCODE <span id="instOpcode">--</span>h</div></div><div class="badge">NOP ONLY</div></div>
+      </section>
+
+      <section class="card">
+        <div class="cardHead"><span>BUS TRACE</span><span class="tiny">M-cycle abstract · not pin-perfect yet</span></div>
+        <div class="cardBody"><div id="trace" class="trace monoBox"></div></div>
+      </section>
+
+      <section class="card">
+        <div class="cardHead"><span>MEMORY 0000h–003Fh</span><span class="tiny">Debugger peek does not generate CPU bus traffic</span></div>
+        <div class="cardBody"><div id="memory" class="memory monoBox"></div></div>
+      </section>
+
+      <section class="card">
+        <div class="cardHead"><span>ACCURACY NOTE</span><span class="badge warn">v0.0.1</span></div>
+        <div class="cardBody note">
+          <strong>Implemented:</strong> documented RESET fields, NOP functional behavior, 4 T-state accounting, R lower-7 increment with bit7 preservation, abstract M1 fetch + refresh trace.<br><br>
+          <strong>Not yet implemented:</strong> cycle-perfect pins, WAIT timing, HALT, interrupts, prefixes, other opcodes, real SHINO-80 memory map/devices.<br><br>
+          The refresh trace intentionally marks A7 as not modeled. This bench visualizes the first heartbeat without pretending to be cycle-perfect.
+          <div id="fault" style="margin-top:8px;color:var(--red)"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div class="footer">SHINO-80 PROJECT · CPU FIRST · DEBUGGER AS OBSERVER · BUS AS A FIRST-CLASS CONCEPT</div>
+</div>
+<script>
+/*__BUS__*/
+</script>
+<script>
+/*__CPU__*/
+</script>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>

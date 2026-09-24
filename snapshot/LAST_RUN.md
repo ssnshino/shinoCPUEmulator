@@ -1,43 +1,64 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T13:20:14+09:00
+Updated: 2026-09-24T13:42:12+09:00
 
-## Repository bootstrap
+## Candidate
 
-Status: **DOCUMENT / STRUCTURE ONLY**
+SHINO Z80 CORE v0.0.1 — FIRST HEARTBEAT
 
-Completed:
+Branch: `feature/z80-core-v0.0.1-first-heartbeat-20260924`
 
-- empty repository confirmed
-- initial `main` anchor commit created
-- bootstrap branch created
-- Vector Rally repository workflow reviewed
-- shinomiya-daihanten-infra workflow reviewed
-- project concept prepared for repository
-- future Virtual Microcomputer Lab vision prepared
-- PHASE 0 research plan prepared
-- AI development rules prepared
-- snapshot navigation prepared
+## Automated validation
 
-## Runtime test
+Command:
 
-No emulator runtime exists yet.
+```bash
+npm test
+```
 
-Therefore:
+Result: **PASS**
 
-- JavaScript syntax: N/A
-- browser smoke: N/A
-- CPU unit tests: N/A
-- Z80 conformance tests: N/A
-- one-page build: N/A
+Validated:
+
+- RESET documented subset
+- NOP `00h`
+- PC increment
+- F unchanged by NOP
+- 4 T-state accounting
+- R lower-seven increment
+- R bit7 preservation
+- abstract M1 fetch trace
+- abstract refresh trace
+- unsupported opcode fault
+- one-page build
+- unresolved build marker check
+- required DOM IDs
+- no external runtime script/link dependency
+
+Generated artifact size: **25,584 bytes**.
+
+## Browser visual status
+
+Automated Chromium screenshot could not be established in the current container environment because headless Chromium stalled on platform/DBus startup.
+
+This is recorded as an environment limitation, not a browser PASS or FAIL.
+
+Human browser visual review: **PENDING**.
+
+## Accuracy statement
+
+Current bus trace is `M_CYCLE_ABSTRACT`, not cycle-perfect.
+
+Refresh A7 is not modeled rather than guessed.
 
 ## Next run
 
-Perform PHASE 0 Z80 research before implementation.
+Human visual review of the initial front panel, then decide v0.0.2 scope.
 
-Do not report CPU behavior as verified until the research/test evidence exists.
+PHASE 0 research continues; do not broaden instruction implementation without research/test coverage.
 
 ## Update History
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Initial LAST RUN created during repository bootstrap.
+- 2026-09-24T13:42:12+09:00 — ChatGPT — v0.0.1 Node/build/static QA PASS; Human visual PENDING.

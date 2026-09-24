@@ -25,3 +25,7 @@ tmp/
 # Do not commit ROM dumps, proprietary firmware, or unreviewed third-party binaries.
 local/
 references/raw/
+
+# Generated one-page review artifact.
+# Reproducible via npm run build; candidate HTML is reviewed before being frozen as a release artifact.
+/one_page_shino_z80_core_v0.0.1.html

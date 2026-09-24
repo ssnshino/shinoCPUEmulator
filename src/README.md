@@ -1,23 +1,26 @@
 # src
 
-SHINO-80実装sourceの予定地。
+SHINO-80 implementation source.
 
-**Current status: implementation not started.**
+## Current candidate
 
-PHASE 0 research完了前にGeneric emulator frameworkを先に作らない。
-
-将来の候補（未確定）:
+SHINO Z80 CORE v0.0.1 — FIRST HEARTBEAT
 
 ```text
 src/
 ├ cpu/
 │  └ z80/
+│     └ z80-core.js
 ├ machine/
 │  └ shino80/
-├ devices/
-├ debug/
-├ ui/
-└ build/
+│     └ shino80-bus.js
+├ app/
+│  ├ shino-z80-core-v0.0.1.js
+│  └ shino-z80-core-v0.0.1.template.html
+└ ui/
+   └ shino-z80-panel.css
 ```
 
-このlayout自体も実装開始時にPLANで確定する。
+Current implementation boundary is intentionally tiny: RESET subset + opcode fetch + `00h NOP` + PC/R/T-state accounting + abstract M1/refresh trace.
+
+PHASE 0 is still active. Do not expand this into a generic multi-CPU framework or jump to BIOS/devices without PLAN/research/test coverage.

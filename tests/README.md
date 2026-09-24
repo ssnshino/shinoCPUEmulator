@@ -1,15 +1,23 @@
 # tests
 
-CPU Core / Machine / Device testの予定地。
+CPU Core / Machine / Device tests.
 
-## Priority
+## Current
 
-CPU implementation開始後はUIより先にunit testを作る。
+- `z80_core_v0.0.1.test.cjs` — RESET/NOP/PC/R/T-state/trace/unimplemented-opcode regression
+- `one_page_v0.0.1_static.test.cjs` — generated one-page build markers, required DOM IDs, external runtime dependency check
 
-候補:
+Run:
 
-- register/state transition
-- instruction execution
+```bash
+npm test
+```
+
+CPU implementation uses unit tests before UI claims.
+
+Future coverage candidates:
+
+- broader instruction execution
 - flags
 - PC/SP
 - prefix decode
@@ -22,4 +30,4 @@ CPU implementation開始後はUIより先にunit testを作る。
 - ROM/RAM protection
 - device register behavior
 
-External test vectorを取り込む場合はlicense/provenanceを記録する。
+External test vectors must record license/provenance.

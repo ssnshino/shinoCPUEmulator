@@ -1,0 +1,28 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "component": "SHINO Z80 CORE",
+  "version": "v0.0.1",
+  "created": "2026-09-24T13:42:12+09:00",
+  "accuracy": "functional NOP + abstract M-cycle trace",
+  "tests": {
+    "reset_documented_subset": "PASS",
+    "reset_does_not_invent_a_sp_values": "PASS",
+    "nop_opcode_00": "PASS",
+    "nop_pc_increment": "PASS",
+    "nop_flags_unchanged": "PASS",
+    "nop_tstates_4": "PASS",
+    "r_lower7_increment": "PASS",
+    "r_bit7_preserved": "PASS",
+    "m1_fetch_trace": "PASS",
+    "refresh_trace": "PASS",
+    "unimplemented_opcode_fault": "PASS",
+    "one_page_build": "PASS",
+    "one_page_placeholder_check": "PASS",
+    "required_dom_ids_static_check": "PASS",
+    "npm_test": "PASS",
+    "generated_one_page_bytes": 25584
+  },
+  "runtimeBrowserHumanVisual": "PENDING",
+  "cyclePerfect": false,
+  "result": "PASS_FOR_FIRST_HEARTBEAT_CANDIDATE"
+}
