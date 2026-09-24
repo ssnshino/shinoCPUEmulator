@@ -15,12 +15,31 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Repository: `ssnshino/shinoCPUEmulator`
 - Default branch: `main`
 - Current machine: **SHINO-80**
-- Current phase: **PHASE 0 — Research / Architecture**
-- Emulator code: **NOT STARTED**
-- One-page build: **NOT STARTED**
-- Repository bootstrap candidate: `chore/repository-bootstrap-20260924`
+- Reviewed baseline: repository bootstrap PR #1 merged
+- CPU implementation candidate: **PR #2 — SHINO Z80 CORE v0.0.1 FIRST HEARTBEAT**
+- CPU Human status: smartphone one-page execution confirmed; PR #2 remains unmerged
+- UI research candidate: `research/ui-design-standard-v0.1-20260924`
+- Current UI design stage: **modern shell architecture / no UI code change in this research branch**
 
-現段階ではRepositoryを先に研究開発可能な形へ整備し、Z80仕様調査・Machine Architecture・Memory Map・I/O Map・CPU Core Design・MVPを固める。
+PHASE 0 research remains active. CPU implementation and UI architecture are advanced in small, reviewable steps.
+
+## UI core direction
+
+SHINO-80 UI has two layers:
+
+> **Modern Shell / Retro Machine**
+
+The machine itself can look and feel like a believable 1980s computer.
+
+The surrounding navigation, inspector, adaptive layout, accessibility, and controls use modern 2026 UI practice.
+
+Two core rules:
+
+> **DISPLAY FIRST.**
+
+> **OBSERVER SECOND.**
+
+Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become a permanent wall of cards.
 
 ## Start here
 
@@ -29,11 +48,14 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
-7. `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
-8. `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
-9. `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
-10. 必要に応じて `research/` / `tests/` / `working-logs/head/` / `code/head/`
+6. `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+7. `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+8. `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
+9. `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
+10. `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
+11. `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
+12. `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
+13. `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 
 ## Core concept
 
@@ -55,21 +77,9 @@ Bus Analyzer
 Device Monitor
 ```
 
-を同時に観測できるようにする。
+を同時または状況に応じて切り替えて観測できるようにする。
 
-目標は、例えば1文字表示するだけでも、
-
-```text
-CPU instruction
-↓
-bus access
-↓
-device / VRAM change
-↓
-screen output
-```
-
-という因果を追えること。
+重要なのは「全部を常時見せる」ことではなく、CPU → Bus → Device / VRAM → Outputの因果を、画面サイズに応じて理解しやすく見せること。
 
 ## Development workflow
 
@@ -107,7 +117,8 @@ SHINO-80をまず一台完成させる。将来の6502 / 6809 / 68000等を理�
 ├ code/
 │  └ head/
 ├ research/
-│  └ z80/
+│  ├ z80/
+│  └ ui/
 ├ references/
 ├ src/
 └ tests/
@@ -181,3 +192,4 @@ VIRTUAL MICROCOMPUTER LAB
 ## Update History
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Repository bootstrap。企画資料、将来構想、研究PLAN、snapshot運用、AI開発ルールの入口を追加。
+- 2026-09-24T15:13:07+09:00 — ChatGPT — Modern Shell / Retro Machine、DISPLAY FIRST / OBSERVER SECONDを軸とするUI研究・設計標準の入口を追加。

@@ -1,43 +1,60 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T13:20:14+09:00
+Updated: 2026-09-24T15:13:07+09:00
 
-## Repository bootstrap
+## Task
 
-Status: **DOCUMENT / STRUCTURE ONLY**
+Research modern UI best practices for the future SHINO-80 single-page computer and translate them into a project-specific UI architecture.
 
-Completed:
+Human specifically requested strong consideration of Apple UI thinking.
 
-- empty repository confirmed
-- initial `main` anchor commit created
-- bootstrap branch created
-- Vector Rally repository workflow reviewed
-- shinomiya-daihanten-infra workflow reviewed
-- project concept prepared for repository
-- future Virtual Microcomputer Lab vision prepared
-- PHASE 0 research plan prepared
-- AI development rules prepared
-- snapshot navigation prepared
+## Research completed
 
-## Runtime test
+Reviewed current official guidance from:
 
-No emulator runtime exists yet.
+- Apple WWDC26 design principles
+- Apple HIG Split Views
+- Apple HIG Toolbars
+- Apple HIG Materials / Liquid Glass
+- Apple HIG Color / Branding
+- Apple HIG Motion
+- Apple Dynamic Type / Labels / Safe Area references
+- Android Adaptive Apps canonical layouts
+- Android Supporting Pane layout
+- Android Window Size Classes
+- VS Code UX Overview / Views / Sidebars / Panel
 
-Therefore:
+## Project synthesis
 
-- JavaScript syntax: N/A
-- browser smoke: N/A
-- CPU unit tests: N/A
-- Z80 conformance tests: N/A
-- one-page build: N/A
+Main UI principles:
 
-## Next run
+- Modern Shell / Retro Machine
+- DISPLAY FIRST
+- OBSERVER SECOND
+- ADAPT, DON'T SHRINK
+- BIG TOUCH, SMALL DATA
+- MOTION = INFORMATION
 
-Perform PHASE 0 Z80 research before implementation.
+## Deliverables
 
-Do not report CPU behavior as verified until the research/test evidence exists.
+Created:
 
-## Update History
+- `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
+- `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+- `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
+- `working-logs/head/SHINO_80_UI_RESEARCH_WORKLOG_v0.1.md`
+- `code/head/SHINO_80_UI_RESEARCH_QA_v0.1.json`
 
-- 2026-09-24T13:20:14+09:00 — ChatGPT — Initial LAST RUN created during repository bootstrap.
+## Code / runtime
+
+No emulator/UI runtime source modified in this branch.
+
+Browser QA: N/A for this document-only research task.
+
+## Next action
+
+Human reviews the design standard and blueprints.
+
+After approval, implement the v0.0.2 UI shell in a separate branch against the latest accepted CPU baseline.

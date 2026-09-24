@@ -1,0 +1,40 @@
+{
+  "project": "ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "topic": "UI design foundation research",
+  "version": "v0.1",
+  "created": "2026-09-24T15:13:07+09:00",
+  "implementationChanged": false,
+  "researchSources": {
+    "apple": true,
+    "androidAdaptive": true,
+    "vscodeUx": true
+  },
+  "deliverables": {
+    "researchNote": "PASS",
+    "uiDesignStandard": "PASS",
+    "layoutBlueprints": "PASS",
+    "implementationPlan": "PASS"
+  },
+  "designCoverage": {
+    "expanded": true,
+    "medium": true,
+    "compact": true,
+    "compactHeight": true,
+    "displayFirst": true,
+    "inspector": true,
+    "deviceDock": true,
+    "toolbar": true,
+    "navigation": true,
+    "touchTargets": true,
+    "typography": true,
+    "colorSemantics": true,
+    "motion": true,
+    "safeArea": true,
+    "statePreservation": true,
+    "accessibility": true,
+    "performance": true
+  },
+  "browserRuntimeQA": "N/A_DOCUMENT_ONLY",
+  "humanReview": "PENDING",
+  "result": "PASS_FOR_UI_STANDARD_REVIEW"
+}
