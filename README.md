@@ -20,10 +20,14 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - SHINO-80 v0.0.2 UI FOUNDATION: **MERGED via PR #4 / Human smartphone PASS**
 - Current development source: `src/`
 - Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
-- Active repository-layout candidate: `refactor/src-deploy-build-layout-20260924`
-- CPU PR #2 remains open as historical first-heartbeat candidate and is not part of this layout refactor
+- Source/deploy split: **MERGED via PR #5**
+- Active CPU candidate: **Z80 PHASE 1A / v0.0.3 — Instruction Architecture + LD**
+- Candidate branch: `feature/z80-phase1a-instruction-architecture-20260924`
+- Candidate artifact: `deploy/one_page_shino80_v0.0.3_z80_phase1a.html`
+- Current executable BASE encodings: **82** (81 LD + NOP)
+- CPU PR #2 remains open as historical first-heartbeat candidate
 
-PHASE 0 research remains active. v0.0.2 is the reviewed UI baseline; CPU scope is still the first heartbeat. Development now uses modular source and generates the standalone one-page artifact for distribution.
+PHASE 0 research remains active alongside PHASE 1 implementation. The reviewed v0.0.2 UI shell is preserved while v0.0.3 teaches the Z80 its first real instruction family: LD.
 
 ## UI core direction
 
@@ -50,14 +54,17 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-7. `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
-8. `plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md`
-9. `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
-10. `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
-11. `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
-12. `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
-13. `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
+6. `plan/head/SHINO_Z80_CORE_PHASE1A_INSTRUCTION_ARCHITECTURE_PLAN.md`
+7. `docs/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_SPEC.md`
+8. `research/z80/Z80_PHASE1A_LD_RESEARCH_NOTE_v0.1.md`
+9. `research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.1.md`
+10. `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+11. `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+12. `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
+13. `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
+14. `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
+15. `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
+16. `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 
 ## Core concept
 
@@ -207,3 +214,5 @@ VIRTUAL MICROCOMPUTER LAB
 - 2026-09-24T15:36:00+09:00 — ChatGPT — v0.0.2 UI FOUNDATION candidateを追加。Display/CPU/Memory/Bus/Devicesのadaptive workbench、Desktop/Tablet/Phone layout、Device Dock placeholder、runtime smokeを追加。
 
 - 2026-09-24T16:50:00+09:00 — ChatGPT — 開発正本を `src/`、配布生成物を `deploy/` とするsource/deploy分離を追加。
+
+- 2026-09-24T17:18:00+09:00 — ChatGPT — Z80 PHASE 1A candidateを追加。Decoder分離とLD命令群81 encodingを実装し、v0.0.3 teaching artifactを追加。

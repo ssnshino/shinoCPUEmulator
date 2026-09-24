@@ -3,29 +3,48 @@ ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 Repository: ssnshino/shinoCPUEmulator
 
 Reviewed main:
-- UI Design Standard v0.1
-- SHINO-80 v0.0.2 UI FOUNDATION / Human smartphone PASS
+- SHINO-80 v0.0.2 UI FOUNDATION
+- src/ development source / deploy/ distribution split
 
 Active candidate:
-- refactor/src-deploy-build-layout-20260924
+- feature/z80-phase1a-instruction-architecture-20260924
+- SHINO Z80 CORE v0.0.3 PHASE 1A
 
-Repository rule:
-- src/ = development source of truth
-- scripts/ = build tooling
-- tests/ = source + artifact QA
-- deploy/ = generated standalone one-page distribution
-- deploy/*.html を直接編集しない
-- npm run build で deploy/ を生成
+Artifact:
+deploy/one_page_shino80_v0.0.3_z80_phase1a.html
 
 Read:
 1. README.md
 2. AGENTS.md
 3. snapshot/CURRENT_SNAPSHOT.md
-4. docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md
-5. docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md
-6. docs/head/SHINO_80_UI_FOUNDATION_v0.0.2_SPEC.md
+4. plan/head/SHINO_Z80_CORE_PHASE1A_INSTRUCTION_ARCHITECTURE_PLAN.md
+5. docs/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_SPEC.md
+6. research/z80/Z80_PHASE1A_LD_RESEARCH_NOTE_v0.1.md
+7. research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.1.md
+8. code/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_QA.json
 
-After layout merge:
-Begin Z80 PHASE 1A Instruction Architecture.
-Prefer natural modular boundaries under src/cpu/z80/ as real code pressure appears.
-Do not over-abstract for future CPUs yet.
+PHASE 1A:
+- decoder separated from core
+- 81 LD encodings executable
+- NOP executable
+- total BASE executable encodings = 82
+- HALT recognized but deliberately not implemented
+- F unchanged for current LD forms
+- R increments on opcode fetch only
+- bus precision remains M_CYCLE_ABSTRACT
+
+Teaching program:
+LD A,41h
+LD B,22h
+LD HL,0080h
+LD (HL),A
+LD C,(HL)
+LD DE,0090h
+LD (DE),A
+LD A,(0090h)
+NOP
+
+Automated QA PASS. Human review pending.
+
+Next likely CPU learning target after acceptance:
+INC / DEC + first real Flags engine.
