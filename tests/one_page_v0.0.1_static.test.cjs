@@ -18,6 +18,16 @@ if(/<script[^>]+src=|<link[^>]+href=/i.test(html)){
   throw new Error('one-page artifact must not require external runtime files');
 }
 
+if(!html.includes('const queryOne=s=>document.querySelector(s);')){
+  throw new Error('queryOne helper missing from generated artifact');
+}
+if(!html.includes('const queryAll=s=>[...document.querySelectorAll(s)];')){
+  throw new Error('queryAll helper missing from generated artifact');
+}
+if(html.includes('const $=')||html.includes('const $$=')||html.includes('$$(')){
+  throw new Error('fragile $ / $$ DOM helper syntax must not appear in generated artifact');
+}
+
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]);
 if(!scripts.length)throw new Error('no inline scripts found in one-page artifact');
 

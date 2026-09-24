@@ -1,7 +1,7 @@
 # SHINO Z80 CORE v0.0.1 WORKLOG
 
 Created: 2026-09-24T13:42:12+09:00
-Updated: 2026-09-24T14:25:00+09:00
+Updated: 2026-09-24T14:32:00+09:00
 
 ## Work performed
 
@@ -17,31 +17,79 @@ Updated: 2026-09-24T14:25:00+09:00
 10. Added dependency-free `package.json` scripts and one-page static test.
 11. Ran `npm test`: CPU tests + build + static one-page check PASS.
 
-## Human review failure and fix
+## Human review failure #1
 
 The first HTML delivered for Human review did not run.
 
-Direct inspection of that exact delivered artifact found a JavaScript syntax error:
+Exact delivered artifact contained:
 
 ```js
 const $=s=>document.querySelector(s);
 const $=s=>[...document.querySelectorAll(s)];
 ```
 
-The second helper must be `$$`.
+This caused a load-time SyntaxError.
 
-Important distinction:
+The GitHub source had intended `$$`, so the exported artifact was inconsistent with source.
 
-- GitHub branch source `src/app/shino-z80-core-v0.0.1.js` already contained the correct `$$` helper.
-- The user-visible exported artifact was inconsistent with that source.
-- The corrected review artifact was patched and every inline script was parsed successfully with `node --check`.
-- Chromium headless runtime validation remains unavailable in the current execution environment because Chromium stalls on DBus/platform startup.
+## Human review failure #2
 
-Regression prevention:
+A RETRY artifact was created with the duplicate declaration fixed, and all inline scripts passed syntax parsing.
 
-- `tests/one_page_v0.0.1_static.test.cjs` now parses every inline `<script>` using Node `vm.Script`.
-- A generated one-page artifact with the duplicate declaration will now fail `npm test`.
-- Future user-delivered review HTML must be validated as the exact artifact, not inferred from source-only test results.
+However it still did not operate.
+
+Exact RETRY artifact inspection found the export path had collapsed intended multi-element helpers from `$$(...)` to `$(...)` throughout the app, e.g.:
+
+```js
+for(const row of $('#regGrid .regRow')) { ... }
+for(const e of $('.flag')) { ... }
+```
+
+`querySelector()` returns one Element, so initialization failed with:
+
+`$ is not a function or its return value is not iterable`
+
+## Robust fix
+
+The shorthand DOM helpers were removed entirely.
+
+New helpers:
+
+```js
+const queryOne=s=>document.querySelector(s);
+const queryAll=s=>[...document.querySelectorAll(s)];
+```
+
+All call sites now use explicit `queryOne()` / `queryAll()`.
+
+This avoids reliance on `$` / `$$` tokens in the user-visible artifact pipeline.
+
+## Exact artifact runtime validation
+
+The exact replacement HTML was loaded into Chromium through Playwright `page.set_content()`.
+
+Validated with zero page errors:
+
+- initial load
+- self-test PASS
+- STEP
+- BURST ×256
+- RESET
+- RUN VISUAL
+- PAUSE
+- register LEDs
+- PC/R/T-state updates
+- bus trace rendering
+- memory monitor rendering
+
+A screenshot was captured from the same exact artifact.
+
+## Regression prevention
+
+- generated inline scripts are parsed with Node `vm.Script`
+- static test now requires `queryOne` / `queryAll`
+- static test rejects `const $`, `const $$`, and `$$(` helper syntax
+- future review HTML must be validated as the exact delivered artifact
 
 ## Important choices
 
@@ -55,6 +103,8 @@ Regression prevention:
 
 CPU/source candidate: PASS.
 
-First delivered review artifact: FAIL (JavaScript syntax error).
+First delivered artifact: FAIL.
 
-Corrected review artifact: inline JavaScript parse PASS; Human visual/runtime retry pending.
+RETRY artifact: FAIL.
+
+Runtime-fixed exact artifact: **Chromium interaction smoke PASS / Human retry pending**.

@@ -3,7 +3,7 @@
   "component": "SHINO Z80 CORE",
   "version": "v0.0.1",
   "created": "2026-09-24T13:42:12+09:00",
-  "updated": "2026-09-24T14:25:00+09:00",
+  "updated": "2026-09-24T14:32:00+09:00",
   "accuracy": "functional NOP + abstract M-cycle trace",
   "tests": {
     "reset_documented_subset": "PASS",
@@ -21,16 +21,28 @@
     "one_page_placeholder_check": "PASS",
     "required_dom_ids_static_check": "PASS",
     "inline_script_syntax_regression_check": "PASS",
+    "explicit_query_helper_check": "PASS",
     "npm_test": "PASS"
   },
   "humanReview": {
     "firstDeliveredArtifact": "FAIL",
-    "firstDeliveredArtifactCause": "duplicate const $ declaration in inline app script",
-    "repositorySourceHadCorrectDoubleDollarHelper": true,
-    "correctedArtifactInlineScriptParse": "PASS",
-    "correctedArtifactHumanRuntimeVisual": "PENDING"
+    "firstFailureCause": "duplicate const $ declaration in delivered artifact",
+    "retryArtifact": "FAIL",
+    "retryFailureCause": "intended $$ multi-element helper collapsed to $ in delivered artifact",
+    "robustFix": "replace $/$$ helpers with queryOne/queryAll",
+    "runtimeFixedHumanVisual": "PENDING"
   },
-  "runtimeBrowserAutomation": "UNAVAILABLE_CHROMIUM_DBUS_STALL",
+  "exactArtifactBrowserSmoke": {
+    "engine": "Chromium via Playwright page.set_content",
+    "initialLoad": "PASS",
+    "pageErrors": 0,
+    "selfTest": "PASS",
+    "step": "PASS",
+    "burst256": "PASS",
+    "reset": "PASS",
+    "runPause": "PASS",
+    "screenshot": "PASS"
+  },
   "cyclePerfect": false,
-  "result": "PASS_FOR_CORRECTED_FIRST_HEARTBEAT_RETRY"
+  "result": "PASS_FOR_RUNTIME_FIXED_FIRST_HEARTBEAT_RETRY"
 }
