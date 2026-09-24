@@ -12,6 +12,18 @@
     const op=Number(opcode)&0xFF;
     if(op===0x00)return {kind:'NOP',family:'CONTROL',mnemonic:'NOP',length:1,tStates:4};
 
+    if((op&0xC7)===0x04){
+      const target=(op>>3)&7;
+      if(target===6)return {kind:'INC_MEM_HL',family:'INC_DEC',mnemonic:'INC (HL)',length:1,tStates:11};
+      return {kind:'INC_R',family:'INC_DEC',targetCode:target,mnemonic:`INC ${REG8_NAMES[target]}`,length:1,tStates:4};
+    }
+
+    if((op&0xC7)===0x05){
+      const target=(op>>3)&7;
+      if(target===6)return {kind:'DEC_MEM_HL',family:'INC_DEC',mnemonic:'DEC (HL)',length:1,tStates:11};
+      return {kind:'DEC_R',family:'INC_DEC',targetCode:target,mnemonic:`DEC ${REG8_NAMES[target]}`,length:1,tStates:4};
+    }
+
     if((op&0xC0)===0x40){
       if(op===0x76)return {kind:'HALT',family:'CONTROL',mnemonic:'HALT',length:1,tStates:4,implemented:false};
       const dst=(op>>3)&7,src=op&7;

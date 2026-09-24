@@ -2,51 +2,48 @@
 
 Z80 CPU implementation.
 
-## Current: PHASE 1A
-
-```text
-z80/
-├ z80-decoder.js
-└ z80-core.js
-```
-
-### z80-decoder.js
-
-Z80-specific BASE opcode recognition and descriptor generation.
-
-Current executable subset:
-- NOP
-- core LD families described in the PHASE 1A spec
-
-### z80-core.js
-
-Owns:
-- architectural state
-- opcode/operand fetch
-- register/pair helpers
-- execution of current descriptors
-- timing totals
-- bus access
-
-CPU code remains independent from DOM/UI.
-
-## Natural next split
-
-When real implementation pressure appears:
+## Current stacked candidate: PHASE 1B
 
 ```text
 z80/
 ├ z80-core.js
 ├ z80-decoder.js
-├ z80-flags.js
-├ z80-alu.js
-├ z80-timing.js
-├ z80-interrupt.js
-└ opcode/
-   ├ cb.js
-   ├ ed.js
-   ├ dd.js
-   └ fd.js
+└ z80-flags.js
 ```
 
-Do not create these merely to fill the tree. The first real split was Decoder because PHASE 1A made it necessary.
+### z80-decoder.js
+
+Recognizes current BASE opcode subset:
+- NOP
+- PHASE 1A LD
+- PHASE 1B INC/DEC
+
+### z80-flags.js
+
+First real flags subsystem.
+
+Current responsibility:
+- documented INC/DEC flags
+- carry preservation
+- temporary PHASE 1B policy to preserve undocumented Y/X
+
+### z80-core.js
+
+Owns:
+- architectural state
+- fetch / operand access
+- execution
+- timing totals
+- bus access
+
+CPU code remains independent from DOM/UI.
+
+## Next natural pressure
+
+Likely next files/areas:
+
+- ALU helpers when ADD/SUB/etc arrive
+- control-flow helpers when JP/JR/CALL/RET arrive
+- prefix modules when CB/ED/DD/FD arrive
+
+Do not split further until implementation pressure justifies it.

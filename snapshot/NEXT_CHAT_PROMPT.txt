@@ -2,49 +2,40 @@ ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Repository: ssnshino/shinoCPUEmulator
 
-Reviewed main:
-- SHINO-80 v0.0.2 UI FOUNDATION
-- src/ development source / deploy/ distribution split
+Stacked branches:
+- PHASE 1A: feature/z80-phase1a-instruction-architecture-20260924
+- PHASE 1B: feature/z80-phase1b-inc-dec-flags-20260924
 
-Active candidate:
-- feature/z80-phase1a-instruction-architecture-20260924
-- SHINO Z80 CORE v0.0.3 PHASE 1A
+Current candidate:
+SHINO Z80 CORE v0.0.4 PHASE 1B
 
 Artifact:
-deploy/one_page_shino80_v0.0.3_z80_phase1a.html
+deploy/one_page_shino80_v0.0.4_z80_phase1b.html
 
 Read:
 1. README.md
-2. AGENTS.md
-3. snapshot/CURRENT_SNAPSHOT.md
-4. plan/head/SHINO_Z80_CORE_PHASE1A_INSTRUCTION_ARCHITECTURE_PLAN.md
-5. docs/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_SPEC.md
-6. research/z80/Z80_PHASE1A_LD_RESEARCH_NOTE_v0.1.md
-7. research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.1.md
-8. code/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_QA.json
+2. snapshot/CURRENT_SNAPSHOT.md
+3. plan/head/SHINO_Z80_CORE_PHASE1B_INC_DEC_FLAGS_PLAN.md
+4. docs/head/SHINO_Z80_CORE_v0.0.4_PHASE1B_SPEC.md
+5. research/z80/Z80_PHASE1B_INC_DEC_FLAGS_RESEARCH_NOTE_v0.1.md
+6. research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.2.md
+7. code/head/SHINO_Z80_CORE_v0.0.4_PHASE1B_QA.json
 
-PHASE 1A:
-- decoder separated from core
-- 81 LD encodings executable
-- NOP executable
-- total BASE executable encodings = 82
-- HALT recognized but deliberately not implemented
-- F unchanged for current LD forms
-- R increments on opcode fetch only
-- bus precision remains M_CYCLE_ABSTRACT
+PHASE 1B:
+- z80-flags.js added
+- INC/DEC r and (HL)
+- 98 executable BASE encodings total
+- documented S/Z/H/PV/N implemented
+- C preserved
+- Y/X preserved as temporary policy
+- INC/DEC (HL) = 11T
+- bus remains M_CYCLE_ABSTRACT
 
-Teaching program:
-LD A,41h
-LD B,22h
-LD HL,0080h
-LD (HL),A
-LD C,(HL)
-LD DE,0090h
-LD (DE),A
-LD A,(0090h)
-NOP
+Human should STEP through:
+LD A,7Fh -> INC A
+LD B,FFh -> INC B
+LD C,80h -> DEC C
+LD D,00h -> DEC D
 
-Automated QA PASS. Human review pending.
-
-Next likely CPU learning target after acceptance:
-INC / DEC + first real Flags engine.
+Next after acceptance:
+choose between general 8-bit ALU or control flow.

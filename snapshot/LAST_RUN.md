@@ -1,81 +1,59 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T17:18:00+09:00
+Updated: 2026-09-24T18:22:00+09:00
 
 ## Task
 
-Implement the first real Z80 instruction architecture after NOP.
+Implement PHASE 1B: INC / DEC + first real FLAGS ENGINE.
 
-## Implemented
+## Research basis
 
-- new `src/cpu/z80/z80-decoder.js`
-- descriptor-based BASE decoder
-- operand byte / little-endian word fetch
-- 8-bit register helpers
-- BC / DE / HL / SP pair helpers
-- memory read/write execution paths
-- 81 executable LD encodings
-- NOP regression
-- dynamic current mnemonic in UI
-- teaching program in deploy artifact
+Zilog UM0080 verified:
+- INC r 4T
+- INC (HL) 11T
+- DEC r 4T
+- DEC (HL) 11T
+- documented S/Z/H/PV/N behavior
+- C unaffected
 
-## Automated result
+## Implementation
 
-PASS:
+Added:
+- `src/cpu/z80/z80-flags.js`
+- INC/DEC decoder patterns
+- register INC/DEC
+- (HL) read-modify-write INC/DEC
+- v0.0.4 teaching program
 
-- 7 LD r,n forms
-- 49 register-register LD forms
-- 4 LD dd,nn forms
-- HL indirect loads/stores
-- BC/DE indirect accumulator forms
-- absolute nn forms
-- F unchanged
-- R opcode-fetch behavior
-- PC / T-state totals
-- exact GitHub blob semantic execution
-- deploy inline JS parse
-- no external runtime dependency
-- local Chromium teaching smoke / zero page errors
+## Exact semantic result
 
-## Exact teaching-program result
+With previous C=1:
 
 ```text
-A      41
-B      22
-C      41
-HL     0080
-DE     0090
-[0080] 41
-[0090] 41
-F      A5 unchanged
-PC     0011
-R      09
-T      72
+INC 7F -> 80  F=95
+INC FF -> 00  F=51
+DEC 80 -> 7F  F=17
+DEC 00 -> FF  F=93
 ```
+
+Memory INC (HL):
+
+```text
+T+0 FETCH
+T+2 REFRESH
+T+4 READ
+T+8 WRITE
+total 11T
+```
+
+## Accuracy
+
+- documented flags: implemented
+- C: preserved
+- undocumented Y/X: deliberately preserved / not claimed accurate
+- bus precision: M_CYCLE_ABSTRACT
 
 ## Next
 
-Human review of v0.0.3 teaching artifact.
-
-Then choose the next CPU learning step, likely INC/DEC + Flags.
-
-
-## Mobile More menu regression (2026-09-24T17:58:00+09:00)
-
-Human smartphone testing confirmed the new LD/register behavior, then found the compact `…` menu did not visibly respond.
-
-Root cause:
-- machine More actions used browser `prompt()`
-- unreliable/poor UX for Edge external-file mobile execution
-
-Candidate fix:
-- replaced browser prompt with in-page responsive More sheet
-- RESET, BURST ×256, CLEAR TRACE, PACE available as real buttons
-- artifact QA explicitly rejects `prompt()`
-- static generated artifact validation PASS
-
-Human real-device retry: **PASS**.
-
-
-PHASE 1A is ready to serve as the base for stacked PHASE 1B development.
+Human real-device flags-lamp review.
