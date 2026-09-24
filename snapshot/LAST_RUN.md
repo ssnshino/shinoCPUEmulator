@@ -1,49 +1,48 @@
 # LAST RUN
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Updated: 2026-09-24T15:36:00+09:00
+Updated: 2026-09-24T16:42:00+09:00
 
 ## Candidate
 
-SHINO-80 v0.0.2 UI FOUNDATION
+SHINO-80 v0.0.2 UI FOUNDATION / PR #4
 
-## Node QA
+## Automated result
 
-`npm test`: PASS
+PASS:
 
-- CPU first-heartbeat regression
+- Node CPU regression
 - source syntax
 - one-page build
-- artifact inline syntax
-- safe-area
-- reduced-motion
-- external dependency check
+- inline JS
+- safe-area / reduced-motion
+- exact Chromium adaptive smoke
+- Desktop / Tablet / Phone portrait / Phone landscape
+- state preservation
+- zero page errors
 
-## Chromium adaptive smoke
+## Human real-device result
 
-Exact generated artifact: PASS / zero page errors.
+**PASS**
 
-Viewports:
+Human tested the standalone HTML on smartphone and supplied a screen recording.
 
-- 1440×900
-- 900×800
-- 390×844
-- 844×390
+Confirmed in recording:
 
-Interaction:
-
-- STEP
+- Edge external-file standalone execution
+- DISPLAY view
+- CPU Debug Lab
 - RUN / PAUSE
-- destination switching
-- viewport resizing
-- CPU state preserved
+- active CPU/LED visualization
 
-## Finding fixed
+Human verdict:
 
-Phone landscape originally remained a squeezed Medium layout.
+> 大満足 / 非の打ち所が無い
 
-Added compact-height override so short windows use one-pane bottom navigation.
+## Project consequence
 
-## Next
+The UI shell is no longer the primary unknown.
 
-Human real-device UI review.
+Next project risk and engineering focus move to **internal Z80 correctness and completeness**.
+
+PR #4 remains unmerged until explicit Human merge authorization.

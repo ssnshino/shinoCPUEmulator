@@ -1,7 +1,7 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T15:36:00+09:00
+Last updated: 2026-09-24T16:42:00+09:00
 
 ## Reviewed baseline
 
@@ -12,11 +12,14 @@ Last updated: 2026-09-24T15:36:00+09:00
 
 ## Active candidate
 
+- PR: #4
 - Branch: `feature/ui-foundation-v0.0.2-20260924`
 - Candidate: **SHINO-80 v0.0.2 UI FOUNDATION**
 - Artifact: `one_page_shino80_v0.0.2_ui_foundation.html`
 - Automated adaptive browser QA: PASS
-- Human real-device review: PENDING
+- Human smartphone real-device QA: **PASS**
+- Human verdict: **大満足 / 非の打ち所が無い**
+- Merge: PENDING EXPLICIT HUMAN MERGE AUTHORIZATION
 
 ## Candidate scope
 
@@ -39,14 +42,37 @@ UI foundation adds:
 - safe-area / reduced-motion
 - state preservation across layout changes
 
+## Human recording evidence
+
+Standalone one-page artifact confirmed on smartphone through Edge external-file.
+
+Observed:
+
+- DISPLAY
+- CPU Debug Lab
+- RUN / PAUSE
+- live CPU/LED activity
+- destination switching
+
 ## Important branch relationship
 
 v0.0.2 contains the CPU heartbeat code that also exists in PR #2.
 
-If v0.0.2 is accepted and merged, PR #2 may become superseded. Do not close or merge PR #2 without Human decision.
+If v0.0.2 is explicitly authorized and merged, PR #2 may become superseded. Do not close or merge PR #2 without Human decision.
 
-## Next gate
+## Next technical direction
 
-Human opens v0.0.2 on phone/desktop and gives visual/interaction feedback.
+UI foundation is accepted.
 
-No new peripheral implementation until the shell is accepted.
+Primary development focus can now move inward:
+
+1. Z80 instruction architecture
+2. flag correctness
+3. prefix groups
+4. control flow / stack
+5. HALT / EI delay
+6. INT / NMI / IM0-2
+7. timing / bus-cycle refinement
+8. broader test-suite integration
+
+Peripheral implementation remains later.
