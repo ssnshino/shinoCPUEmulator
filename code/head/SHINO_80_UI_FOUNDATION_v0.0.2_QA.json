@@ -1,0 +1,33 @@
+{
+  "project":"ONE-PAGE Z80 COMPUTER / SHINO-80",
+  "version":"v0.0.2",
+  "topic":"UI FOUNDATION",
+  "created":"2026-09-24T15:36:00+09:00",
+  "artifact":"one_page_shino80_v0.0.2_ui_foundation.html",
+  "artifact_bytes":42692,
+  "cpu_scope":"NOP first heartbeat only",
+  "static":{
+    "cpu_regression":"PASS",
+    "source_syntax":"PASS",
+    "one_page_build":"PASS",
+    "inline_script_parse":"PASS",
+    "external_runtime_dependency":"PASS_NONE",
+    "safe_area":"PASS",
+    "reduced_motion":"PASS"
+  },
+  "chromium_smoke":{
+    "page_errors":0,
+    "initial_self_test":"PASS",
+    "step":"PASS",
+    "run_pause":"PASS",
+    "destination_switch_state_preservation":"PASS",
+    "resize_state_preservation":"PASS",
+    "desktop_1440x900":"PASS",
+    "tablet_900x800":"PASS",
+    "phone_portrait_390x844":"PASS",
+    "phone_landscape_844x390":"PASS_AFTER_COMPACT_HEIGHT_FIX"
+  },
+  "peripherals_implemented":false,
+  "human_review":"PENDING",
+  "result":"PASS_FOR_HUMAN_UI_REVIEW"
+}

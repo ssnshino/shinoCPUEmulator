@@ -18,10 +18,13 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Reviewed baseline: repository bootstrap PR #1 merged
 - CPU implementation candidate: **PR #2 — SHINO Z80 CORE v0.0.1 FIRST HEARTBEAT**
 - CPU Human status: smartphone one-page execution confirmed; PR #2 remains unmerged
-- UI research candidate: `research/ui-design-standard-v0.1-20260924`
-- Current UI design stage: **modern shell architecture / no UI code change in this research branch**
+- UI Design Standard v0.1: **MERGED to main via PR #3**
+- Active UI implementation candidate: **v0.0.2 UI FOUNDATION**
+- Candidate branch: `feature/ui-foundation-v0.0.2-20260924`
+- Candidate artifact: `one_page_shino80_v0.0.2_ui_foundation.html`
+- Candidate status: **Desktop / Tablet / Phone portrait / Phone landscape Chromium smoke PASS; Human review pending**
 
-PHASE 0 research remains active. CPU implementation and UI architecture are advanced in small, reviewable steps.
+PHASE 0 research remains active. v0.0.2 combines the proven NOP heartbeat core with the merged adaptive UI standard without expanding CPU instruction scope.
 
 ## UI core direction
 
@@ -193,3 +196,5 @@ VIRTUAL MICROCOMPUTER LAB
 
 - 2026-09-24T13:20:14+09:00 — ChatGPT — Repository bootstrap。企画資料、将来構想、研究PLAN、snapshot運用、AI開発ルールの入口を追加。
 - 2026-09-24T15:13:07+09:00 — ChatGPT — Modern Shell / Retro Machine、DISPLAY FIRST / OBSERVER SECONDを軸とするUI研究・設計標準の入口を追加。
+
+- 2026-09-24T15:36:00+09:00 — ChatGPT — v0.0.2 UI FOUNDATION candidateを追加。Display/CPU/Memory/Bus/Devicesのadaptive workbench、Desktop/Tablet/Phone layout、Device Dock placeholder、runtime smokeを追加。

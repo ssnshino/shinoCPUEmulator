@@ -1,43 +1,37 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Repository: ssnshino/shinoCPUEmulator
-Default branch: main
 
-Parallel candidates:
-- CPU PR #2: feature/z80-core-v0.0.1-first-heartbeat-20260924
-- UI research: research/ui-design-standard-v0.1-20260924
+Reviewed:
+- UI Design Standard v0.1 merged via PR #3
 
-UI workをする場合は最初に読む:
+Open:
+- PR #2 first-heartbeat CPU candidate
+- v0.0.2 UI FOUNDATION candidate branch: feature/ui-foundation-v0.0.2-20260924
+
+Current artifact:
+one_page_shino80_v0.0.2_ui_foundation.html
+
+Read:
 1. README.md
 2. AGENTS.md
 3. snapshot/CURRENT_SNAPSHOT.md
 4. docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md
 5. docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md
-6. plan/head/SHINO_80_UI_FOUNDATION_v0.1_PLAN.md
-7. research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md
+6. docs/head/SHINO_80_UI_FOUNDATION_v0.0.2_SPEC.md
+7. code/head/SHINO_80_UI_FOUNDATION_v0.0.2_QA.json
 
-UI core rules:
+v0.0.2:
+- DISPLAY / CPU / MEMORY / BUS / DEVICES
 - Modern Shell / Retro Machine
-- DISPLAY FIRST
-- OBSERVER SECOND
-- ADAPT, DON'T SHRINK
-- BIG TOUCH, SMALL DATA
-- MOTION = INFORMATION
-- Compact = one major pane
-- Medium = primary + one supporting pane
-- Expanded = navigation + primary + inspector + optional trace
-- future peripherals are normally under DEVICES / Device Dock
-- current LED front panel becomes Debug Lab / CPU Inspector
-- viewport size, not device detection
-- preserve machine state across resize/navigation
-- safe-area / reduced-motion / accessible hit targets
+- adaptive Expanded/Medium/Compact
+- compact-height phone landscape
+- CPU state preserved across pane/resize
+- future devices are placeholders only
+- CPU is still NOP-only first heartbeat
 
-Important:
-- UI research branch is document-only.
-- Do not modify CPU behavior as part of UI standard work.
-- Do not add FDD/UART/Printer functionality merely to populate layout.
-- Breakpoints and pane ratios are candidates until Human real-device QA.
+Automated Chromium adaptive smoke PASS.
 
 Next:
-Human reviews UI Standard / Blueprints.
-If approved, create a separate v0.0.2 UI implementation branch against the latest accepted CPU baseline.
+Human real-device UI review and visual/interaction tuning.
+Do not add FDD/UART/Printer behavior before shell feedback.
