@@ -1,19 +1,14 @@
 # deploy
 
-Generated standalone SHINO-80 distribution artifacts.
+Generated standalone SHINO-80 artifacts. Do not hand-edit.
 
-Do not hand-edit these files.
+Current milestones:
 
-Build from `src/` with:
+- v0.0.2 UI FOUNDATION
+- v0.0.3 PHASE 1A — LD / decoder
+- v0.0.4 PHASE 1B — INC/DEC + FLAGS
+- v0.0.5 PHASE 1C — CONTROL FLOW
 
-```bash
-npm run build
-```
+Current candidate:
 
-Current artifacts:
-
-- `one_page_shino80_v0.0.2_ui_foundation.html` — accepted UI baseline
-- `one_page_shino80_v0.0.3_z80_phase1a.html` — LD / Decoder milestone
-- `one_page_shino80_v0.0.4_z80_phase1b.html` — INC/DEC + Flags Engine candidate
-
-One-page remains the distribution promise; modular `src/` remains the development source of truth.
+`one_page_shino80_v0.0.5_z80_phase1c.html`

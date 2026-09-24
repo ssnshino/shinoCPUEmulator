@@ -12,6 +12,16 @@
     const op=Number(opcode)&0xFF;
     if(op===0x00)return {kind:'NOP',family:'CONTROL',mnemonic:'NOP',length:1,tStates:4};
 
+    switch(op){
+      case 0xC3:return {kind:'JP_NN',family:'CONTROL_FLOW',mnemonic:'JP nn',length:3,tStates:10};
+      case 0x18:return {kind:'JR_E',family:'CONTROL_FLOW',mnemonic:'JR e',length:2,tStates:12};
+      case 0x20:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'NZ',mnemonic:'JR NZ,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x28:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'Z',mnemonic:'JR Z,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x30:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'NC',mnemonic:'JR NC,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x38:return {kind:'JR_CC_E',family:'CONTROL_FLOW',condition:'C',mnemonic:'JR C,e',length:2,tStatesTaken:12,tStatesNotTaken:7};
+      case 0x10:return {kind:'DJNZ_E',family:'CONTROL_FLOW',condition:'B!=0',mnemonic:'DJNZ e',length:2,tStatesTaken:13,tStatesNotTaken:8};
+    }
+
     if((op&0xC7)===0x04){
       const target=(op>>3)&7;
       if(target===6)return {kind:'INC_MEM_HL',family:'INC_DEC',mnemonic:'INC (HL)',length:1,tStates:11};
