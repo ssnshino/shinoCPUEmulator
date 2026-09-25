@@ -3,9 +3,9 @@
   "candidate": "MINIMUM BIOS + MONITOR FOUNDATION v0.1",
   "date": "2026-09-25",
   "branch": "feature/shino80-minimum-bios-monitor-20260925",
-  "reviewed_main_base": "d46de4e460a148c2d52a3024cc0767e48e5a1d64",
-  "stacked_cgrom_dm80_base": "52edcafa9a76702b8b22fcd69a26a527488959d0",
-  "result": "PASS_SOURCE_CANDIDATE",
+  "reviewed_main_base": "6d46743d6efac93a66ad79a61515e6adfc6e8ff1",
+  "cgrom_dm80_reviewed_head": "e04a951183fa6eb429cf61bcfd3d9655bea883b2",
+  "result": "PASS_INTEGRATION_CANDIDATE",
   "checks": {
     "rom_size_8192": "PASS",
     "reset_vector_0000_to_ipl_0200": "PASS",
@@ -23,15 +23,15 @@
     "phase2a_video_ipl_regression": "PASS",
     "phase2a1_power_reset_display_regression": "PASS",
     "source_syntax": "PASS",
-    "stacked_base_artifact_static_regression": "PASS",
+    "final_generated_artifact_static_regression": "PASS",
+    "final_generated_artifact_reproducibility": "PASS",
+    "final_generated_artifact_sha256": "a059110e7599e7252ec5b419dee1d2c2c31d84d1b4e0e59002043d260e78d33c",
     "in_memory_one_page_build_inline_syntax": "PASS",
-    "in_memory_chrome_ipl_to_monitor": "PASS",
+    "generated_artifact_chrome_ipl_to_monitor": "PASS",
     "git_diff_check": "PASS"
   },
   "deferred": [
-    "generated deploy HTML update after CG-ROM / DM-80 merge",
-    "package script integration",
-    "repository README and restart snapshot refresh",
+    "repository README and restart snapshot closeout after merge",
     "keyboard GETCHAR and interactive Monitor commands",
     "disk, serial, printer, interrupt and NMI BIOS services"
   ]

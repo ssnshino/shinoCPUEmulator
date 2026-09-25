@@ -1,7 +1,7 @@
 # SHINO-80 MINIMUM BIOS + MONITOR FOUNDATION WORKLOG
 
 Date: 2026-09-25
-Status: SOURCE CANDIDATE COMPLETE
+Status: INTEGRATION CANDIDATE COMPLETE
 
 ## Source of truth
 
@@ -73,23 +73,29 @@ MON
 *
 ```
 
-## Deferred integration
+## Final integration — 2026-09-25
 
-The following shared files are deliberately not changed in this branch before
-the CG-ROM / DM-80 merge:
+CG-ROM / DM-80 PR #14 merged first as required.
 
-- generated `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
-- `package.json`
-- root `README.md`
-- `snapshot/*`
+- reviewed CG-ROM / DM-80 head:
+  `e04a951183fa6eb429cf61bcfd3d9655bea883b2`
+- CG-ROM / DM-80 merge commit:
+  `6d46743d6efac93a66ad79a61515e6adfc6e8ff1`
+- BIOS branch updated from that `main`: PASS / no conflict
+- BIOS test added to the package test chain
+- browser smoke Monitor target updated from legacy `009Ch` to `0220h`
+- canonical one-page artifact regenerated with final CG-ROM and BIOS
+- generated artifact SHA-256:
+  `a059110e7599e7252ec5b419dee1d2c2c31d84d1b4e0e59002043d260e78d33c`
+- repeat build produced the same artifact SHA-256
+- final Chrome smoke reached `PC=0220h` with DM-80 AA mode active
 
-After the CG-ROM / DM-80 branch merges, update the BIOS branch from `main`, run
-the canonical build once, run browser smoke against the generated artifact,
-refresh shared status documents, and only then open the BIOS PR.
+Root README and restart snapshots remain a post-merge closeout item so they can
+record the exact reviewed `main` commit.
 
 ## Remaining work
 
-- human review of the v0.1 BIOS ABI
+- merge review of the v0.1 BIOS ABI
 - keyboard device and GETCHAR design
 - interactive Monitor command PLAN
 - device BIOS services after their hardware contracts exist

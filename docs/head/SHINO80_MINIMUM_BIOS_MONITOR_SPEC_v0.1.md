@@ -143,7 +143,12 @@ load/save, disk, serial, and printer commands are not implemented in v0.1.
 - Total firmware timing is deterministic at the current instruction/T-state
   accuracy level.
 
-## Deferred integration
+## Integration status
 
-The generated one-page artifact, README status, package scripts, and restart
-snapshot are updated after the parallel CG-ROM / DM-80 branch has merged.
+After CG-ROM / DM-80 PR #14 merged, the BIOS candidate was updated from the
+reviewed `main` and the canonical one-page artifact was regenerated. The
+package test chain includes the BIOS unit test, and Chrome smoke reaches the
+Monitor loop at `0220h` with the final CG-ROM / DM-80 renderer active.
+
+Repository README and restart snapshots are refreshed in the post-merge
+closeout so they can record the exact reviewed `main` commit.
