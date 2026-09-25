@@ -1,61 +1,81 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
-Last updated: 2026-09-24T23:55:00+09:00
+Last updated: 2026-09-25T23:58:41+09:00
 
-## Main baseline
+## Reviewed runtime baseline
 
-PR #6 through PR #11 are merged into main.
+- runtime baseline before this documentation closeout:
+  `b5b0aa8f73a772e27f86960bb24fb058057bb77d`
+- CG-ROM / DM-80: merged via PR #14
+- Minimum BIOS / Monitor foundation: merged via PR #15
+- canonical source: reviewed GitHub `main`
+- canonical artifact:
+  `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 
-Machine baseline includes:
-- Z80 core foundation
-- flags
-- control flow
-- CALL/RET stack
-- SYSTEM ROM / IPL
-- TEXT VIDEO / CG-ROM
-- POWER / warm RESET
-- DM-80 exchangeable display-device model
-
-## Active candidate
-
-- Branch: `feature/z80-phase1e-complete-base-opcodes-20260924`
-- Candidate: **SHINO Z80 CORE v0.0.9 — PHASE 1E BASE COMPLETE**
-- Artifact: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
-- Human review: PENDING
-
-## Instruction coverage
+## CPU status
 
 ```text
 BASE decode slots       256 / 256
 BASE non-prefix execute 252 / 252
-PREFIX entry points     CB DD ED FD
+External oracle         252 / 252 opcodes
+Unique oracle cases     252,000 / 252,000 PASS
+Failure                 0
+Prefix entry points     CB DD ED FD
 ```
 
-BASE functional execution now includes:
-- full 8-bit ALU
-- 16-bit INC/DEC + ADD HL
-- DAA / rotates / CPL / SCF / CCF
-- exchange family
-- all JP/CALL/RET conditions
-- PUSH/POP
-- RST
-- immediate IN/OUT
-- HALT
-- DI/EI functional state
+PHASE 1F CB execution is not implemented yet.
 
-## QA
+## Display status
 
-- 252 non-prefix opcodes fresh-execution smoke: PASS
-- targeted family regression: PASS
-- representative SingleStepTests oracle: **23,000 / 23,000 PASS**
-- DAA randomized oracle: **1000 / 1000 PASS**
-- artifact inline syntax: PASS
+- original native 8 x 16 CG-ROM
+- 4096 bytes / 256 glyphs x 16 bytes
+- CG-ROM SHA-256:
+  `78ad2a69fce15801f07766b05f1f9cd9179eb7e974fb22d7f83e22e2d34dd194`
+- CG-ROM CRC32: `659A7798`
+- native / integer enlargement: pixel-perfect
+- reduction / non-integer scaling: gentle AA
+- scanline / phosphor: DM-80 presentation layer
+- Human visual QA: PASS
 
-Comparison policy currently excludes undocumented X/Y and internal WZ/P/Q.
+## Firmware status
 
-## Next
+- SYSTEM ROM: `0000h-1FFFh`, 8 KiB, CPU write protected
+- RESET: `0000h` -> IPL at `0200h`
+- `RST 08h`: PUTCHAR
+- BIOS jump table: `0100h`
+- implemented: PUTCHAR / NEWLINE / CLS / PRINT_STRING
+- BIOS work area: `E000h-E002h`
+- Monitor loop: `0220h`
+- Monitor interaction: not implemented
 
-**PHASE 1F — CB COMPLETE**
+Reserved and unimplemented:
 
-Implement all 256 CB second-byte encodings.
+- GETCHAR / keyboard input
+- disk / serial / printer BIOS
+- interrupt / NMI service bodies
+- interactive Monitor commands
+
+## Final integration QA
+
+- full Z80 PHASE 1A-1E regression: PASS
+- PHASE 2A / 2A.1 regression: PASS
+- minimum BIOS unit test: PASS
+- source syntax / build / artifact test: PASS
+- generated artifact reproducibility: PASS
+- final Chrome CG-ROM + DM-80 + BIOS smoke: PASS
+- final Monitor PC: `0220h`
+
+## Operating decision
+
+Do not resume concurrent implementation on multiple environments.
+
+Choose one next task and one active environment, then keep a single writer until
+that branch is complete and merged.
+
+Candidate next tasks:
+
+1. Z80 PHASE 1F — all 256 CB second-byte encodings
+2. Keyboard device + GETCHAR + interactive Monitor PLAN
+
+Neither candidate is automatically authorized by this snapshot.

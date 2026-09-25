@@ -15,19 +15,18 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Repository: `ssnshino/shinoCPUEmulator`
 - Default branch: `main`
 - Current machine: **SHINO-80**
-- Reviewed baseline: repository bootstrap PR #1 merged
-- UI Design Standard v0.1: **MERGED via PR #3**
-- SHINO-80 v0.0.2 UI FOUNDATION: **MERGED via PR #4 / Human smartphone PASS**
 - Current development source: `src/`
-- Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
-- Source/deploy split: **MERGED via PR #5**
-- Active candidate: **Z80 PHASE 1E / v0.0.9 — BASE COMPLETE**
-- Candidate branch: `feature/z80-phase1e-complete-base-opcodes-20260924`
-- Candidate artifact: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
-- BASE status: **252 / 252 non-prefix executable; CB/DD/ED/FD prefix entry points recognized**
-- CPU PR #2 remains open as historical first-heartbeat candidate
+- Current distribution artifact: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
+- Z80 PHASE 1E: **MERGED / BASE 252 of 252 non-prefix opcodes**
+- External BASE oracle: **252,000 / 252,000 PASS / Failure 0**
+- Native CG-ROM / DM-80 refinement: **MERGED via PR #14 / Human visual PASS**
+- Minimum SHINO BIOS + Monitor foundation: **MERGED via PR #15**
+- BIOS services: PUTCHAR / NEWLINE / CLS / PRINT_STRING
+- Current Monitor: non-interactive `*` prompt and wait loop at `0220h`
 
-PHASE 1E completes the non-prefix BASE opcode map. Next target: CB 256 second-byte encodings.
+The next implementation target is intentionally not auto-selected. Resume with
+one active environment and one branch only, then choose either Z80 PHASE 1F CB
+completion or keyboard / interactive Monitor design through PLAN FIRST.
 
 ## UI core direction
 
@@ -54,21 +53,14 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO_Z80_CORE_PHASE1B_INC_DEC_FLAGS_PLAN.md`
-7. `docs/head/SHINO_Z80_CORE_v0.0.4_PHASE1B_SPEC.md`
-8. `research/z80/Z80_PHASE1B_INC_DEC_FLAGS_RESEARCH_NOTE_v0.1.md`
-9. `research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.2.md`
-10. `plan/head/SHINO_Z80_CORE_PHASE1A_INSTRUCTION_ARCHITECTURE_PLAN.md`
-7. `docs/head/SHINO_Z80_CORE_v0.0.3_PHASE1A_SPEC.md`
-8. `research/z80/Z80_PHASE1A_LD_RESEARCH_NOTE_v0.1.md`
-9. `research/z80/Z80_INSTRUCTION_COVERAGE_MATRIX_v0.1.md`
-10. `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-11. `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
-12. `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
-13. `plan/head/SHINO_80_PHASE0_RESEARCH_PLAN_v0.1.md`
-14. `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
-15. `docs/head/SHINO_80_ARCHITECTURE_DRAFT_v0.1.md`
-16. `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
+6. `plan/head/SHINO80_MINIMUM_BIOS_MONITOR_PLAN_v0.1.md`
+7. `docs/head/SHINO80_MINIMUM_BIOS_MONITOR_SPEC_v0.1.md`
+8. `code/head/SHINO80_MINIMUM_BIOS_MONITOR_QA_v0.1.json`
+9. `working-logs/head/SHINO80_MINIMUM_BIOS_MONITOR_WORKLOG.md`
+10. `snapshot/SHINO80_CGROM_DM80_SNAPSHOT_20260925_2234.md`
+11. `working-logs/head/SHINO80_CGROM_DM80_REFINEMENT_WORKLOG.md`
+12. `plan/head/SHINO_Z80_FULL_INSTRUCTION_SET_COMPLETION_PLAN.md`
+13. `working-logs/head/SHINO_Z80_CORE_PHASE1E_WORKLOG.md`
 
 ## Core concept
 
@@ -230,3 +222,6 @@ VIRTUAL MICROCOMPUTER LAB
 - 2026-09-24 — ChatGPT — PHASE 2A.1 candidate: POWER state, warm RESET, IPL VRAM clear and CRT safe margin.
 
 - 2026-09-24T23:55:00+09:00 — ChatGPT — PHASE 1E: all 252 non-prefix BASE opcodes executable; BASE 256/256 decode coverage; representative SingleStepTests oracle 23,000/23,000 PASS.
+- 2026-09-25 — Codex — PHASE 1E external oracle closeout: 252 non-prefix opcodes / 252,000 unique cases PASS, Failure 0.
+- 2026-09-25 — ChatGPT / Human QA / Codex — Native 8x16 CG-ROM and adaptive DM-80 rendering merged via PR #14.
+- 2026-09-25 — Codex — Minimum SHINO BIOS + Monitor foundation merged via PR #15; IPL now prints through BIOS and waits at `0220h`.

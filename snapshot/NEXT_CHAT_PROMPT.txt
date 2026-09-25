@@ -1,32 +1,38 @@
-ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
+SHINO-80 development is cleanly integrated through:
 
-Current candidate:
-Z80 CORE v0.0.9 PHASE 1E BASE COMPLETE
+- PR #14: native CG-ROM / DM-80 rendering
+- PR #15: minimum SHINO BIOS + Monitor foundation
 
-Branch:
-feature/z80-phase1e-complete-base-opcodes-20260924
+Start from reviewed GitHub main and verify live branch / HEAD / dirty state.
 
-Artifact:
-deploy/one_page_shino80_v0.0.9_z80_base_complete.html
+Read in order:
 
-Read:
 1. README.md
-2. snapshot/CURRENT_SNAPSHOT.md
-3. plan/head/SHINO_Z80_FULL_INSTRUCTION_SET_COMPLETION_PLAN.md
-4. plan/head/SHINO_Z80_CORE_PHASE1E_BASE_COMPLETE_PLAN.md
-5. docs/head/SHINO_Z80_CORE_v0.0.9_PHASE1E_SPEC.md
-6. research/z80/Z80_PHASE1E_BASE_COMPLETION_RESEARCH_NOTE_v0.1.md
-7. research/z80/Z80_BASE_OPCODE_MATRIX_v0.5.md
-8. code/head/SHINO_Z80_CORE_v0.0.9_PHASE1E_QA.json
+2. AGENTS.md
+3. snapshot/CURRENT_SNAPSHOT.md
+4. snapshot/LAST_RUN.md
+5. snapshot/SNAPSHOT_MANIFEST.md
 
-BASE:
-- 252/252 non-prefix executable
-- CB/DD/ED/FD prefix entry points recognized
-- 23,000/23,000 representative external-oracle cases PASS
+Current machine facts:
 
-Next task:
-PHASE 1F — implement all 256 CB second-byte encodings:
-RLC/RRC/RL/RR/SLA/SRA/SLL/SRL/BIT/RES/SET.
+- BASE non-prefix: 252 / 252
+- external BASE oracle: 252,000 / 252,000 PASS
+- native 8x16 CG-ROM and adaptive DM-80 rendering: merged
+- BIOS PUTCHAR / NEWLINE / CLS / PRINT_STRING: merged
+- IPL Monitor loop: 0220h
+- keyboard / GETCHAR / interactive Monitor: not implemented
+- CB prefix execution: not implemented
 
-Keep documented flags exact.
-Use SingleStepTests as an independent oracle.
+Important operating rule:
+
+Use one active environment and one writer only. Do not begin parallel changes
+in ChatGPT and Codex against the same repository.
+
+Before implementation, ask the human to choose the next objective:
+
+A. Z80 PHASE 1F CB COMPLETE
+B. Keyboard + GETCHAR + interactive Monitor foundation
+
+Then follow PLAN FIRST and create a fresh purpose branch from current main.
+
+ごっごっごっごっ♪

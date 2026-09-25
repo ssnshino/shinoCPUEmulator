@@ -1,35 +1,37 @@
 # LAST RUN
-## Z80 PHASE 1E — BASE COMPLETE
+## CG-ROM / DM-80 + MINIMUM BIOS INTEGRATION CLOSEOUT
 
-Updated: 2026-09-24T23:55:00+09:00
+Updated: 2026-09-25T23:58:41+09:00
 
-Completed the Z80 non-prefix BASE instruction map.
+Completed sequentially:
 
-Results:
+1. verified frozen CG-ROM / DM-80 head
+   `e04a951183fa6eb429cf61bcfd3d9655bea883b2`
+2. merged CG-ROM / DM-80 through PR #14
+3. updated the BIOS branch from reviewed `main`
+4. regenerated the one-page artifact once with final display and BIOS source
+5. ran all CPU, machine, BIOS, build, artifact, and Chrome regressions
+6. merged Minimum BIOS / Monitor foundation through PR #15
+
+Final runtime integration baseline before documentation closeout:
+
+`b5b0aa8f73a772e27f86960bb24fb058057bb77d`
+
+Key results:
 
 ```text
-BASE slots decoded          256 / 256
-Non-prefix opcodes executed 252 / 252
-Prefix introducers          CB / DD / ED / FD
-Fresh-opcode failures       0
+BASE oracle                252,000 / 252,000 PASS
+Native CG-ROM              4096 bytes / integrity PASS
+DM-80 adaptive rendering   PASS
+BIOS PUTCHAR               PASS
+BIOS NEWLINE               PASS
+BIOS CLS                   PASS
+BIOS PRINT_STRING          PASS
+IPL -> Monitor 0220h       PASS
+Chrome integration smoke   PASS
 ```
 
-Added:
-- general ALU
-- 16-bit arithmetic
-- DAA
-- accumulator rotates
-- EX family
-- full conditional control flow
-- PUSH/POP/RST
-- I/O port space + IN/OUT
-- HALT functional cycles
-- DI/EI functional state
+No next implementation phase was started.
 
-Independent oracle:
-- SingleStepTests representative opcodes: 23,000 cases
-- final failures: 0
-
-DAA was corrected after the first randomized oracle pass found 174 edge-case mismatches.
-
-Next: CB 00h-FFh.
+The next session must choose one active environment and one branch. Do not run
+parallel writers against this repository.
