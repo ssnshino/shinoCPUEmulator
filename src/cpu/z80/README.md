@@ -1,6 +1,6 @@
 # src/cpu/z80
 
-Current candidate: **PHASE 1H — BASE + CB + ED + DD/FD (documented-state policy)**
+Current candidate: **PHASE 1I — all instruction families (D7 comparison policy)**
 
 ```text
 z80/
@@ -19,7 +19,8 @@ z80/
 - external oracle: BASE 252,000 + CB 256,000 + ED 80,000 PASS at this candidate
 - ED external inventory includes 2 unused NOPs; other unused slots have units only
 - DD/FD: 252 non-prefix terminal slots each, 504,000 external cases PASS
-- Current total external baseline: 1,092,000 PASS; indexed CB excluded
+- DDCB/FDCB: 256 encodings each, 512,000 external cases PASS
+- Current total external baseline: 1,604,000 PASS; interrupts/precision excluded
 
 ## Responsibilities
 
@@ -49,7 +50,7 @@ Undocumented X/Y remains a later accuracy target.
 
 ## Next
 
-Next PHASE 1I adds DDCB/FDCB execution. Indexed CB remains unimplemented.
+Next PHASE 1J: interrupt dispatch and precision closeout, with its own plan.
 Interrupt dispatch, undocumented X/Y and pin-level precision remain later work.
 
 Do not create a generic multi-CPU abstraction while finishing Z80.

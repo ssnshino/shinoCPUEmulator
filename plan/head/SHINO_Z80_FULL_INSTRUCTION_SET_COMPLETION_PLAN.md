@@ -83,6 +83,11 @@ Do not blindly substitute H/L in encodings where Z80 semantics differ.
 
 ### PHASE 1I — DDCB / FDCB COMPLETE
 
+2026-09-26: candidate feature/shino80-z80-indexed-cb-20260926 on e01d5ed /
+PR #24. DDCB/FDCB256 each; new512k external plus prior1,092k PASS. See
+PHASE1I_INDEXED_CB plan/spec/worklog. Instruction families execute under D7;
+full CPU accuracy/interrupts are NOT complete. Next PHASE1J. Review pending.
+
 Implement indexed bit/rotate families including the register-copy forms.
 
 ### PHASE 1J — INTERRUPT + ACCURACY CLOSEOUT

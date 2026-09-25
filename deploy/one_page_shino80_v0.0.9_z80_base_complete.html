@@ -909,7 +909,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     return d;
   }
 
+  function decodeIndexedCB(opcode,index){
+    if(index!=='IX'&&index!=='IY')throw new Error('Invalid index register');
+    const d=decodeCB(opcode),memory=`(${index}+d)`,bit=d.kind==='CB_BIT';
+    const stem=d.kind==='CB_ROTATE'?`${d.rotate} ${memory}`:`${bit?'BIT':d.kind==='CB_RES'?'RES':'SET'} ${d.operation},${memory}`;
+    return {...d,index,family:index==='IX'?'DDCB':'FDCB',length:4,tStates:bit?20:23,
+      mnemonic:stem+(!bit&&d.targetCode!==6?','+REG8_NAMES[d.targetCode]:'')};
+  }
+
   return {
+    decodeIndexedCB,
     decodeIndex,
     decodeED,
     decodeCB,
@@ -933,7 +942,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,decodeCB,decodeED,decodeIndex,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,decodeED,decodeIndex,decodeIndexedCB,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
@@ -1011,10 +1020,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       return {...this.lastInstruction,bytes:[...this.lastInstruction.bytes]};
     }
 
-    fetchOperandByte(ctx,offsetT=4){
+    fetchOperandByte(ctx,offsetT=4,purpose='OPERAND_READ'){
       const s=this.state,address=s.pc&0xFFFF;
       const value=this.bus.cpuRead(address,{
-        tState:ctx.startTState+offsetT,purpose:'OPERAND_READ',signals:['MREQ','RD'],
+        tState:ctx.startTState+offsetT,purpose,signals:['MREQ','RD'],
         meta:{precision:'M_CYCLE_ABSTRACT'}
       });
       s.pc=(s.pc+1)&0xFFFF;ctx.bytes.push(value);return value;
@@ -1559,6 +1568,21 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       return desc.mnemonic;
     }
 
+    executeIndexedCB(desc,ctx){
+      const s=this.state,address=(s[desc.index.toLowerCase()]+signed8(ctx.displacement))&65535;
+      const value=this.readData(address,ctx,11);
+      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation);
+      else{
+        let result;
+        if(desc.kind==='CB_ROTATE'){const next=rotateShift8(s.f,value,desc.rotate);result=next.result;s.f=next.f;}
+        else result=desc.kind==='CB_RES'?value&~(1<<desc.operation):value|(1<<desc.operation);
+        this.writeData(address,result,ctx,15);
+        // Copy the computed result, even if ROM protection blocked the memory write.
+        if(desc.targetCode!==6)this.setReg8(desc.targetCode,result);
+      }
+      return desc.mnemonic.replace('+d',signedText(ctx.displacement));
+    }
+
     executeIndex(desc,ctx){
       if(!desc.affected)return this.executeDescriptor(desc,ctx);
       const s=this.state,key=desc.index.toLowerCase();
@@ -1627,10 +1651,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         terminal=this.fetchOpcode(prefixCount*4).opcode;ctx.bytes.push(terminal);
       }
       ctx.startTState=startTState+prefixCount*4;
-      if(index&&terminal===0xCB)throw new Error('UNIMPLEMENTED INDEXED CB (PHASE 1I)');
-      if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
+      if(index&&terminal===0xCB){
+        ctx.displacement=this.fetchOperandByte(ctx,4);
+        desc=decodeIndexedCB(this.fetchOperandByte(ctx,7,'OPCODE_READ'),index);
+      }
+      else if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
       else if(index)desc=decodeIndex(terminal,index);
-      const execution=terminal===0xCB?this.executeCB(desc,ctx):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
+      const execution=terminal===0xCB?(index?this.executeIndexedCB(desc,ctx):this.executeCB(desc,ctx)):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
       const actualTStates=(detail.tStates??desc.tStates)+(index?(terminal===0xED?prefixCount:prefixCount-1)*4:0);
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
@@ -2422,7 +2449,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
-    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.map(b=>hex(b,2)).join(' ')}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>DD / FD</span><b>252 + 252 terminal opcodes ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Documented state / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">BASE, CB, ED and DD/FD execute. ED oracle: 80 encodings (includes 2 unused NOPs). Indexed CB remains unimplemented. X/Y flags and interrupt dispatch are later accuracy work.</div>`;}
+    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.map(b=>hex(b,2)).join(' ')}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>DD / FD</span><b>252 + 252 terminal opcodes ONLINE</b></div><div class="inspector-kv"><span>DDCB / FDCB</span><b>256 + 256 encodings ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Documented state / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">All instruction families execute under the D7 comparison policy. ED oracle: 80 encodings (includes 2 unused NOPs). Interrupt dispatch, X/Y and other internal-state precision remain unfinished.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.traceCount}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){

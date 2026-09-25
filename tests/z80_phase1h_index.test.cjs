@@ -66,7 +66,7 @@ for(const [prefix,key,other] of [[0xDD,'ix','iy'],[0xFD,'iy','ix']]){
   // HALT consumes no displacement; subsequent HALT cycle is still 4T / one R increment.
   s=setup(prefix,0x76);cpu.step();assert.equal(s.pc,0x2002);assert.equal(s.tStates,8);cpu.step();assert.equal(s.tStates,12);assert.equal(s.r,0x81);
   s=setup(prefix,0xFB);cpu.step();assert.equal(s.eiDelay,1);bus.memory[0x2002]=0;cpu.step();assert.equal(s.eiDelay,0);
-  setup(prefix,0xCB,{},[0,0]);assert.throws(()=>cpu.step(),/UNIMPLEMENTED INDEXED CB/);
+  setup(prefix,0xCB,{},[0,0]);assert.equal(cpu.step().tStates,23);
   const pb=new Shino80Bus({romRanges:[[0,8191]]}),pc=new Z80Core(pb);pb.load([prefix,0x36,255,0],0x2000);pb.memory[0x1000]=0x55;Object.assign(pc.state,{pc:0x2000,[key]:0x1001});pc.step();assert.equal(pb.memory[0x1000],0x55);assert(pb.trace.some(e=>e.operation==='WRITE_BLOCKED'));
 }
 // Repeated prefixes: last index wins, R and T include every fetch, one retirement.

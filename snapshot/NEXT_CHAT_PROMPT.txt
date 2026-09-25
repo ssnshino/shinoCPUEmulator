@@ -1,3 +1,11 @@
+CURRENT INDEXED CB OVERRIDE 2026-09-26:
+Resume feature/shino80-z80-indexed-cb-20260926, parent e01d5ed / PR #24.
+Read PHASE1I_INDEXED_CB plan/spec/worklog and QA JSONs. All7 instruction
+families execute; external1,604,000 PASS under D7 policy. Full Z80 NOT done.
+Next PHASE1J: start with a bounded interrupt plan, then precision expansion.
+MON paused. One writer; no automatic merges. Inspect live Git status.
+The old phase targets below are historical, not current directions.
+
 LATEST INDEX OVERRIDE 2026-09-26:
 Resume feature/shino80-z80-index-20260926, parent bb0daeb / PR #23. Read
 PHASE1H_INDEX plan/spec/worklog and QA JSONs. DD/FD252 each verified; external

@@ -195,7 +195,16 @@
     return d;
   }
 
+  function decodeIndexedCB(opcode,index){
+    if(index!=='IX'&&index!=='IY')throw new Error('Invalid index register');
+    const d=decodeCB(opcode),memory=`(${index}+d)`,bit=d.kind==='CB_BIT';
+    const stem=d.kind==='CB_ROTATE'?`${d.rotate} ${memory}`:`${bit?'BIT':d.kind==='CB_RES'?'RES':'SET'} ${d.operation},${memory}`;
+    return {...d,index,family:index==='IX'?'DDCB':'FDCB',length:4,tStates:bit?20:23,
+      mnemonic:stem+(!bit&&d.targetCode!==6?','+REG8_NAMES[d.targetCode]:'')};
+  }
+
   return {
+    decodeIndexedCB,
     decodeIndex,
     decodeED,
     decodeCB,
