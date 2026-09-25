@@ -76,3 +76,111 @@ After DAA correction:
 
 PHASE 1F:
 CB 256 encodings.
+
+## External oracle sweep continuation — 2026-09-25
+
+### Validation policy
+
+Oracle:
+- `SingleStepTests/z80`
+- `v1/*.json`
+
+CPU checkpoint:
+- `efcdd08ebbb6bdeb1ba7c7d6ad7e3616aa1aebf2`
+
+Rules:
+- checkpoint CPU core only; no CPU-core source changes during validation
+- 1000 oracle cases per opcode
+- compare documented flags only: `F & 0xD7`
+- WZ / P / Q / undocumented Y / X are outside PHASE 1E comparison
+- compare architectural registers, PC / SP, alternate registers, I / R,
+  IFF1 / IFF2 / IM / EI delay, final RAM, and total T-states
+- total T-states are compared against oracle `cycles.length`
+
+### Entry state
+
+Before this continuation:
+- Oracle verified: 138 opcode
+- Oracle cases: 138,000
+- PASS: 138,000
+- Failure: 0
+- `40h–7Fh` had been fully verified
+- final previous block `54h–7Fh`: 44,000 / 44,000 PASS
+
+### 80h–BFh ALU matrix
+
+All 64 ALU opcodes were verified, including every `(HL)` form.
+
+Results:
+- `80–8F` ADD / ADC: 16,000 / 16,000 PASS
+- `90–9F` SUB / SBC: 16,000 / 16,000 PASS
+- `A0–AF` AND / XOR: 16,000 / 16,000 PASS
+- `B0–BF` OR / CP: 16,000 / 16,000 PASS
+
+ALU matrix total:
+- 64 opcode
+- 64,000 / 64,000 PASS
+- Failure: 0
+
+Unique verified coverage after the ALU matrix:
+- Oracle verified: 202 opcode
+- Oracle cases: 202,000
+- PASS: 202,000
+- Failure: 0
+
+### C0h–CFh revalidation
+
+The next sweep deliberately re-ran the C0h block rather than assuming which
+earlier representative opcodes were already included in the 138-opcode total.
+
+Confirmed PASS:
+- `C0–C7`: 8,000 / 8,000
+- `C8`
+- `C9`
+- `CA`
+- `CC`
+- `CD`
+- `CE`
+- `CF`
+
+`CB` is a prefix introducer and is outside non-prefix BASE validation.
+
+C0h–CFh non-prefix revalidation total:
+- 15 opcode
+- 15,000 / 15,000 PASS
+- Failure: 0
+
+These 15 opcodes are recorded as **revalidation** and are not added blindly to
+the unique 202-opcode coverage count, because the earlier 138-opcode run already
+contained some opcodes outside the 00h–7Fh range. Reconstruct the exact opcode
+coverage set before publishing a final unique-opcode total.
+
+Observed oracle executions through this stopping point:
+- previous confirmed executions: 202,000
+- C0h–CFh revalidation: +15,000
+- total executed oracle cases represented by the current record: 217,000
+- observed failures: 0
+
+### Stop point
+
+A `D0h–DFh` automated run was started, but its result was not returned before
+the validation session was stopped.
+
+Therefore:
+- do **not** infer PASS/FAIL for `D0h–DFh` from that interrupted run
+- resume from `D0h` (excluding prefix `DDh`) or reconstruct the full
+  remaining non-prefix BASE set automatically
+- prefixes `CBh / DDh / EDh / FDh` remain outside PHASE 1E BASE oracle scope
+
+### Recommended continuation
+
+Use an automated oracle harness to:
+1. pin the emulator to checkpoint `efcdd08ebbb6bdeb1ba7c7d6ad7e3616aa1aebf2`
+2. leave CPU-core source unchanged
+3. reconstruct the exact already-verified opcode set
+4. run every remaining non-prefix BASE opcode against all 1000 oracle cases
+5. print per-opcode PASS/FAIL and cumulative totals
+6. stop and preserve the first mismatch with full state diagnostics
+7. finish only when non-prefix BASE coverage can be stated unambiguously as
+   `252 / 252` under the documented-state comparison policy
+
