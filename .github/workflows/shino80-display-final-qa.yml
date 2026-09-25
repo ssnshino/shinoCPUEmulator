@@ -96,6 +96,37 @@ jobs:
               desktop.screenshot(path='qa/dm80-desktop-1440x900.png', full_page=True)
               desktop.locator('#displayDevice').screenshot(path='qa/dm80-desktop-monitor.png')
 
+              # Human glyph QA: use the real branch CG-ROM and real Shino80TextVideo
+              # driver on the actual DM-80 canvas. This is diagnostic display data,
+              # not a SYSTEM ROM / BIOS modification.
+              desktop.evaluate("""() => {
+                  const bus=new globalThis.SHINO_BUS.Shino80Bus({traceLimit:32});
+                  const video=new globalThis.SHINO_VIDEO.Shino80TextVideo(
+                    bus, document.querySelector('#crtCanvas')
+                  );
+                  video.setPower(true);
+                  const lines=[
+                    'SHINO-80 NATIVE 8x16 CG-ROM QA',
+                    '',
+                    '0123456789  9876543210',
+                    '40414243444546474849',
+                    '44 47 74 77 4477 7474',
+                    '',
+                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                    'abcdefghijklmnopqrstuvwxyz',
+                    '0123456789 !?-*/:._'
+                  ];
+                  lines.forEach((line,row)=>{
+                    for(let col=0;col<line.length&&col<80;col++){
+                      bus.debugPoke(0xC000+row*80+col,line.charCodeAt(col)&0xFF);
+                    }
+                  });
+                  video.render();
+              }""")
+              desktop.wait_for_timeout(120)
+              desktop.screenshot(path='qa/dm80-glyph-qa-desktop.png', full_page=True)
+              desktop.locator('#displayDevice').screenshot(path='qa/dm80-glyph-qa-monitor.png')
+
               browser.close()
 
           (root/'qa'/'display-render-report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
@@ -122,5 +153,7 @@ jobs:
         if: always()
         with:
           name: shino80-display-qa
-          path: qa/
+          path: |
+            qa/
+            deploy/one_page_shino80_v0.0.9_z80_base_complete.html
           if-no-files-found: error
