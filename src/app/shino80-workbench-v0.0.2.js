@@ -97,7 +97,49 @@
   function traceHtml(events){return events.map(t=>{const addr=t.address==null?'----':hex(t.address,4),data=t.data==null?'--':hex(t.data,2);return `<div class="trace-line"><span class="t">T+${t.tState}</span><span class="kind">${t.purpose}</span><span class="addr">${addr}:${data}</span><span class="sig">${(t.signals||[]).join(' ')}</span></div>`;}).join('');}
   function updateTrace(){const rows=bus.trace.slice(-120);queryOne('#busTrace').innerHTML=traceHtml(rows);queryOne('#tracePanelBody').innerHTML=traceHtml(rows.slice(-40));queryOne('#traceSummary').textContent=`${bus.trace.length} events`;}
 
-  function updateMemory(){const root=queryOne('#memoryGrid');let html='';for(let base=0;base<0x100;base+=16){const cells=[];for(let i=0;i<16;i++){const a=base+i,v=bus.debugPeek(a);cells.push(`<span class="${a===ui.lastFetchAddress?'hot':''}">${hex(v,2)}</span>`);}html+=`<div class="memline"><span class="memaddr">${hex(base,4)}</span><span class="membytes">${cells.join(' ')}</span></div>`;}root.innerHTML=html;}
+  const memoryView={address:0,follow:''};
+  function selectMemoryAddress(address){
+    memoryView.address=address&0xFFFF;memoryView.follow='';
+    queryOne('#memoryFollow').value='';queryOne('#memoryAddress').value=hex(memoryView.address,4);
+    queryOne('#memoryMessage').textContent='';ui.dirty=true;
+  }
+  function updateMemory(){
+    if(ui.view!=='memory')return;
+    if(memoryView.follow==='pc')memoryView.address=cpu.state.pc;
+    if(memoryView.follow==='sp')memoryView.address=cpu.state.sp;
+    if(memoryView.follow==='hl')memoryView.address=(cpu.state.h<<8)|cpu.state.l;
+    if(memoryView.follow==='cursor')memoryView.address=bus.debugPeek(0xE000)|(bus.debugPeek(0xE001)<<8);
+    const start=memoryView.address&0xFF00,columns=matchMedia('(max-width:719px)').matches?8:16;
+    const root=queryOne('#memoryGrid');root.style.setProperty('--memory-columns',columns);
+    queryOne('#memoryRange').textContent=`${hex(start,4)}h–${hex(start+255,4)}h · PAGE ${start/256+1}/256 · ${columns} bytes/row`;
+    queryOne('#memoryPrev').disabled=start===0;queryOne('#memoryNext').disabled=start===0xFF00;
+    if(document.activeElement!==queryOne('#memoryAddress'))queryOne('#memoryAddress').value=hex(memoryView.address,4);
+    const marks={};
+    for(const event of bus.trace){
+      if(event.actor!=='CPU'||event.space!=='MEMORY')continue;
+      if(event.purpose==='OPCODE_FETCH')marks.fetch=event.address;
+      else if(event.operation==='READ')marks.read=event.address;
+      else if(event.operation==='WRITE')marks.write=event.address;
+    }
+    const fragment=document.createDocumentFragment();
+    for(let base=start;base<start+256;base+=columns){
+      const row=document.createElement('div');row.className='memline';
+      const label=document.createElement('span');label.className='memaddr';label.textContent=hex(base,4);
+      const bytes=document.createElement('span');bytes.className='membytes';
+      const ascii=document.createElement('span');ascii.className='memascii';let text='';
+      for(let i=0;i<columns;i++){
+        const address=base+i,value=bus.debugPeek(address),cell=document.createElement('span');
+        cell.textContent=hex(value);cell.dataset.address=hex(address,4);
+        cell.classList.toggle('mem-selected',address===memoryView.address);
+        const kinds=Object.keys(marks).filter(kind=>marks[kind]===address);
+        for(const kind of kinds)cell.classList.add('mem-'+kind);
+        cell.title=`${hex(address,4)}h${kinds.length?' · '+kinds.join(' / ').toUpperCase():''}`;
+        bytes.appendChild(cell);text+=value>=32&&value<=126?String.fromCharCode(value):'.';
+      }
+      ascii.textContent=text;row.append(label,bytes,ascii);fragment.appendChild(row);
+    }
+    root.replaceChildren(fragment);
+  }
 
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
@@ -250,6 +292,16 @@
   }
 
   function bind(){
+    queryOne('#memoryAddressForm').addEventListener('submit',event=>{
+      event.preventDefault();
+      const value=queryOne('#memoryAddress').value.trim().replace(/^0x/i,'').replace(/h$/i,'');
+      if(!/^[0-9a-f]{1,4}$/i.test(value)){queryOne('#memoryMessage').textContent='Enter a hex address from 0000 to FFFF.';return;}
+      selectMemoryAddress(parseInt(value,16));
+    });
+    queryOne('#memoryPrev').addEventListener('click',()=>selectMemoryAddress(Math.max(0,(memoryView.address&0xFF00)-256)));
+    queryOne('#memoryNext').addEventListener('click',()=>selectMemoryAddress(Math.min(0xFF00,(memoryView.address&0xFF00)+256)));
+    queryOne('#memoryJump').addEventListener('change',event=>{if(event.target.value)selectMemoryAddress(parseInt(event.target.value,16));event.target.value='';});
+    queryOne('#memoryFollow').addEventListener('change',event=>{memoryView.follow=event.target.value;ui.dirty=true;});
     queryAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
@@ -280,7 +332,7 @@
     if(globalThis.visualViewport)globalThis.visualViewport.addEventListener('resize',syncKeyboardViewport);
     addEventListener('keydown',e=>{
       if(e.key==='Escape'){closeMore();return;}
-      if(e.target===keyboardCapture||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
+      if(e.defaultPrevented||e.target===keyboardCapture||e.target.closest('input,textarea,select,button,[contenteditable="true"]')||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
       if(enqueueHostKey(e.key))e.preventDefault();
     });
   }
