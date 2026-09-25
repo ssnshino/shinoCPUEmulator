@@ -1,6 +1,11 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+Latest override 2026-09-26: feature/shino80-z80-cb-20260926 on eea8dfc / PR #21.
+CB 256/256 implemented; external CB 256,000 and BASE 252,000 PASS (D7 policy).
+Read PHASE1F_CB plan/spec/worklog. MON expansion paused; next PHASE 1G ED.
+DD/FD/indexed CB and interrupt/precision work still incomplete. No merge.
+
 Newest override 2026-09-26: perf/shino80-trace-observer-20260926 on 3f4f90d /
 PR #20. Read TRACE_OBSERVER_PERF plan/spec/worklog. Ring storage and lazy
 observers; exact CPU/Bus equivalence tested. Chrome ~4 MHz, phone QA pending.
