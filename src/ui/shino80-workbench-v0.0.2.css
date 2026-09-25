@@ -63,7 +63,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.more-backdrop,.more-panel{transition:none!important}}
 
 /* PHASE 2A real text video */
-.crt canvas{width:100%;height:100%;display:block;image-rendering:auto;background:#06100a;position:relative;z-index:0;transition:filter .12s ease}\n.crt.pixelPerfect canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+.crt canvas{width:100%;height:100%;display:block;image-rendering:auto;background:#06100a;position:relative;z-index:0;transition:filter .12s ease}
+.crt.pixelPerfect canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 
 .device-state.online{color:var(--ready)}
 

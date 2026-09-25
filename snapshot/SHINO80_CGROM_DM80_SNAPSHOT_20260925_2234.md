@@ -169,13 +169,33 @@ Locked selected digit bytes:
 - digit 4: selected conservative family-fit form
 - digit 7: selected conservative family-fit form
 
-## Validation still pending
+## Final validation status — 2026-09-25 23:46 JST
 
-The following must not be silently promoted to PASS:
+Completed on GitHub Actions run `36148649953` at QA head
+`560e62e3be982d2c5eed6bc7d4bb32ba5d229474`:
 
-- real Chromium execution of `tests/browser_smoke_v0.0.9.py`
-- full repository `npm test` from a real checkout
-- human visual approval inside the actual DM-80 UI on target browser/device
+- full repository `npm test`: **PASS**
+- source syntax: **PASS**
+- PHASE 2A: **PASS**
+- PHASE 2A.1: **PASS**
+- build: **PASS**
+- artifact test: **PASS**
+- real Chromium browser smoke: **PASS**
+- actual mobile / desktop DM-80 render capture: **PASS**
+- actual branch CG-ROM glyph QA render: **PASS**
+- `git diff --check`: **PASS**
+- generated artifact reproducibility: **PASS**
+- tracked working tree clean after rebuild: **PASS**
+
+Human visual approval against the actual Chrome-rendered DM-80 and glyph-QA
+screenshots:
+
+> **PASS — 「OK 表示がきれいになった！」**
+
+Display-side work is complete and ready for integration.
+
+Still pending by design:
+
 - integration test after BIOS / Monitor branch merge
 
 ## Integration note
@@ -194,6 +214,12 @@ After CG-ROM / DM-80 and BIOS / Monitor branches are reconciled:
 4. run complete test suite
 5. update global snapshot / README if appropriate
 6. perform human display verification
+
+## Completion / freeze rule
+
+After the final cleanup commit, this branch is frozen for Codex integration review.
+Do not add further pushes after reporting the final head SHA unless Human explicitly
+reopens the display work.
 
 ## Resume point
 
