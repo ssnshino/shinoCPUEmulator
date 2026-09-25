@@ -1,5 +1,10 @@
 # LAST RUN
 
+CURRENT: PHASE 1G ED candidate 2026-09-26, feature/shino80-z80-ed-20260926.
+Parent 42d04f7 / PR #22. External ED/BASE/CB: 588,000 PASS, no failures.
+See working-logs/head/SHINO_Z80_PHASE1G_ED_WORKLOG.md. Next DD/FD; no merges.
+The entries below describe earlier work.
+
 Latest: PHASE 1F CB candidate 2026-09-26, feature/shino80-z80-cb-20260926.
 See working-logs/head/SHINO_Z80_PHASE1F_CB_WORKLOG.md. External CB and BASE
 recheck PASS; MON expansion paused; next ED. No main merge performed.

@@ -44,7 +44,7 @@ function flags(f){return f&0xD7;} // documented S/Z/H/PV/N/C only
 }
 
 // Prefixes are recognized but intentionally delegated to later phases.
-for(const op of [0xDD,0xED,0xFD]){
+for(const op of [0xDD,0xFD]){
   const {cpu}=fresh([op,0x00]);
   assert.throws(()=>cpu.step(),/UNIMPLEMENTED PREFIX/);
 }

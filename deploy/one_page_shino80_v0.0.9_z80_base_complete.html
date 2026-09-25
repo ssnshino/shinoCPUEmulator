@@ -681,7 +681,30 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       (set?0:FLAG_MASK.Z|FLAG_MASK.PV)|(bit===7&&set?FLAG_MASK.S:0);
   }
 
+  function carryArithmetic16(oldF,a,b,subtract){
+    const av=a&65535,bv=b&65535,c=oldF&1,total=subtract?av-bv-c:av+bv+c,result=total&65535;
+    let f=preserveYX(oldF)|(result&0x8000?0x80:0)|(result===0?0x40:0)|(subtract?2:0);
+    if((av^bv^result)&0x1000)f|=0x10;
+    if((subtract?(av^bv)&(av^result):~(av^bv)&(av^result))&0x8000)f|=4;
+    if(total<0||total>65535)f|=1;
+    return {result,f};
+  }
+
+  function blockIoFlags(oldF,b,value,sum,repeating){
+    let f=sz(oldF,b)|(value&128?2:0)|(sum>255?0x11:0);
+    let parity=parityEven((sum&7)^b);
+    // Extra repeat cycles alter H/PV: David Banks hardware findings.
+    if(repeating){
+      const carry=sum>255,negative=!!(value&128);
+      const adjusted=carry?b+(negative?-1:1):b;
+      parity=parity===parityEven(adjusted&7);
+      if(carry)f=(f&~0x10)|((b&15)===(negative?0:15)?0x10:0);
+    }
+    return f|(parity?4:0);
+  }
+
   return {
+    carryArithmetic16,blockIoFlags,logicFlags,
     rotateShift8,bitTest8,
     FLAG_BITS,FLAG_MASK,flagState,parityEven,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
@@ -840,7 +863,36 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     return {kind,family:'CB',operation,rotate,targetCode,mnemonic,length:2,tStates:targetCode===6?(group===1?12:15):8};
   }
 
+  function decodeED(opcode){
+    const op=Number(opcode)&255,regCode=(op>>3)&7,pairCode=(op>>4)&3;
+    const d={family:'ED',opcode:op,length:2,tStates:8,kind:'ED_NOP',mnemonic:'NOP (ED unused)',classification:'unused'};
+    const set=(kind,mnemonic,tStates,length=2)=>Object.assign(d,{kind,mnemonic,tStates,length,classification:'defined'});
+    if(op>=0x40&&op<=0x7F){
+      d.regCode=regCode;d.pairCode=pairCode;
+      switch(op&7){
+        case 0:set('ED_IN',regCode===6?'IN (C)':`IN ${REG8_NAMES[regCode]},(C)`,12);break;
+        case 1:set('ED_OUT',`OUT (C),${regCode===6?'0':REG8_NAMES[regCode]}`,12);break;
+        case 2:d.subtract=!(op&8);set('ED_ARITH16',`${d.subtract?'SBC':'ADC'} HL,${REG16_DD_NAMES[pairCode]}`,15);break;
+        case 3:d.load=!!(op&8);set('ED_LD16',d.load?`LD ${REG16_DD_NAMES[pairCode]},(nn)`:`LD (nn),${REG16_DD_NAMES[pairCode]}`,20,4);break;
+        case 4:set('ED_NEG','NEG',8);if(op!==0x44)d.classification='alias';break;
+        case 5:set('ED_RETURN',op===0x4D?'RETI':'RETN',14);if(op!==0x45&&op!==0x4D)d.classification='alias';break;
+        case 6:d.mode=[0,0,1,2,0,0,1,2][regCode];set('ED_IM',`IM ${d.mode}`,8);if(![0x46,0x56,0x5E].includes(op))d.classification='alias';break;
+        case 7:
+          if(op<0x60){d.special=['I','R'][regCode&1];d.loadA=!!(op&0x10);set('ED_SPECIAL',d.loadA?`LD A,${d.special}`:`LD ${d.special},A`,9);}
+          else if(op<0x70){d.left=!!(op&8);set('ED_NIBBLE',d.left?'RLD':'RRD',18);}
+          break;
+      }
+      if(op===0x70||op===0x71)d.classification='undocumented';
+    }else if((op&0xE4)===0xA0){
+      d.operation=op&3;d.direction=(op&8)?-1:1;d.repeat=!!(op&0x10);
+      const names=d.repeat?(d.direction===1?['LDIR','CPIR','INIR','OTIR']:['LDDR','CPDR','INDR','OTDR']):(d.direction===1?['LDI','CPI','INI','OUTI']:['LDD','CPD','IND','OUTD']);
+      set('ED_BLOCK',names[d.operation],16);
+    }
+    return d;
+  }
+
   return {
+    decodeED,
     decodeCB,
     decodeBase,
     REG8_NAMES,REG8_KEYS,
@@ -862,11 +914,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,decodeCB,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,decodeED,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
-    add16HL,rotateAccumulator,daa8,rotateShift8,bitTest8
+    add16HL,rotateAccumulator,daa8,rotateShift8,bitTest8,
+    carryArithmetic16,blockIoFlags,logicFlags
   }=flagsApi;
 
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
@@ -1414,6 +1467,79 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       return desc.mnemonic;
     }
 
+    executeED(desc,ctx){
+      const s=this.state;
+      const ioOptions=(offset,write)=>({tState:ctx.startTState+offset,purpose:write?'IO_WRITE':'IO_READ',signals:['IORQ',write?'WR':'RD'],meta:{precision:'M_CYCLE_ABSTRACT',portMode:'BC'}});
+      switch(desc.kind){
+        case 'ED_NOP':break;
+        case 'ED_IN':{
+          const value=this.bus.cpuIoRead(this.getBC(),ioOptions(8,false));
+          if(desc.regCode!==6)this.setReg8(desc.regCode,value);
+          s.f=logicFlags(s.f,value,false)|(s.f&1);break;
+        }
+        case 'ED_OUT':this.bus.cpuIoWrite(this.getBC(),desc.regCode===6?0:this.getReg8(desc.regCode),ioOptions(8,true));break;
+        case 'ED_ARITH16':{
+          const result=carryArithmetic16(s.f,this.getHL(),this.getPair16(desc.pairCode),desc.subtract);
+          this.setPair16(2,result.result);s.f=result.f;break;
+        }
+        case 'ED_LD16':{
+          const address=this.fetchOperandWord(ctx,8);
+          if(desc.load)this.setPair16(desc.pairCode,this.readWord(address,ctx,14));
+          else this.writeWord(address,this.getPair16(desc.pairCode),ctx,14);
+          return desc.mnemonic.replace('nn',hex(address,4)+'h');
+        }
+        case 'ED_NEG':{const result=sub8(s.f,0,s.a);s.a=result.result;s.f=result.f;break;}
+        case 'ED_RETURN':{
+          const stackBefore=s.sp,fallThrough=s.pc;s.pc=this.popWord(ctx,8);s.iff1=s.iff2;
+          return {mnemonic:desc.mnemonic,tStates:14,stackBefore,stackAfter:s.sp,branchTaken:true,branchTarget:s.pc,fallThrough};
+        }
+        case 'ED_IM':s.im=desc.mode;break;
+        case 'ED_SPECIAL':{
+          const key=desc.special.toLowerCase();
+          if(desc.loadA){s.a=s[key];s.f=(logicFlags(s.f,s.a,false)&~4)|(s.iff2?4:0)|(s.f&1);}
+          else s[key]=s.a;
+          break;
+        }
+        case 'ED_NIBBLE':{
+          const address=this.getHL(),value=this.readData(address,ctx,8),low=s.a&15;
+          const result=desc.left?((value<<4)|low)&255:(low<<4)|(value>>4);
+          s.a=(s.a&240)|(desc.left?value>>4:value&15);
+          this.writeData(address,result,ctx,15);s.f=logicFlags(s.f,s.a,false)|(s.f&1);break;
+        }
+        case 'ED_BLOCK':{
+          const address=this.getHL(),dir=desc.direction,op=desc.operation;
+          let repeat=false;
+          if(op<2){
+            const value=this.readData(address,ctx,8);
+            if(op===0){
+              this.writeData(this.getDE(),value,ctx,11);this.setPair16(1,this.getDE()+dir);
+              s.f&=0xE9; // retain S/Z/X/Y/C; H/N clear, PV set from remaining BC below
+            }else s.f=(sub8(s.f,s.a,value).f&~5)|(s.f&1);
+            this.setPair16(2,address+dir);this.setPair16(0,this.getBC()-1);
+            if(this.getBC()!==0)s.f|=4;
+            repeat=desc.repeat&&this.getBC()!==0&&(op===0||!(s.f&0x40));
+          }else{
+            let value,sum;
+            if(op===2){
+              value=this.bus.cpuIoRead(this.getBC(),ioOptions(9,false));
+              this.writeData(address,value,ctx,13);s.b=(s.b-1)&255;
+              sum=value+((s.c+dir)&255);
+            }else{
+              value=this.readData(address,ctx,9);s.b=(s.b-1)&255;
+              this.bus.cpuIoWrite(this.getBC(),value,ioOptions(12,true));
+              sum=value+((address+dir)&255);
+            }
+            this.setPair16(2,address+dir);repeat=desc.repeat&&s.b!==0;
+            s.f=blockIoFlags(s.f,s.b,value,sum,repeat);
+          }
+          const fallThrough=s.pc;if(repeat)s.pc=(s.pc-2)&65535;
+          return {mnemonic:desc.mnemonic,tStates:repeat?21:16,branchTaken:repeat,branchTarget:repeat?s.pc:null,fallThrough};
+        }
+        default:throw new Error('UNIMPLEMENTED ED KIND '+desc.kind);
+      }
+      return desc.mnemonic;
+    }
+
     step(){
       const s=this.state;
       if(s.halted)return this.haltCycle();
@@ -1423,8 +1549,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
 
       const ctx={address,opcode,startTState,bytes:[opcode]};
-      if(opcode===0xCB){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=decodeCB(second);}
-      const execution=opcode===0xCB?this.executeCB(desc,ctx):this.executeDescriptor(desc,ctx);
+      if(opcode===0xCB||opcode===0xED){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=opcode===0xCB?decodeCB(second):decodeED(second);}
+      const execution=opcode===0xCB?this.executeCB(desc,ctx):opcode===0xED?this.executeED(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
       const actualTStates=detail.tStates??desc.tStates;
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
@@ -2216,7 +2342,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
-    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.map(b=>hex(b,2)).join(' ')}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>Accuracy</span><b>Documented state / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">BASE and CB execute. ED, DD/FD and indexed CB execution remain unimplemented. Undocumented flags and interrupt dispatch are later accuracy work.</div>`;}
+    if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.map(b=>hex(b,2)).join(' ')}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>Accuracy</span><b>Documented state / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">BASE, CB and ED execute. ED oracle: 80 encodings (includes 2 unused NOPs). DD/FD and indexed CB remain unimplemented. X/Y flags and interrupt dispatch are later accuracy work.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.traceCount}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){

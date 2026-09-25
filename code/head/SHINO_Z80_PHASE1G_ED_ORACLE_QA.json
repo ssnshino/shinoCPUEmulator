@@ -1,0 +1,584 @@
+{
+  "revision": "ebe1875d48f374bcfd4b505d8eb8ee751568b5f7",
+  "family": "ed",
+  "sourceHashes": {
+    "src/cpu/z80/z80-core.js": "45c1339109256132c04fc4c5a41f2e88bcd9ec73d16cf0e44d8520f234374f6b",
+    "src/cpu/z80/z80-decoder.js": "4d38da329a3fbe0f833ae6dff1b437cf6d1b0a25eaceb7b72eb8e925532803ee",
+    "src/cpu/z80/z80-flags.js": "7a5a1934e083087a31b623e9ebeab35c3d9b547793ffa47de47e924ce2ac3a81",
+    "src/machine/shino80/shino80-bus.js": "19c865233231af915a15a9323069e724b3d466bce6719979060193104a47d2d6"
+  },
+  "flagMask": "D7",
+  "excluded": [
+    "WZ",
+    "P",
+    "Q",
+    "X/Y",
+    "pin waveforms"
+  ],
+  "opcodes": [
+    {
+      "opcode": "ed 40",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "29f95b2433806b1625fcf3821b612d662b79255b846481ea7ba21d23da99a8d1"
+    },
+    {
+      "opcode": "ed 41",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "52d039a487976d300d617f4eea0ff6aae2bfce4333089bc1f6c90ba21ee163ff"
+    },
+    {
+      "opcode": "ed 42",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "d5348d64364c935970a33076e70b6972fb8157eea966e3d8795eb8089a58177b"
+    },
+    {
+      "opcode": "ed 43",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "1c46448f27eff8c698ba1b94087ed7649121e7340d0aaea03dd5eba089124666"
+    },
+    {
+      "opcode": "ed 44",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "fd4e782c4646eaf4ebf0de9273e9574ccc42876e141df3fc8b717edd9b2faccc"
+    },
+    {
+      "opcode": "ed 45",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "5b330e2cbf698e03191a76c604563b43581da8d389fba03fd95d73810cacc530"
+    },
+    {
+      "opcode": "ed 46",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b5228e26fb367aebdb7369ae2e855fd5543c4b454a4a6e9d947901988e2e7199"
+    },
+    {
+      "opcode": "ed 47",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "491d015ffc6f762b933f0c312ec283fa40dcb84dee587d213f040a61f5eabe1b"
+    },
+    {
+      "opcode": "ed 48",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "455004c125bd4778d81ce9c97b68b14ee7b58b3eeae35e3ed9e544b6e4977b89"
+    },
+    {
+      "opcode": "ed 49",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "9f5236e9db7f794285b5b93f8cf42ce40f534a9557f1d660a7986c81050e375c"
+    },
+    {
+      "opcode": "ed 4a",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "6fe86abc7ad7bee52e90ec073cc913ab690afe7e0a6e9b9779d56bb58122d046"
+    },
+    {
+      "opcode": "ed 4b",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "944cc5a8f514098049bb60ea8f55644fb19b737aae0fbce50e52d238a2dea322"
+    },
+    {
+      "opcode": "ed 4c",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "f7a1a12d87639619bfdfb25d98486631efa9563fa6e072d51f319d3854fa5f2b"
+    },
+    {
+      "opcode": "ed 4d",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "244588b1a1fd8b280cb51a3b67996b89b95af7e4dd143fd9bac13a94c08fa70f"
+    },
+    {
+      "opcode": "ed 4e",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b2665b60d2f7ffe4fe2ab7cfec3bc21303b68c435481aa064e4f4eb1a17ffc6a"
+    },
+    {
+      "opcode": "ed 4f",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "06ae359cc94a2ba901a6a40ca131907a221bdf30df5f590209cbfd75288da763"
+    },
+    {
+      "opcode": "ed 50",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "6d90d7381ebcd93d62e3d1665c9440c9ea86a5518a1104a8c366b5e992f54eb7"
+    },
+    {
+      "opcode": "ed 51",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "661251e7aac1ea9d36fcacc4c8014ff4694ddb220c95d48f6e1a8f5e919bedf8"
+    },
+    {
+      "opcode": "ed 52",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "317c22ee74446a22a85a0cb45771f38ceeb6e35525e26e4782e914d374251944"
+    },
+    {
+      "opcode": "ed 53",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "22f6e0f0df809bbc21f6f7b014a00dc384267a18a283e473cda9fcd5fe1d323c"
+    },
+    {
+      "opcode": "ed 54",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "64dcbc14c1e8cec3074c31a2a88a1df101b5cc12fa5c7685c20fe9486e897244"
+    },
+    {
+      "opcode": "ed 55",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "8d1c72800658241d31d5191ca4d3d15dccafd2c9d9d7b2bbcaf0a33bdfdb4a7b"
+    },
+    {
+      "opcode": "ed 56",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "de8baa8e6b17811f5e2e7af023b0b416a988061fe2a099b6a18fa177fd88abf0"
+    },
+    {
+      "opcode": "ed 57",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "c2cdce45b80eb60d18dd2cd7e38c2252d19931e42757b70514fd242972c44813"
+    },
+    {
+      "opcode": "ed 58",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "2e639d31a67e870aea52740030c5b2897d979a715f152db163913fbcefb71f38"
+    },
+    {
+      "opcode": "ed 59",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "eb34feb2a8cb82f482adaf24eaeda4edd7878285883c415b8156e97d79d65177"
+    },
+    {
+      "opcode": "ed 5a",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "3c8bed4eea6eb3071915e68e77a86caf659180bd87ddec51ee9c2f20698a1a09"
+    },
+    {
+      "opcode": "ed 5b",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "f70b402d955aadf8015ed2ef92cb14351898ba1bb9596e2aa2f4b2cdbeb0ed1a"
+    },
+    {
+      "opcode": "ed 5c",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "ebd391881615c7ca3ea830b7c20662a7ef94ec350071ed9c7c3422319bbc419e"
+    },
+    {
+      "opcode": "ed 5d",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "93559e6b78914c91e03197c0dd2a7856e99b579befd76038b23d1ef719266890"
+    },
+    {
+      "opcode": "ed 5e",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "3d63d4f291edfeb61bb3d232ed0890c91d904ac9aa5d669f2f5247bed20de0bc"
+    },
+    {
+      "opcode": "ed 5f",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "547d9f9831775c9e252cef8a9fc36602aba4e15e5bd25fb8537ce01fe6e164cb"
+    },
+    {
+      "opcode": "ed 60",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "73bfa3ca59fda5dd1f9bfb87c26f09d244dfe1001ad8af48d7542be4e4575404"
+    },
+    {
+      "opcode": "ed 61",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "86ac50d4f6d2475efd9872e4fbc434cef5aed209c61aaafce359753706fc044f"
+    },
+    {
+      "opcode": "ed 62",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "f940e3100934eb15fe31373e7cf0696fb5000bbafa1185c06051c3a34f96b4f6"
+    },
+    {
+      "opcode": "ed 63",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "031f5bc31d12dc3068f694b8d48a11f148529462d14629e214fb6372c9b78f3b"
+    },
+    {
+      "opcode": "ed 64",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "1c7ede8ba20b9bc1acb31ff54bae865f3bdd91f1db556c1e33024ec22a2875ff"
+    },
+    {
+      "opcode": "ed 65",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "cfb6c9b44b9b6c75cd8bda6fc8da1cd4f726f08337ba70c144cecb397142bf14"
+    },
+    {
+      "opcode": "ed 66",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "1c1f377ddeb14df2fecf910d6724a9bbfe7e9d7e6e34b9506f5037f5e2e4494f"
+    },
+    {
+      "opcode": "ed 67",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "4acb3a2b6e2ce2c474768a34fbe9b256c1c845db4675dc975a69da50f2532227"
+    },
+    {
+      "opcode": "ed 68",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "8024b17313d557d8ca9d5ece5d6d91b16010ed6342a00b8dda4f5dbfc460850e"
+    },
+    {
+      "opcode": "ed 69",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b3dc72bbe0c37017396d8b3728010bbbde343e45b7aa873654d217ce5c0e12c2"
+    },
+    {
+      "opcode": "ed 6a",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "a45132c1e8f15e6b56356cd3ec4def1312d382ee2692e0a446b3cadda37f6a07"
+    },
+    {
+      "opcode": "ed 6b",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "58e4d9bb5f1aebba53cc05bb6165b1dddb1fae1240789d59281cc8477b004e47"
+    },
+    {
+      "opcode": "ed 6c",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b0ffc689e404bb676f1b087b0f1b77bdbcf05229b55c5ff6ff15e9d811e8b5b3"
+    },
+    {
+      "opcode": "ed 6d",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "75c781aa9be9423f03009653b105916c57f04bd5aea71e1572bd7a5cc54a0ee0"
+    },
+    {
+      "opcode": "ed 6e",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "96201d9eb8bc127b67ed59b1033002949be818b2b55294dd4f9a2b40995a2d3e"
+    },
+    {
+      "opcode": "ed 6f",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "967dd4718e259a6cba424ef59ec92234291c627df52f1b8dbbb66364aa42ceda"
+    },
+    {
+      "opcode": "ed 70",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "cab10514862c44b87304767701348dabb1b6c7e33bee59554bb382398debaaa6"
+    },
+    {
+      "opcode": "ed 71",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "42138cedbb767f03d791fa1ed855dedfe22da964e78209485a528dda5b1fe783"
+    },
+    {
+      "opcode": "ed 72",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "9679a5f782c3d65405f4c4db15c2d087780c26f921a7c5569fa8c194823140a9"
+    },
+    {
+      "opcode": "ed 73",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b9b9833cb7eaa444f520d23e47d6722b4da17e375e89dbbf2799ef08fe8ac55c"
+    },
+    {
+      "opcode": "ed 74",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "75253b41a5b721c4c60db1aa64ad50bac21ef7797d47f1099db6453eac2e4b4d"
+    },
+    {
+      "opcode": "ed 75",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "ae39392523889f6fcc6a25b466b92239f38326beeab778904008094970488e8e"
+    },
+    {
+      "opcode": "ed 76",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "a2f6143cf938edc3e6abbed4b020afb5d5f00795efa2ebd03389e69a6dcce69f"
+    },
+    {
+      "opcode": "ed 77",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "677ded1a23ca514921598485d9a21f94668c92532a3d9c85420bd07603f62d76"
+    },
+    {
+      "opcode": "ed 78",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "02ad89adcf9a44bd624296c38d0f9a1e3f45027ac76460596a379c7fd997e95a"
+    },
+    {
+      "opcode": "ed 79",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "832eccce0d1e2cd0daa44ad958129a21ae335f257909a9885a14a76a1da2e747"
+    },
+    {
+      "opcode": "ed 7a",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "bb80c8ffc0fc8170a0c674308fa19bb007e7b8e9d7dfd29f09ee13f8c69399a9"
+    },
+    {
+      "opcode": "ed 7b",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "014e6652f8e72d8019985dc194ff3e047f2a1002231bf64fdc90c3867d86f4eb"
+    },
+    {
+      "opcode": "ed 7c",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "4bd42c4f62ff8acffa38774bb7e9709bcee23fbceeef7cdfe2901d18988d8e63"
+    },
+    {
+      "opcode": "ed 7d",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "98b0a24078075c61779267ecd60371479c17fb15028152aa00b916ac0435374f"
+    },
+    {
+      "opcode": "ed 7e",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "c5a633bc6c012971bac6de07e68b581c1384ff158463eb2b08f0f0fd76583cfc"
+    },
+    {
+      "opcode": "ed 7f",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "3dbdc0315bb7efcd0bcd3d6581a2b50d6eb411eb79e84f73655214fa1a36cb71"
+    },
+    {
+      "opcode": "ed a0",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "ffdfbb28d81b1d0af7fc865173e74ee9c9a770409ba801dd61d3922e58d05894"
+    },
+    {
+      "opcode": "ed a1",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "ee0bb83c5dc0b9628d27c03cb5fd8d424fcefe980e60c6744ea64a38c893fefa"
+    },
+    {
+      "opcode": "ed a2",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "e769fbbf76861916e4f4e6897b2073c431b81a5fd575c68edbf4939a73951009"
+    },
+    {
+      "opcode": "ed a3",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "e214d9d25b6ee49dc7cc06ff83b0e4a6e35f3c9036b457e68842ba77072f04cf"
+    },
+    {
+      "opcode": "ed a8",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "5bbe30f43170f9b80ccc1342a2173bd8c79cb1ef208733760aefa6ea7f09f242"
+    },
+    {
+      "opcode": "ed a9",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "90b0da430f1e3afbc36eebd2a618436453c2fbcfbd4f61f1edf92eb28d55cb69"
+    },
+    {
+      "opcode": "ed aa",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "b974a3e301684197ef2a78873b24672ad75ae99906eaaa516c4afe11b5259d62"
+    },
+    {
+      "opcode": "ed ab",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "770d38e552635125ad69d3397796cb78453264b654e1de82ee4ab3c8c4587fad"
+    },
+    {
+      "opcode": "ed b0",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "164f322ed9edf8775c41429fad95c5f6754e6ff93f4afe3507b1fb13afa232ee"
+    },
+    {
+      "opcode": "ed b1",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "8e273e5c3ec2d7efd7fd93e02bfa07dd657807318c1394d86e191f63d4c1ac1d"
+    },
+    {
+      "opcode": "ed b2",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "f5d12ac86b7af6bc72eb3170531ec8e316bca6a79e3b91459058616b1dbf03d7"
+    },
+    {
+      "opcode": "ed b3",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "a3fb7199e5e4831e18963bea87867facfb1e4929bcc19727a65f9ea2e05fe732"
+    },
+    {
+      "opcode": "ed b8",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "42a6567d6e2068a3f505b80971dabd732ca942209f58d515ce152fe40aca1869"
+    },
+    {
+      "opcode": "ed b9",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "1f8733ccd690d2c40471b0d6057b0b818db82a352060b9b6dc74c23a7411da84"
+    },
+    {
+      "opcode": "ed ba",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "4e5c09d30b89f97b15ae4d9599e87f3d7fa6c3bebc04ea447e59070d9602ad63"
+    },
+    {
+      "opcode": "ed bb",
+      "cases": 1000,
+      "pass": 1000,
+      "failures": 0,
+      "sha256": "8dc270488ab19c98681dfdfee9909d396e12609174a1167596f2df808f36afe8"
+    }
+  ],
+  "cases": 80000,
+  "pass": 80000,
+  "failures": 0,
+  "details": []
+}

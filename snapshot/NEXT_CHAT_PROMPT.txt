@@ -1,3 +1,11 @@
+CURRENT ED OVERRIDE 2026-09-26:
+Resume feature/shino80-z80-ed-20260926, parent 42d04f7 / PR #22. Read
+PHASE1G_ED plan/spec/worklog and QA JSONs. ED active 78, unused NOP 178;
+external ED 80k + BASE 252k + CB 256k PASS under D7 policy. Next PHASE1H DD/FD.
+Full CPU is NOT complete: indexed CB and interrupt/precision also remain.
+MON expansion paused. One writer, no automatic merges. Verify current Git.
+The following prompts are historical; do not use their old next-phase targets.
+
 CPU OVERRIDE 2026-09-26:
 Resume feature/shino80-z80-cb-20260926 on eea8dfc / PR #21. Read PHASE1F_CB
 plan/spec/worklog and oracle QA JSONs. CB 256/256 implemented, 256,000 external

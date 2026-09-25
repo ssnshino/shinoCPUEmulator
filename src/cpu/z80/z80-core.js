@@ -11,11 +11,12 @@
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,decodeCB,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,decodeED,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
-    add16HL,rotateAccumulator,daa8,rotateShift8,bitTest8
+    add16HL,rotateAccumulator,daa8,rotateShift8,bitTest8,
+    carryArithmetic16,blockIoFlags,logicFlags
   }=flagsApi;
 
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
@@ -563,6 +564,79 @@
       return desc.mnemonic;
     }
 
+    executeED(desc,ctx){
+      const s=this.state;
+      const ioOptions=(offset,write)=>({tState:ctx.startTState+offset,purpose:write?'IO_WRITE':'IO_READ',signals:['IORQ',write?'WR':'RD'],meta:{precision:'M_CYCLE_ABSTRACT',portMode:'BC'}});
+      switch(desc.kind){
+        case 'ED_NOP':break;
+        case 'ED_IN':{
+          const value=this.bus.cpuIoRead(this.getBC(),ioOptions(8,false));
+          if(desc.regCode!==6)this.setReg8(desc.regCode,value);
+          s.f=logicFlags(s.f,value,false)|(s.f&1);break;
+        }
+        case 'ED_OUT':this.bus.cpuIoWrite(this.getBC(),desc.regCode===6?0:this.getReg8(desc.regCode),ioOptions(8,true));break;
+        case 'ED_ARITH16':{
+          const result=carryArithmetic16(s.f,this.getHL(),this.getPair16(desc.pairCode),desc.subtract);
+          this.setPair16(2,result.result);s.f=result.f;break;
+        }
+        case 'ED_LD16':{
+          const address=this.fetchOperandWord(ctx,8);
+          if(desc.load)this.setPair16(desc.pairCode,this.readWord(address,ctx,14));
+          else this.writeWord(address,this.getPair16(desc.pairCode),ctx,14);
+          return desc.mnemonic.replace('nn',hex(address,4)+'h');
+        }
+        case 'ED_NEG':{const result=sub8(s.f,0,s.a);s.a=result.result;s.f=result.f;break;}
+        case 'ED_RETURN':{
+          const stackBefore=s.sp,fallThrough=s.pc;s.pc=this.popWord(ctx,8);s.iff1=s.iff2;
+          return {mnemonic:desc.mnemonic,tStates:14,stackBefore,stackAfter:s.sp,branchTaken:true,branchTarget:s.pc,fallThrough};
+        }
+        case 'ED_IM':s.im=desc.mode;break;
+        case 'ED_SPECIAL':{
+          const key=desc.special.toLowerCase();
+          if(desc.loadA){s.a=s[key];s.f=(logicFlags(s.f,s.a,false)&~4)|(s.iff2?4:0)|(s.f&1);}
+          else s[key]=s.a;
+          break;
+        }
+        case 'ED_NIBBLE':{
+          const address=this.getHL(),value=this.readData(address,ctx,8),low=s.a&15;
+          const result=desc.left?((value<<4)|low)&255:(low<<4)|(value>>4);
+          s.a=(s.a&240)|(desc.left?value>>4:value&15);
+          this.writeData(address,result,ctx,15);s.f=logicFlags(s.f,s.a,false)|(s.f&1);break;
+        }
+        case 'ED_BLOCK':{
+          const address=this.getHL(),dir=desc.direction,op=desc.operation;
+          let repeat=false;
+          if(op<2){
+            const value=this.readData(address,ctx,8);
+            if(op===0){
+              this.writeData(this.getDE(),value,ctx,11);this.setPair16(1,this.getDE()+dir);
+              s.f&=0xE9; // retain S/Z/X/Y/C; H/N clear, PV set from remaining BC below
+            }else s.f=(sub8(s.f,s.a,value).f&~5)|(s.f&1);
+            this.setPair16(2,address+dir);this.setPair16(0,this.getBC()-1);
+            if(this.getBC()!==0)s.f|=4;
+            repeat=desc.repeat&&this.getBC()!==0&&(op===0||!(s.f&0x40));
+          }else{
+            let value,sum;
+            if(op===2){
+              value=this.bus.cpuIoRead(this.getBC(),ioOptions(9,false));
+              this.writeData(address,value,ctx,13);s.b=(s.b-1)&255;
+              sum=value+((s.c+dir)&255);
+            }else{
+              value=this.readData(address,ctx,9);s.b=(s.b-1)&255;
+              this.bus.cpuIoWrite(this.getBC(),value,ioOptions(12,true));
+              sum=value+((address+dir)&255);
+            }
+            this.setPair16(2,address+dir);repeat=desc.repeat&&s.b!==0;
+            s.f=blockIoFlags(s.f,s.b,value,sum,repeat);
+          }
+          const fallThrough=s.pc;if(repeat)s.pc=(s.pc-2)&65535;
+          return {mnemonic:desc.mnemonic,tStates:repeat?21:16,branchTaken:repeat,branchTarget:repeat?s.pc:null,fallThrough};
+        }
+        default:throw new Error('UNIMPLEMENTED ED KIND '+desc.kind);
+      }
+      return desc.mnemonic;
+    }
+
     step(){
       const s=this.state;
       if(s.halted)return this.haltCycle();
@@ -572,8 +646,8 @@
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
 
       const ctx={address,opcode,startTState,bytes:[opcode]};
-      if(opcode===0xCB){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=decodeCB(second);}
-      const execution=opcode===0xCB?this.executeCB(desc,ctx):this.executeDescriptor(desc,ctx);
+      if(opcode===0xCB||opcode===0xED){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=opcode===0xCB?decodeCB(second):decodeED(second);}
+      const execution=opcode===0xCB?this.executeCB(desc,ctx):opcode===0xED?this.executeED(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
       const actualTStates=detail.tStates??desc.tStates;
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
