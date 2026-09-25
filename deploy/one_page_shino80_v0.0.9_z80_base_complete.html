@@ -69,7 +69,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.more-backdrop,.more-panel{transition:none!important}}
 
 /* PHASE 2A real text video */
-.crt canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#06100a}
+.crt canvas{width:100%;height:100%;display:block;image-rendering:auto;background:#06100a;position:relative;z-index:0;transition:filter .12s ease}
+.crt.pixelPerfect canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 
 .device-state.online{color:var(--ready)}
 
@@ -91,6 +92,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .monitor-maker{font-size:11px;font-weight:750;letter-spacing:.16em;color:#dce5ea}
 .monitor-type{position:absolute;right:2px;font-size:7px;letter-spacing:.08em;color:#87949e}
 .crt{width:100%}
+.crt::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(120,255,160,.035),rgba(30,110,62,.012) 58%,transparent 82%);mix-blend-mode:screen}
+.crt:after{z-index:2;opacity:.72}
+.crt.dm80AA canvas{filter:brightness(1.025) saturate(1.035)}
 @media(max-width:719px){
   .monitor-head{height:18px;font-size:8px}
   .monitor-foot{height:22px;margin-top:5px}
@@ -1241,53 +1245,132 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
 
-  const GLYPH_WIDTH=8,GLYPH_HEIGHT=16,GLYPH_COUNT=256,CG_ROM_BYTES=GLYPH_HEIGHT*GLYPH_COUNT;
+  const GLYPH_WIDTH=8,GLYPH_HEIGHT=16,GLYPH_COUNT=256,CG_ROM_BYTES=4096;
+  const ROM_SHA256='78ad2a69fce15801f07766b05f1f9cd9179eb7e974fb22d7f83e22e2d34dd194';
+  const ROM_CRC32='659A7798';
 
-  // Original SHINO-80 5x7 bring-up font, expanded to 8x16 at ROM-build time.
-  const G={
-    ' ':[0,0,0,0,0,0,0],
-    'A':[14,17,17,31,17,17,17],'B':[30,17,17,30,17,17,30],
-    'C':[14,17,16,16,16,17,14],'D':[30,17,17,17,17,17,30],
-    'E':[31,16,16,30,16,16,31],'F':[31,16,16,30,16,16,16],
-    'G':[14,17,16,23,17,17,15],'H':[17,17,17,31,17,17,17],
-    'I':[14,4,4,4,4,4,14],'J':[7,2,2,2,18,18,12],
-    'K':[17,18,20,24,20,18,17],'L':[16,16,16,16,16,16,31],
-    'M':[17,27,21,21,17,17,17],'N':[17,25,21,19,17,17,17],
-    'O':[14,17,17,17,17,17,14],'P':[30,17,17,30,16,16,16],
-    'Q':[14,17,17,17,21,18,13],'R':[30,17,17,30,20,18,17],
-    'S':[15,16,16,14,1,1,30],'T':[31,4,4,4,4,4,4],
-    'U':[17,17,17,17,17,17,14],'V':[17,17,17,17,17,10,4],
-    'W':[17,17,17,21,21,21,10],'X':[17,17,10,4,10,17,17],
-    'Y':[17,17,10,4,4,4,4],'Z':[31,1,2,4,8,16,31],
-    '0':[14,17,19,21,25,17,14],'1':[4,12,4,4,4,4,14],
-    '2':[14,17,1,2,4,8,31],'3':[30,1,1,14,1,1,30],
-    '4':[2,6,10,18,31,2,2],'5':[31,16,16,30,1,1,30],
-    '6':[14,16,16,30,17,17,14],'7':[31,1,2,4,8,8,8],
-    '8':[14,17,17,14,17,17,14],'9':[14,17,17,15,1,1,14],
-    '-':[0,0,0,31,0,0,0],'*':[0,21,14,31,14,21,0],
-    ':':[0,4,4,0,4,4,0],'.':[0,0,0,0,0,12,12],
-    '>':[16,8,4,2,4,8,16],'<':[1,2,4,8,4,2,1],
-    '/':[1,2,2,4,8,8,16],'?':[14,17,1,2,4,0,4],
-    '!':[4,4,4,4,4,0,4],'_':[0,0,0,0,0,0,31]
-  };
+  // SHINO-80 native 8x16 CG-ROM.
+  // 256 glyphs x 16 bytes = 4096 bytes. bit7 is the leftmost pixel.
+  // Blank / reserved glyphs are zero-filled. Printable ASCII and diagnostics
+  // below are literal ROM byte patterns, not browser-font rendering.
+  const GLYPH_HEX=Object.freeze({
+    '21':'00001010101010101010100000100000',
+    '22':'00002424242400000000000000000000',
+    '23':'0000002424247E2424247E2424240000',
+    '24':'0000103E505050507C121212127C1000',
+    '25':'00006262040408081010202046460000',
+    '26':'000000384040402428181814243E0000',
+    '27':'00001010101000000000000000000000',
+    '28':'00000408101020202020201010080400',
+    '29':'00002010080804040404040808102000',
+    '30':'00003C4246464A4A52526262423C0000',
+    '31':'000010103010101010101010107E0000',
+    '32':'00007C020202023E40404040407E0000',
+    '33':'00007C020202023C02020202027C0000',
+    '34':'00000818284848487C08080808080000',
+    '35':'00007E404040407C02020202027C0000',
+    '36':'00003E404040407C42424242423C0000',
+    '37':'00007E42040408081010202020200000',
+    '38':'00003C424242423C42424242423C0000',
+    '39':'00003C424242423E02020202027C0000',
+    '40':'00003C4242425E5656565E42423C0000',
+    '41':'000018142422427E4242424242420000',
+    '42':'00007C424242427C42424242427C0000',
+    '43':'00003E424040404040404040423E0000',
+    '44':'00007C424242424242424242427C0000',
+    '45':'00007E404040407C40404040407E0000',
+    '46':'00007E404040407C4040404040400000',
+    '47':'00003E40404040404E424242423E0000',
+    '48':'000042424242427E4242424242420000',
+    '49':'00007E101010101010101010107E0000',
+    '50':'00007C424242427C4040404040400000',
+    '51':'00003C424242424242424A463E020100',
+    '52':'00007C424242427C4444424242420000',
+    '53':'00003E424040407C02020202427C0000',
+    '54':'00007E10101010101010101010100000',
+    '55':'000042424242424242424242423C0000',
+    '56':'00004242424242424222242418180000',
+    '57':'000042424242424242425A5A66660000',
+    '58':'00004242242418181818242442420000',
+    '59':'00004244242818101010101010100000',
+    '60':'00002010080000000000000000000000',
+    '61':'0000000000003C02023E4242423E0000',
+    '62':'0000404040407C4242424242427C0000',
+    '63':'0000000000003E4040404040403E0000',
+    '64':'0000020202023E4242424242423E0000',
+    '65':'0000000000003C42427E4040403E0000',
+    '66':'00001C2020207C202020202020200000',
+    '67':'0000000000003C42424242427E02423C',
+    '68':'0000404040407C424242424242420000',
+    '69':'00000010000010101010101010380000',
+    '70':'0000000000007C42424242427C404040',
+    '71':'0000000000003E42424242423E020202',
+    '72':'0000000000007C424040404040400000',
+    '73':'0000000000003E40407C0202027C0000',
+    '74':'0000001010107C1010101010100E0000',
+    '75':'000000000000424242424242423E0000',
+    '76':'00000000000042424242222414180000',
+    '77':'000000000000424242425A6666420000',
+    '78':'00000000000042242418182424420000',
+    '79':'000000000000424242424226241C0478',
+    '2A':'00000000002418187E18242400000000',
+    '2B':'00000000001010107E10101000000000',
+    '2C':'00000000000000000000001818101000',
+    '2D':'00000000000000003C00000000000000',
+    '2E':'00000000000000000000000018180000',
+    '2F':'00000202040408081010202040400000',
+    '3A':'00000000001818000000181800000000',
+    '3B':'00000000001818000000181810100000',
+    '3C':'00000000020408102010080402000000',
+    '3D':'0000000000007E0000007E0000000000',
+    '3E':'00000000201008040204081020000000',
+    '3F':'00003C02020204081000000010000000',
+    '4A':'00003E04040404040404444444380000',
+    '4B':'00004244485050604060504844420000',
+    '4C':'000040404040404040404040407E0000',
+    '4D':'000066665A5A42424242424242420000',
+    '4E':'00004262625252524A4A464642420000',
+    '4F':'00003C424242424242424242423C0000',
+    '5A':'00007E020404080810102020407E0000',
+    '5B':'00003C202020202020202020203C0000',
+    '5C':'00004040202010100808040402020000',
+    '5D':'00003C040404040404040404043C0000',
+    '5E':'00000018142422420000000000000000',
+    '5F':'00000000000000000000000000007E00',
+    '6A':'00000008000008080808080808080870',
+    '6B':'0000404040404244586040704C420000',
+    '6C':'000010101010101010101010101C0000',
+    '6D':'0000000000007C525252525252520000',
+    '6E':'0000000000007C424242424242420000',
+    '6F':'0000000000003C4242424242423C0000',
+    '7A':'0000000000007E0404081020207E0000',
+    '7B':'00000418101010102010101010100C00',
+    '7C':'00001010101010101010101010101000',
+    '7D':'00002018080808080408080808083000',
+    '7E':'0000000000000020520C000000000000',
+    'DB':'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+    'DC':'F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0',
+    'DD':'0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F',
+    'DF':'0000000000000000FFFFFFFFFFFFFFFF'
+  });
 
   function buildCgRom(){
     const rom=new Uint8Array(CG_ROM_BYTES);
-    for(const [ch,rows] of Object.entries(G)){
-      const code=ch.charCodeAt(0)&0xFF,base=code*GLYPH_HEIGHT;
-      for(let r=0;r<7;r++){
-        const bits=(rows[r]&0x1F)<<1;
-        const y=1+r*2;
-        rom[base+y]=bits;
-        rom[base+y+1]=bits;
+    for(const [codeHex,glyphHex] of Object.entries(GLYPH_HEX)){
+      if(glyphHex.length!==GLYPH_HEIGHT*2)throw new Error('SHINO CG-ROM: invalid glyph length '+codeHex);
+      const base=parseInt(codeHex,16)*GLYPH_HEIGHT;
+      for(let row=0;row<GLYPH_HEIGHT;row++){
+        rom[base+row]=parseInt(glyphHex.slice(row*2,row*2+2),16);
       }
     }
     return rom;
   }
 
   const CG_ROM_IMAGE=buildCgRom();
-  return {GLYPH_WIDTH,GLYPH_HEIGHT,GLYPH_COUNT,CG_ROM_BYTES,CG_ROM_IMAGE,buildCgRom};
-});</script>
+
+  return {GLYPH_WIDTH,GLYPH_HEIGHT,GLYPH_COUNT,CG_ROM_BYTES,CG_ROM_IMAGE,buildCgRom,ROM_SHA256,ROM_CRC32};
+});
+</script>
 <script>(function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -1510,10 +1593,23 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   video.setPower(false);
   function syncDisplayGeometry(){
     const signal=video.signal;
-    const crt=queryOne('#crtViewport');
+    const crt=queryOne('#crtViewport'),displayCanvas=queryOne('#crtCanvas');
     if(crt)crt.style.aspectRatio=`${signal.width} / ${signal.height}`;
+
+    let renderMode='AA';
+    if(crt&&displayCanvas){
+      const rect=displayCanvas.getBoundingClientRect();
+      const sx=rect.width/signal.width,sy=rect.height/signal.height;
+      const nearInteger=v=>v>=1&&Math.abs(v-Math.round(v))<.015;
+      const pixelPerfect=nearInteger(sx)&&nearInteger(sy);
+      renderMode=pixelPerfect?'PIXEL':'AA';
+      crt.classList.toggle('pixelPerfect',pixelPerfect);
+      crt.classList.toggle('dm80AA',!pixelPerfect);
+      crt.dataset.renderMode=renderMode;
+    }
+
     const status=queryOne('#statusVideo');
-    if(status)status.textContent=`VIDEO ${signal.width}×${signal.height} ${signal.interface.replace('_',' ')}`;
+    if(status)status.textContent=`VIDEO ${signal.width}×${signal.height} ${signal.interface.replace('_',' ')} / ${renderMode}`;
   }
   const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
   const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
@@ -1579,7 +1675,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
-    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
+    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · PREFIXES NEXT</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1E completes all 252 non-prefix BASE opcodes. CB/DD/ED/FD are recognized prefix entry points and are the next completion target.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;

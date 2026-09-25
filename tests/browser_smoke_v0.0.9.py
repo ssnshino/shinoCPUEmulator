@@ -17,6 +17,7 @@ with sync_playwright() as p:
     assert page.locator('#runPauseBtn').is_disabled()
     assert page.locator('.monitor-model').inner_text()=='DM-80'
     assert page.locator('.monitor-maker').inner_text()=='SHINOMIYA'
+    assert page.locator('#crtViewport').get_attribute('data-render-mode')=='AA'
 
     box_c=page.locator('#crtCanvas').bounding_box()
     box_r=page.locator('#crtViewport').bounding_box()
