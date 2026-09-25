@@ -118,7 +118,7 @@ for(const code of [0,1,2,3,4,5,7]){
   assert.equal(bus.debugPeek(0x0080),0x7F);
   assert.equal(cpu.state.pc,program.length);
   assert.equal(cpu.state.r,13);
-  assert.equal(cpu.state.tStates,86);
+  assert.equal(cpu.state.tStates,90);
   assert.equal(mn[1],'INC A');
   assert.equal(mn[3],'INC B');
   assert.equal(mn[5],'DEC C');

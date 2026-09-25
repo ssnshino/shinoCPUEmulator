@@ -1,31 +1,32 @@
 ONE-PAGE Z80 COMPUTER / SHINO-80 を継続する。
 
 Current candidate:
-SHINO-80 v0.0.8 PHASE 2A.1
+Z80 CORE v0.0.9 PHASE 1E BASE COMPLETE
 
 Branch:
-feature/shino80-phase2a1-power-reset-crt-20260924
+feature/z80-phase1e-complete-base-opcodes-20260924
 
-Current display stack:
-TEXT VIDEO BOARD -> DIGITAL MONO 640x400 -> DM-80 DISPLAY
+Artifact:
+deploy/one_page_shino80_v0.0.9_z80_base_complete.html
 
-DM-80:
-- SHINOMIYA
-- GREEN MONO DIGITAL DISPLAY
-- raster geometry follows VIDEO BOARD signal dynamically
+Read:
+1. README.md
+2. snapshot/CURRENT_SNAPSHOT.md
+3. plan/head/SHINO_Z80_FULL_INSTRUCTION_SET_COMPLETION_PLAN.md
+4. plan/head/SHINO_Z80_CORE_PHASE1E_BASE_COMPLETE_PLAN.md
+5. docs/head/SHINO_Z80_CORE_v0.0.9_PHASE1E_SPEC.md
+6. research/z80/Z80_PHASE1E_BASE_COMPLETION_RESEARCH_NOTE_v0.1.md
+7. research/z80/Z80_BASE_OPCODE_MATRIX_v0.5.md
+8. code/head/SHINO_Z80_CORE_v0.0.9_PHASE1E_QA.json
 
-Important architecture rule:
-Do not put overscan/safe-margin pixels into logical VIDEO raster merely for appearance.
-Canvas is the complete VIDEO raster.
-DISPLAY shell is replaceable hardware.
+BASE:
+- 252/252 non-prefix executable
+- CB/DD/ED/FD prefix entry points recognized
+- 23,000/23,000 representative external-oracle cases PASS
 
-Machine/debug INFO has been removed from the monitor bezel and moved to footer.
+Next task:
+PHASE 1F — implement all 256 CB second-byte encodings:
+RLC/RRC/RL/RR/SLA/SRA/SLL/SRL/BIT/RES/SET.
 
-Human test:
-- full A-H screen should use the CRT display area without large 4:3 letterboxing
-- monitor shows only DM-80 / SHINOMIYA / type labels
-- footer shows system telemetry
-- POWER / RESET / IPL display test behavior remains intact
-
-After acceptance:
-PHASE 2B Keyboard + real ROM MONITOR input.
+Keep documented flags exact.
+Use SingleStepTests as an independent oracle.

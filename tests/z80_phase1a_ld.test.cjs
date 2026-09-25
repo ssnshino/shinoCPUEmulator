@@ -84,7 +84,11 @@ assert.equal(decoder.decodeBase(0x76).kind,'HALT');
 
 {
   const {cpu}=fresh([0x76]);
-  assert.throws(()=>cpu.step(),/UNIMPLEMENTED HALT OPCODE 76h/);
+  const r=cpu.step();
+  assert.equal(r.mnemonic,'HALT');
+  assert.equal(cpu.state.halted,true);
+  assert.equal(cpu.state.pc,1);
+  assert.equal(cpu.state.tStates,4);
 }
 
 console.log('SHINO Z80 PHASE 1A LD: ALL TESTS PASS');

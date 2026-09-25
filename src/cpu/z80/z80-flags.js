@@ -9,36 +9,38 @@
   const FLAG_MASK=Object.freeze({
     S:0x80,Z:0x40,Y:0x20,H:0x10,X:0x08,PV:0x04,N:0x02,C:0x01
   });
+  const YX_MASK=FLAG_MASK.Y|FLAG_MASK.X;
 
   function flagState(f){
     const v=Number(f)&0xFF;
     return Object.fromEntries(Object.entries(FLAG_BITS).map(([name,bit])=>[name,!!(v&(1<<bit))]));
   }
-
-  // PHASE 1B policy:
-  // - implement documented INC/DEC flags exactly
-  // - preserve C because Zilog documents C as unaffected
-  // - preserve undocumented Y/X until their real behavior is researched separately
-  function preservedUnaffected(oldF){
-    return Number(oldF)&(FLAG_MASK.C|FLAG_MASK.Y|FLAG_MASK.X);
+  function parityEven(value){
+    let v=Number(value)&0xFF,p=0;
+    for(let i=0;i<8;i++){p^=v&1;v>>=1;}
+    return p===0;
+  }
+  function preserveYX(oldF){return Number(oldF)&YX_MASK;}
+  function sz(oldF,result){
+    const r=Number(result)&0xFF;
+    let f=preserveYX(oldF);
+    if(r&0x80)f|=FLAG_MASK.S;
+    if(r===0)f|=FLAG_MASK.Z;
+    return f;
   }
 
   function inc8(oldF,value){
-    const before=Number(value)&0xFF;
-    const result=(before+1)&0xFF;
-    let f=preservedUnaffected(oldF);
+    const before=Number(value)&0xFF,result=(before+1)&0xFF;
+    let f=preserveYX(oldF)|(Number(oldF)&FLAG_MASK.C);
     if(result&0x80)f|=FLAG_MASK.S;
     if(result===0)f|=FLAG_MASK.Z;
     if((before&0x0F)===0x0F)f|=FLAG_MASK.H;
     if(before===0x7F)f|=FLAG_MASK.PV;
-    // N is reset for INC.
     return {result,f};
   }
-
   function dec8(oldF,value){
-    const before=Number(value)&0xFF;
-    const result=(before-1)&0xFF;
-    let f=preservedUnaffected(oldF)|FLAG_MASK.N;
+    const before=Number(value)&0xFF,result=(before-1)&0xFF;
+    let f=preserveYX(oldF)|(Number(oldF)&FLAG_MASK.C)|FLAG_MASK.N;
     if(result&0x80)f|=FLAG_MASK.S;
     if(result===0)f|=FLAG_MASK.Z;
     if((before&0x0F)===0x00)f|=FLAG_MASK.H;
@@ -46,5 +48,81 @@
     return {result,f};
   }
 
-  return {FLAG_BITS,FLAG_MASK,flagState,inc8,dec8};
+  function add8(oldF,a,b,carry=0){
+    const av=Number(a)&0xFF,bv=Number(b)&0xFF,c=carry?1:0;
+    const sum=av+bv+c,result=sum&0xFF;
+    let f=sz(oldF,result);
+    if(((av&0x0F)+(bv&0x0F)+c)>0x0F)f|=FLAG_MASK.H;
+    if((~(av^bv)&(av^result)&0x80)!==0)f|=FLAG_MASK.PV;
+    if(sum>0xFF)f|=FLAG_MASK.C;
+    return {result,f};
+  }
+  function sub8(oldF,a,b,carry=0){
+    const av=Number(a)&0xFF,bv=Number(b)&0xFF,c=carry?1:0;
+    const diff=av-bv-c,result=diff&0xFF;
+    let f=sz(oldF,result)|FLAG_MASK.N;
+    if(((av&0x0F)-(bv&0x0F)-c)<0)f|=FLAG_MASK.H;
+    if(((av^bv)&(av^result)&0x80)!==0)f|=FLAG_MASK.PV;
+    if(diff<0)f|=FLAG_MASK.C;
+    return {result,f};
+  }
+  function logicFlags(oldF,result,h){
+    const r=Number(result)&0xFF;
+    let f=sz(oldF,r);
+    if(h)f|=FLAG_MASK.H;
+    if(parityEven(r))f|=FLAG_MASK.PV;
+    return f;
+  }
+  function and8(oldF,a,b){const result=(Number(a)&Number(b))&0xFF;return {result,f:logicFlags(oldF,result,true)};}
+  function xor8(oldF,a,b){const result=(Number(a)^Number(b))&0xFF;return {result,f:logicFlags(oldF,result,false)};}
+  function or8(oldF,a,b){const result=(Number(a)|Number(b))&0xFF;return {result,f:logicFlags(oldF,result,false)};}
+  function cp8(oldF,a,b){return sub8(oldF,a,b,0);}
+
+  function add16HL(oldF,a,b){
+    const av=Number(a)&0xFFFF,bv=Number(b)&0xFFFF,sum=av+bv,result=sum&0xFFFF;
+    let f=Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|YX_MASK);
+    if(((av&0x0FFF)+(bv&0x0FFF))>0x0FFF)f|=FLAG_MASK.H;
+    if(sum>0xFFFF)f|=FLAG_MASK.C;
+    return {result,f};
+  }
+
+  function rotateAccumulator(oldF,a,kind){
+    const av=Number(a)&0xFF,oldC=(Number(oldF)&FLAG_MASK.C)?1:0;
+    let result=av,carry=0;
+    switch(kind){
+      case 'RLCA':carry=(av>>7)&1;result=((av<<1)|carry)&0xFF;break;
+      case 'RRCA':carry=av&1;result=((carry<<7)|(av>>1))&0xFF;break;
+      case 'RLA':carry=(av>>7)&1;result=((av<<1)|oldC)&0xFF;break;
+      case 'RRA':carry=av&1;result=((oldC<<7)|(av>>1))&0xFF;break;
+      default:throw new Error('UNKNOWN ACC ROTATE '+kind);
+    }
+    let f=Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|YX_MASK);
+    if(carry)f|=FLAG_MASK.C;
+    return {result,f};
+  }
+
+  function daa8(oldF,a){
+    const av=Number(a)&0xFF;
+    const n=!!(oldF&FLAG_MASK.N),oldC=!!(oldF&FLAG_MASK.C),oldH=!!(oldF&FLAG_MASK.H);
+    let correction=0,carry=oldC;
+    // Z80 DAA correction selection is driven by the current digits plus H/C.
+    // N selects whether that correction is added or subtracted.
+    if(oldH||(av&0x0F)>9)correction|=0x06;
+    if(oldC||av>0x99){correction|=0x60;carry=true;}
+    const result=(n?av-correction:av+correction)&0xFF;
+    let f=preserveYX(oldF);
+    if(result&0x80)f|=FLAG_MASK.S;
+    if(result===0)f|=FLAG_MASK.Z;
+    if(((av^result)&0x10)!==0)f|=FLAG_MASK.H;
+    if(parityEven(result))f|=FLAG_MASK.PV;
+    if(n)f|=FLAG_MASK.N;
+    if(carry)f|=FLAG_MASK.C;
+    return {result,f};
+  }
+
+  return {
+    FLAG_BITS,FLAG_MASK,flagState,parityEven,
+    inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
+    add16HL,rotateAccumulator,daa8
+  };
 });

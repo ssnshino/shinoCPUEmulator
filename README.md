@@ -21,13 +21,13 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 - Current development source: `src/`
 - Current distribution artifact: `deploy/one_page_shino80_v0.0.2_ui_foundation.html`
 - Source/deploy split: **MERGED via PR #5**
-- Active stacked candidate: **SHINO-80 PHASE 2A.1 / v0.0.8 — POWER / RESET / CRT**
-- Candidate branch: `feature/shino80-phase2a1-power-reset-crt-20260924`
-- Candidate artifact: `deploy/one_page_shino80_v0.0.8_phase2a1_power_reset.html`
-- Current executable BASE encodings: **107** (unchanged in PHASE 2A)
+- Active candidate: **Z80 PHASE 1E / v0.0.9 — BASE COMPLETE**
+- Candidate branch: `feature/z80-phase1e-complete-base-opcodes-20260924`
+- Candidate artifact: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
+- BASE status: **252 / 252 non-prefix executable; CB/DD/ED/FD prefix entry points recognized**
 - CPU PR #2 remains open as historical first-heartbeat candidate
 
-PHASE 0 research remains active alongside PHASE 1 implementation. The reviewed UI shell now visualizes non-linear PC movement and taken/not-taken branch decisions in v0.0.5.
+PHASE 1E completes the non-prefix BASE opcode map. Next target: CB 256 second-byte encodings.
 
 ## UI core direction
 
@@ -228,3 +228,5 @@ VIRTUAL MICROCOMPUTER LAB
 - 2026-09-24 — ChatGPT — PHASE 2A candidate: 8 KiB SYSTEM ROM, IPL, 80x25 TEXT VIDEO, 4 KiB CG-ROM and real CRT canvas.
 
 - 2026-09-24 — ChatGPT — PHASE 2A.1 candidate: POWER state, warm RESET, IPL VRAM clear and CRT safe margin.
+
+- 2026-09-24T23:55:00+09:00 — ChatGPT — PHASE 1E: all 252 non-prefix BASE opcodes executable; BASE 256/256 decode coverage; representative SingleStepTests oracle 23,000/23,000 PASS.
