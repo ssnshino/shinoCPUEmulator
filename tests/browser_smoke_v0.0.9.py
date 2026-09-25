@@ -29,7 +29,8 @@ with sync_playwright() as p:
     page.locator('[data-more-action="pace"]').click()
     page.locator('#moreCloseBtn').click();page.wait_for_timeout(220)
 
-    page.locator('#runPauseBtn').click();page.wait_for_timeout(750)
+    page.locator('#runPauseBtn').click()
+    page.wait_for_function("document.querySelector('#statusPc')?.textContent === '009C'",timeout=3000)
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert page.locator('#statusPc').inner_text()=='009C'
 
