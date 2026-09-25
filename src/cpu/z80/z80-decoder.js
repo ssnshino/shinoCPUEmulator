@@ -177,7 +177,26 @@
     return d;
   }
 
+  function decodeIndex(opcode,index){
+    if(index!=='IX'&&index!=='IY')throw new Error('Invalid index register');
+    const base=decodeBase(opcode),d={...base,family:index,index,affected:false,length:base.length+1};
+    for(const key of ['tStates','tStatesTaken','tStatesNotTaken'])if(Number.isFinite(base[key]))d[key]=base[key]+4;
+    const memory=['INC_MEM_HL','DEC_MEM_HL','LD_R_MEM_HL','LD_MEM_HL_R','LD_MEM_HL_N'].includes(base.kind)||(base.kind==='ALU_R'&&base.srcCode===6);
+    const half=code=>code===4||code===5;
+    d.affected=memory||['ADD_HL_DD','LD_MEM_NN_HL','LD_HL_MEM_NN','EX_SP_HL','JP_HL','LD_SP_HL'].includes(base.kind)||
+      (['LD_DD_NN','INC_DD','DEC_DD','PUSH_QQ','POP_QQ'].includes(base.kind)&&base.pairCode===2)||
+      (['INC_R','DEC_R'].includes(base.kind)&&half(base.targetCode))||
+      (base.kind==='LD_R_N'&&half(base.dstCode))||
+      (base.kind==='LD_R_R'&&(half(base.srcCode)||half(base.dstCode)))||
+      (base.kind==='ALU_R'&&half(base.srcCode));
+    d.indexedMemory=memory;
+    if(memory){d.mnemonic=base.mnemonic.replace('(HL)',`(${index}+d)`);d.length++;d.tStates=['INC_MEM_HL','DEC_MEM_HL'].includes(base.kind)?23:19;}
+    else if(d.affected)d.mnemonic=base.mnemonic.replace(/\bHL\b/g,index).replace(/\bH\b/g,index+'H').replace(/\bL\b/g,index+'L');
+    return d;
+  }
+
   return {
+    decodeIndex,
     decodeED,
     decodeCB,
     decodeBase,

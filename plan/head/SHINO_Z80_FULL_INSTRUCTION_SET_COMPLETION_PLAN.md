@@ -72,6 +72,11 @@ Undefined ED encodings will be researched and classified separately.
 
 ### PHASE 1H — DD / FD COMPLETE
 
+2026-09-26: verified candidate feature/shino80-z80-index-20260926 on bb0daeb /
+PR #23. DD/FD 252 terminal encodings each, external 504k PASS; BASE/CB/ED
+588k regression PASS. Prefix controls tested separately, indexed CB excluded.
+See PHASE1H_INDEX plan/spec/worklog. Human review/merge pending; next PHASE1I.
+
 Implement IX/IY substitution rules and displacement forms.
 
 Do not blindly substitute H/L in encodings where Z80 semantics differ.

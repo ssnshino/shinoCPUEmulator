@@ -1,3 +1,11 @@
+LATEST INDEX OVERRIDE 2026-09-26:
+Resume feature/shino80-z80-index-20260926, parent bb0daeb / PR #23. Read
+PHASE1H_INDEX plan/spec/worklog and QA JSONs. DD/FD252 each verified; external
+BASE/CB/ED/DD/FD 1,092,000 PASS under D7 policy. Next PHASE1I DDCB/FDCB.
+Interrupts/precision remain after that; full CPU NOT finished. MON paused.
+Single writer; no automatic merges. Inspect live Git state before continuing.
+Older instructions below are historical, not current next steps.
+
 CURRENT ED OVERRIDE 2026-09-26:
 Resume feature/shino80-z80-ed-20260926, parent 42d04f7 / PR #22. Read
 PHASE1G_ED plan/spec/worklog and QA JSONs. ED active 78, unused NOP 178;

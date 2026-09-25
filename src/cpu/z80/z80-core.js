@@ -11,7 +11,7 @@
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,decodeCB,decodeED,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,decodeED,decodeIndex,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
@@ -637,6 +637,57 @@
       return desc.mnemonic;
     }
 
+    executeIndex(desc,ctx){
+      if(!desc.affected)return this.executeDescriptor(desc,ctx);
+      const s=this.state,key=desc.index.toLowerCase();
+      // ctx starts at the terminal opcode M1; descriptor timing includes one prefix.
+      const get=code=>code===4?s[key]>>>8:code===5?s[key]&255:this.getReg8(code);
+      const set=(code,value)=>{if(code===4)s[key]=((value&255)<<8)|(s[key]&255);else if(code===5)s[key]=(s[key]&0xFF00)|(value&255);else this.setReg8(code,value);};
+      if(desc.indexedMemory){
+        const displacement=this.fetchOperandByte(ctx,4),address=(s[key]+signed8(displacement))&65535;
+        let mnemonic=desc.mnemonic.replace('+d',signedText(displacement));
+        switch(desc.kind){
+          case 'LD_R_MEM_HL':this.setReg8(desc.dstCode,this.readData(address,ctx,12));break;
+          case 'LD_MEM_HL_R':this.writeData(address,this.getReg8(desc.srcCode),ctx,12);break;
+          case 'LD_MEM_HL_N':{const value=this.fetchOperandByte(ctx,7);this.writeData(address,value,ctx,12);mnemonic=mnemonic.replace(',n',','+hex(value,2)+'h');break;}
+          case 'ALU_R':this.alu8(desc.aluCode,this.readData(address,ctx,12));break;
+          case 'INC_MEM_HL':case 'DEC_MEM_HL':{
+            const value=this.readData(address,ctx,12),next=desc.kind==='INC_MEM_HL'?inc8(s.f,value):dec8(s.f,value);
+            this.writeData(address,next.result,ctx,16);s.f=next.f;break;
+          }
+          default:throw new Error('UNIMPLEMENTED INDEX MEMORY '+desc.kind);
+        }
+        return mnemonic;
+      }
+      switch(desc.kind){
+        case 'LD_DD_NN':s[key]=this.fetchOperandWord(ctx,4);return desc.mnemonic.replace('nn',hex(s[key],4)+'h');
+        case 'INC_DD':s[key]=(s[key]+1)&65535;break;
+        case 'DEC_DD':s[key]=(s[key]-1)&65535;break;
+        case 'ADD_HL_DD':{const next=add16HL(s.f,s[key],desc.pairCode===2?s[key]:this.getPair16(desc.pairCode));s[key]=next.result;s.f=next.f;break;}
+        case 'LD_MEM_NN_HL':case 'LD_HL_MEM_NN':{
+          const address=this.fetchOperandWord(ctx,4);
+          if(desc.kind==='LD_MEM_NN_HL')this.writeWord(address,s[key],ctx,10);else s[key]=this.readWord(address,ctx,10);
+          return desc.mnemonic.replace('nn',hex(address,4)+'h');
+        }
+        case 'LD_R_R':set(desc.dstCode,get(desc.srcCode));break;
+        case 'LD_R_N':{const value=this.fetchOperandByte(ctx,4);set(desc.dstCode,value);return desc.mnemonic.replace(',n',','+hex(value,2)+'h');}
+        case 'INC_R':case 'DEC_R':{const next=desc.kind==='INC_R'?inc8(s.f,get(desc.targetCode)):dec8(s.f,get(desc.targetCode));set(desc.targetCode,next.result);s.f=next.f;break;}
+        case 'ALU_R':this.alu8(desc.aluCode,get(desc.srcCode));break;
+        case 'LD_SP_HL':s.sp=s[key];break;
+        case 'JP_HL':{const fallThrough=s.pc;s.pc=s[key];return this.flowResult(desc.mnemonic,desc.tStates,true,s.pc,fallThrough,'ALWAYS');}
+        case 'PUSH_QQ':case 'POP_QQ':{
+          const stackBefore=s.sp;if(desc.kind==='PUSH_QQ')this.pushWord(s[key],ctx,5);else s[key]=this.popWord(ctx,4);
+          return {mnemonic:desc.mnemonic,tStates:desc.tStates,stackBefore,stackAfter:s.sp};
+        }
+        case 'EX_SP_HL':{
+          const old=s[key],sp=s.sp,value=this.readWord(sp,ctx,4,'STACK_READ');
+          this.writeData((sp+1)&65535,old>>>8,ctx,11,'STACK_WRITE');this.writeData(sp,old&255,ctx,14,'STACK_WRITE');s[key]=value;break;
+        }
+        default:throw new Error('UNIMPLEMENTED INDEX KIND '+desc.kind);
+      }
+      return desc.mnemonic;
+    }
+
     step(){
       const s=this.state;
       if(s.halted)return this.haltCycle();
@@ -646,14 +697,24 @@
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
 
       const ctx={address,opcode,startTState,bytes:[opcode]};
-      if(opcode===0xCB||opcode===0xED){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=opcode===0xCB?decodeCB(second):decodeED(second);}
-      const execution=opcode===0xCB?this.executeCB(desc,ctx):opcode===0xED?this.executeED(desc,ctx):this.executeDescriptor(desc,ctx);
+      let terminal=opcode,index=null,prefixCount=0;
+      while(terminal===0xDD||terminal===0xFD){
+        index=terminal===0xDD?'IX':'IY';prefixCount++;
+        // A complete address-space loop of prefixes cannot retire; keep the host responsive.
+        if(prefixCount>=65536)throw new Error('INDEX PREFIX STREAM exceeds one address space');
+        terminal=this.fetchOpcode(prefixCount*4).opcode;ctx.bytes.push(terminal);
+      }
+      ctx.startTState=startTState+prefixCount*4;
+      if(index&&terminal===0xCB)throw new Error('UNIMPLEMENTED INDEXED CB (PHASE 1I)');
+      if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
+      else if(index)desc=decodeIndex(terminal,index);
+      const execution=terminal===0xCB?this.executeCB(desc,ctx):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
-      const actualTStates=detail.tStates??desc.tStates;
+      const actualTStates=(detail.tStates??desc.tStates)+(index?(terminal===0xED?prefixCount:prefixCount-1)*4:0);
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
 
       s.tStates+=actualTStates;s.instructions+=1;
-      if(s.eiDelay>0&&opcode!==0xFB)s.eiDelay=Math.max(0,s.eiDelay-1);
+      if(s.eiDelay>0&&terminal!==0xFB)s.eiDelay=Math.max(0,s.eiDelay-1);
 
       this.lastInstruction={
         address,opcode,bytes:[...ctx.bytes],mnemonic:detail.mnemonic,family:desc.family,

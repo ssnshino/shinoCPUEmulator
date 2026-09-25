@@ -43,10 +43,10 @@ function flags(f){return f&0xD7;} // documented S/Z/H/PV/N/C only
   assert.deepEqual(failures,[]);
 }
 
-// Prefixes are recognized but intentionally delegated to later phases.
+// Indexed CB remains a separate, explicitly unsupported phase.
 for(const op of [0xDD,0xFD]){
-  const {cpu}=fresh([op,0x00]);
-  assert.throws(()=>cpu.step(),/UNIMPLEMENTED PREFIX/);
+  const {cpu}=fresh([op,0xCB,0,0]);
+  assert.throws(()=>cpu.step(),/UNIMPLEMENTED INDEXED CB/);
 }
 
 // 8-bit ALU boundary behavior.

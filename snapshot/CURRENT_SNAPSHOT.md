@@ -1,6 +1,11 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: feature/shino80-z80-index-20260926, parent bb0daeb / PR #23.
+DD/FD252 each; external BASE/CB/ED/DD/FD 1,092,000 PASS. See PHASE1H_INDEX
+plan/spec/worklog and QA reports. Next PHASE1I indexed CB, then interrupts.
+MON paused; no merges; earlier snapshots below are historical.
+
 CURRENT 2026-09-26: feature/shino80-z80-ed-20260926 on 42d04f7 / PR #22.
 PHASE 1G ED candidate: 78 active + 178 unused NOP slots. External ED 80,000,
 BASE 252,000, CB 256,000 PASS. Read PHASE1G_ED plan/spec/worklog and QA JSONs.
