@@ -69,7 +69,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.more-backdrop,.more-panel{transition:none!important}}
 
 /* PHASE 2A real text video */
-.crt canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#06100a}
+.crt canvas{width:100%;height:100%;display:block;image-rendering:auto;background:#06100a;position:relative;z-index:0;transition:filter .12s ease}\n.crt.pixelPerfect canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 
 .device-state.online{color:var(--ready)}
 
@@ -91,6 +91,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .monitor-maker{font-size:11px;font-weight:750;letter-spacing:.16em;color:#dce5ea}
 .monitor-type{position:absolute;right:2px;font-size:7px;letter-spacing:.08em;color:#87949e}
 .crt{width:100%}
+.crt::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(120,255,160,.035),rgba(30,110,62,.012) 58%,transparent 82%);mix-blend-mode:screen}
+.crt:after{z-index:2;opacity:.72}
+.crt.dm80AA canvas{filter:brightness(1.025) saturate(1.035)}
 @media(max-width:719px){
   .monitor-head{height:18px;font-size:8px}
   .monitor-foot{height:22px;margin-top:5px}
@@ -1241,53 +1244,35 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
 
-  const GLYPH_WIDTH=8,GLYPH_HEIGHT=16,GLYPH_COUNT=256,CG_ROM_BYTES=GLYPH_HEIGHT*GLYPH_COUNT;
+  const GLYPH_WIDTH=8,GLYPH_HEIGHT=16,GLYPH_COUNT=256,CG_ROM_BYTES=4096;
+  const ROM_SHA256='78ad2a69fce15801f07766b05f1f9cd9179eb7e974fb22d7f83e22e2d34dd194';
+  const ROM_CRC32='659A7798';
 
-  // Original SHINO-80 5x7 bring-up font, expanded to 8x16 at ROM-build time.
-  const G={
-    ' ':[0,0,0,0,0,0,0],
-    'A':[14,17,17,31,17,17,17],'B':[30,17,17,30,17,17,30],
-    'C':[14,17,16,16,16,17,14],'D':[30,17,17,17,17,17,30],
-    'E':[31,16,16,30,16,16,31],'F':[31,16,16,30,16,16,16],
-    'G':[14,17,16,23,17,17,15],'H':[17,17,17,31,17,17,17],
-    'I':[14,4,4,4,4,4,14],'J':[7,2,2,2,18,18,12],
-    'K':[17,18,20,24,20,18,17],'L':[16,16,16,16,16,16,31],
-    'M':[17,27,21,21,17,17,17],'N':[17,25,21,19,17,17,17],
-    'O':[14,17,17,17,17,17,14],'P':[30,17,17,30,16,16,16],
-    'Q':[14,17,17,17,21,18,13],'R':[30,17,17,30,20,18,17],
-    'S':[15,16,16,14,1,1,30],'T':[31,4,4,4,4,4,4],
-    'U':[17,17,17,17,17,17,14],'V':[17,17,17,17,17,10,4],
-    'W':[17,17,17,21,21,21,10],'X':[17,17,10,4,10,17,17],
-    'Y':[17,17,10,4,4,4,4],'Z':[31,1,2,4,8,16,31],
-    '0':[14,17,19,21,25,17,14],'1':[4,12,4,4,4,4,14],
-    '2':[14,17,1,2,4,8,31],'3':[30,1,1,14,1,1,30],
-    '4':[2,6,10,18,31,2,2],'5':[31,16,16,30,1,1,30],
-    '6':[14,16,16,30,17,17,14],'7':[31,1,2,4,8,8,8],
-    '8':[14,17,17,14,17,17,14],'9':[14,17,17,15,1,1,14],
-    '-':[0,0,0,31,0,0,0],'*':[0,21,14,31,14,21,0],
-    ':':[0,4,4,0,4,4,0],'.':[0,0,0,0,0,12,12],
-    '>':[16,8,4,2,4,8,16],'<':[1,2,4,8,4,2,1],
-    '/':[1,2,2,4,8,8,16],'?':[14,17,1,2,4,0,4],
-    '!':[4,4,4,4,4,0,4],'_':[0,0,0,0,0,0,31]
-  };
+  // SHINO-80 native 8x16 CG-ROM.
+  // 256 glyphs x 16 bytes = 4096 bytes; bit7 is the leftmost pixel.
+  // Runtime rendering never depends on a browser font.
+  const ROM_BASE64='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAAABAAAAAAJCQkJAAAAAAAAAAAAAAAAAAkJCR+JCQkfiQkJAAAAAAQPlBQUFB8EhISEnwQAAAAYmIEBAgIEBAgIEZGAAAAAAA4QEBAJCgYGBQkPgAAAAAQEBAQAAAAAAAAAAAAAAAABAgQECAgICAgEBAIBAAAACAQCAgEBAQEBAgIECAAAAAAAAAkGBh+GCQkAAAAAAAAAAAAEBAQfhAQEAAAAAAAAAAAAAAAAAAAABgYEBAAAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAABgYAAAAAAICBAQICBAQICBAQAAAAAA8QkZGSkpSUmJiQjwAAAAAEBAwEBAQEBAQEBB+AAAAAHwCAgICPkBAQEBAfgAAAAB8AgICAjwCAgICAnwAAAAACBgoSEhIfAgICAgIAAAAAH5AQEBAfAICAgICfAAAAAA+QEBAQHxCQkJCQjwAAAAAfkIEBAgIEBAgICAgAAAAADxCQkJCPEJCQkJCPAAAAAA8QkJCQj4CAgICAnwAAAAAAAAAGBgAAAAYGAAAAAAAAAAAABgYAAAAGBgQEAAAAAAAAAIECBAgEAgEAgAAAAAAAAAAAH4AAAB+AAAAAAAAAAAAIBAIBAIECBAgAAAAAAA8AgICBAgQAAAAEAAAAAAAPEJCQl5WVlZeQkI8AAAAABgUJCJCfkJCQkJCQgAAAAB8QkJCQnxCQkJCQnwAAAAAPkJAQEBAQEBAQEI+AAAAAHxCQkJCQkJCQkJCfAAAAAB+QEBAQHxAQEBAQH4AAAAAfkBAQEB8QEBAQEBAAAAAAD5AQEBAQE5CQkJCPgAAAABCQkJCQn5CQkJCQkIAAAAAfhAQEBAQEBAQEBB+AAAAAD4EBAQEBAQEREREOAAAAABCREhQUGBAYFBIREIAAAAAQEBAQEBAQEBAQEB+AAAAAGZmWlpCQkJCQkJCQgAAAABCYmJSUlJKSkZGQkIAAAAAPEJCQkJCQkJCQkI8AAAAAHxCQkJCfEBAQEBAQAAAAAA8QkJCQkJCQkpGPgIBAAAAfEJCQkJ8RERCQkJCAAAAAD5CQEBAfAICAgJCfAAAAAB+EBAQEBAQEBAQEBAAAAAAQkJCQkJCQkJCQkI8AAAAAEJCQkJCQkIiJCQYGAAAAABCQkJCQkJCQlpaZmYAAAAAQkIkJBgYGBgkJEJCAAAAAEJEJCgYEBAQEBAQEAAAAAB+AgQECAgQECAgQH4AAAAAPCAgICAgICAgICA8AAAAAEBAICAQEAgIBAQCAgAAAAA8BAQEBAQEBAQEBDwAAAAAABgUJCJCAAAAAAAAAAAAAAAAAAAAAH4AAAAgEAgAAAAAAAAAAAAAAAAAAAAAADwCAj5CQkI+AAAAAEBAQEB8QkJCQkJCfAAAAAAAAAAAPkBAQEBAQD4AAAAAAgICAj5CQkJCQkI+AAAAAAAAAAA8QkJ+QEBAPgAAAAAcICAgfCAgICAgICAAAAAAAAAAADxCQkJCQn4CQjwAAEBAQEB8QkJCQkJCQgAAAAAAEAAAEBAQEBAQEDgAAAAAAAgAAAgICAgICAgICHAAAEBAQEBCRFhgQHBMQgAAAAAQEBAQEBAQEBAQEBwAAAAAAAAAAHxSUlJSUlJSAAAAAAAAAAB8QkJCQkJCQgAAAAAAAAAAPEJCQkJCQjwAAAAAAAAAAHxCQkJCQnxAQEAAAAAAAAA+QkJCQkI+AgICAAAAAAAAfEJAQEBAQEAAAAAAAAAAAD5AQHwCAgJ8AAAAAAAQEBB8EBAQEBAQDgAAAAAAAAAAQkJCQkJCQj4AAAAAAAAAAEJCQkIiJBQYAAAAAAAAAABCQkJCWmZmQgAAAAAAAAAAQiQkGBgkJEIAAAAAAAAAAEJCQkJCJiQcBHgAAAAAAAB+BAQIECAgfgAAAAAEGBAQEBAgEBAQEBAMAAAAEBAQEBAQEBAQEBAQEAAAACAYCAgICAQICAgICDAAAAAAAAAAACBSDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////////////////Dw8PDw8PDw8PDw8PDw8PAPDw8PDw8PDw8PDw8PDw8PAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
 
-  function buildCgRom(){
-    const rom=new Uint8Array(CG_ROM_BYTES);
-    for(const [ch,rows] of Object.entries(G)){
-      const code=ch.charCodeAt(0)&0xFF,base=code*GLYPH_HEIGHT;
-      for(let r=0;r<7;r++){
-        const bits=(rows[r]&0x1F)<<1;
-        const y=1+r*2;
-        rom[base+y]=bits;
-        rom[base+y+1]=bits;
-      }
+  function decodeRomBase64(encoded){
+    if(typeof Buffer!=='undefined'&&typeof Buffer.from==='function'){
+      return new Uint8Array(Buffer.from(encoded,'base64'));
     }
-    return rom;
+    if(typeof atob==='function'){
+      const raw=atob(encoded),out=new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i)&0xFF;
+      return out;
+    }
+    throw new Error('SHINO CG-ROM: base64 decoder unavailable');
   }
 
-  const CG_ROM_IMAGE=buildCgRom();
-  return {GLYPH_WIDTH,GLYPH_HEIGHT,GLYPH_COUNT,CG_ROM_BYTES,CG_ROM_IMAGE,buildCgRom};
-});</script>
+  const CG_ROM_IMAGE=decodeRomBase64(ROM_BASE64);
+  if(CG_ROM_IMAGE.length!==CG_ROM_BYTES)throw new Error('SHINO CG-ROM: invalid ROM size');
+
+  function buildCgRom(){return new Uint8Array(CG_ROM_IMAGE);}
+
+  return {GLYPH_WIDTH,GLYPH_HEIGHT,GLYPH_COUNT,CG_ROM_BYTES,CG_ROM_IMAGE,buildCgRom,ROM_SHA256,ROM_CRC32};
+});
+</script>
 <script>(function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -1510,10 +1495,23 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   video.setPower(false);
   function syncDisplayGeometry(){
     const signal=video.signal;
-    const crt=queryOne('#crtViewport');
+    const crt=queryOne('#crtViewport'),displayCanvas=queryOne('#crtCanvas');
     if(crt)crt.style.aspectRatio=`${signal.width} / ${signal.height}`;
+
+    let renderMode='AA';
+    if(crt&&displayCanvas){
+      const rect=displayCanvas.getBoundingClientRect();
+      const sx=rect.width/signal.width,sy=rect.height/signal.height;
+      const nearInteger=v=>v>=1&&Math.abs(v-Math.round(v))<.015;
+      const pixelPerfect=nearInteger(sx)&&nearInteger(sy);
+      renderMode=pixelPerfect?'PIXEL':'AA';
+      crt.classList.toggle('pixelPerfect',pixelPerfect);
+      crt.classList.toggle('dm80AA',!pixelPerfect);
+      crt.dataset.renderMode=renderMode;
+    }
+
     const status=queryOne('#statusVideo');
-    if(status)status.textContent=`VIDEO ${signal.width}×${signal.height} ${signal.interface.replace('_',' ')}`;
+    if(status)status.textContent=`VIDEO ${signal.width}×${signal.height} ${signal.interface.replace('_',' ')} / ${renderMode}`;
   }
   const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
   const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
@@ -1579,7 +1577,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
-    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
+    if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${hex(li.opcode,2)}h ${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · PREFIXES NEXT</b></div><div class="inspector-kv"><span>Accuracy</span><b>Level 1</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">PHASE 1E completes all 252 non-prefix BASE opcodes. CB/DD/ED/FD are recognized prefix entry points and are the next completion target.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
