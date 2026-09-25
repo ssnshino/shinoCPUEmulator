@@ -39,8 +39,9 @@
   const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
   const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
 
-  const ui={view:'display',running:false,powered:false,paceIndex:0,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'display',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
-  const paces=[{label:'VISUAL',mode:'interval',ms:125,batch:1},{label:'FAST',mode:'interval',ms:16,batch:8},{label:'MAX',mode:'raf',ms:0,batch:256}];
+  const ui={view:'display',running:false,powered:false,paceIndex:1,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'display',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
+  const paces=[{label:'VISUAL',mode:'interval',ms:125},{label:'REALTIME',mode:'raf'},{label:'TURBO',mode:'raf'}];
+  const executionPace=new globalThis.SHINO_PACE.ExecutionPace(cpu);
   let runTimer=null;
   let morePreviousFocus=null;
 
@@ -170,13 +171,14 @@
     queryOne('#crtViewport').setAttribute('aria-disabled',String(!ui.powered));
     queryOne('#runPauseBtn').disabled=!ui.powered;queryOne('#stepBtn').disabled=!ui.powered;queryOne('#resetBtn').disabled=!ui.powered;
     queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();
+    queryOne('#actualClock').textContent=`ACTUAL ${ui.running&&!document.hidden?executionPace.mhz.toFixed(2):'0.00'} MHz`;
     queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;
   }
   function markSignals(events){ui.activeSignals=new Set(events.flatMap(e=>e.signals||[]));ui.pulseUntil=performance.now()+180;}
   function stepBatch(count){
     if(!ui.powered)return;
-    const before=bus.trace.length;
-    try{cpu.runInstructions(count);markSignals(bus.trace.slice(before));ui.dirty=true;}
+    const before=bus.sequence;
+    try{cpu.runInstructions(count);markSignals(bus.trace.filter(e=>e.seq>before));ui.dirty=true;}
     catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);}
   }
   function stepOne(){stepBatch(1);}
@@ -189,9 +191,19 @@
     return 1;
   }
   function scheduleRun(){
-    clearRunHandle();if(!ui.running||!ui.powered)return;const p=paces[ui.paceIndex];
-    if(p.mode==='interval')runTimer=setInterval(()=>stepBatch(ui.paceIndex===0?visualBatch():p.batch),p.ms);
-    else{const loop=()=>{if(!ui.running||!ui.powered)return;stepBatch(p.batch);runTimer=requestAnimationFrame(loop);};runTimer=requestAnimationFrame(loop);}
+    clearRunHandle();executionPace.reset();
+    if(!ui.running||!ui.powered||document.hidden)return;const p=paces[ui.paceIndex];
+    if(p.mode==='interval')runTimer=setInterval(()=>{stepBatch(visualBatch());executionPace.sample();},p.ms);
+    else{
+      const loop=at=>{
+        if(!ui.running||!ui.powered||document.hidden)return;
+        const before=bus.sequence;
+        try{executionPace.advance(at,p.label);markSignals(bus.trace.filter(e=>e.seq>before));ui.dirty=true;}
+        catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);return;}
+        runTimer=requestAnimationFrame(loop);
+      };
+      runTimer=requestAnimationFrame(loop);
+    }
   }
   function clearRunHandle(){if(runTimer==null)return;clearInterval(runTimer);cancelAnimationFrame(runTimer);runTimer=null;}
   function startRun(){if(!ui.powered)return;ui.running=true;scheduleRun();ui.dirty=true;}
@@ -218,7 +230,7 @@
   function syncMoreSheet(){
     const menu=queryOne('#moreMenu');
     if(!menu)return;
-    queryOne('#morePaceValue').textContent=paces[ui.paceIndex].label;
+    queryOne('#morePaceValue').textContent=`${paces[ui.paceIndex].label} · ${ui.running&&!document.hidden?executionPace.mhz.toFixed(2):'0.00'} MHz`;
   }
 
   function openMore(){
@@ -316,6 +328,7 @@
     queryOne('#clearTraceBtn').addEventListener('click',()=>{bus.clearTrace();ui.dirty=true;});
     queryOne('#traceToggleBtn').addEventListener('click',toggleTrace);
     addEventListener('resize',()=>{ui.dirty=true;});
+    document.addEventListener('visibilitychange',()=>{scheduleRun();ui.dirty=true;});
     const keyboardCapture=queryOne('#keyboardCapture'),crt=queryOne('#crtViewport');
     crt.addEventListener('click',activateKeyboard);
     crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});

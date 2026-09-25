@@ -14,6 +14,7 @@
   --toolbar-h:58px;--status-h:26px;--nav-w:92px;--inspector-w:360px;--bottom-nav-h:62px;
 }
 .memory-toolbar{flex-wrap:wrap}
+@media (min-width:720px) and (max-width:1199px){.control.pace .wide-label{display:none}.toolbar .brand{min-width:160px}}
 .memory-toolbar label{display:flex;align-items:center;gap:6px}
 .memory-toolbar input,.memory-toolbar select,.memory-toolbar button{min-height:44px;background:#182027;color:var(--text);border:1px solid #526474;border-radius:6px;padding:6px;font:12px var(--mono)}
 .memory-toolbar input{width:76px}
@@ -133,13 +134,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 <div class="app" id="app">
   <header class="toolbar">
     <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · Z80 BASE COMPLETE v0.0.9</div></div>
-    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
+    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="actualClock">ACTUAL 0.00 MHz</span> · <span id="machineState">READY</span></div>
     <div class="toolbar-spacer"></div>
     <div class="control-group" aria-label="Machine controls">
       <button class="control power" id="powerBtn" aria-label="Power on or off" aria-pressed="false"><span class="power-led" aria-hidden="true"></span><span id="powerLabel">POWER</span></button>
       <button class="control primary" id="runPauseBtn" aria-label="Run or pause"><span id="runPauseLabel">RUN</span></button>
       <button class="control compact-label" id="stepBtn" aria-label="Step one instruction">STEP</button>
-      <button class="control pace" id="paceBtn" aria-label="Change observation pace"><span class="wide-label">PACE </span><span id="paceLabel">VISUAL</span></button>
+      <button class="control pace" id="paceBtn" aria-label="Change execution pace: VISUAL, REALTIME, TURBO"><span class="wide-label">PACE </span><span id="paceLabel">REALTIME</span></button>
       <button class="control danger reset-wide" id="resetBtn" aria-label="Reset CPU">RESET</button>
       <button class="control" id="moreBtn" aria-label="More actions">•••</button>
     </div>
@@ -254,7 +255,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </div>
     <div class="more-actions">
       <button class="more-action" data-more-action="keyboard"><span>KEYBOARD</span><b>TYPE INTO MON</b></button>
-      <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">VISUAL</b></button>
+      <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">REALTIME · 0.00 MHz</b></button>
       <button class="more-action" data-more-action="burst"><span>BURST</span><b>×256</b></button>
       <button class="more-action" data-more-action="clear"><span>CLEAR TRACE</span><b>BUS LOG</b></button>
       <button class="more-action danger" data-more-action="reset"><span>RESET CPU</span><b>PC → 0000h</b></button>
@@ -1939,7 +1940,51 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   return {Shino80TextVideo,TEXT_VRAM_BASE,COLS,ROWS,CELL_COUNT,SCREEN_W,SCREEN_H,VIDEO_SIGNAL};
 });</script>
-<script>(function(){
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_PACE=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  // Host pacing only: virtual time always comes from completed CPU instructions.
+  class ExecutionPace {
+    constructor(cpu,{now=()=>performance.now(),hz=4000000,workMs=8,maxInstructions=100000}={}){
+      this.cpu=cpu;this.now=now;this.hz=hz;this.workMs=workMs;this.maxInstructions=maxInstructions;
+      this.reset(now());
+    }
+    reset(at=this.now()){
+      this.lastAt=at;this.credit=0;this.sampleAt=at;
+      this.sampleT=this.cpu.state.tStates;this.mhz=0;
+    }
+    sample(at=this.now()){
+      const elapsed=at-this.sampleAt;
+      if(elapsed>=500){
+        this.mhz=Math.max(0,this.cpu.state.tStates-this.sampleT)/elapsed/1000;
+        this.sampleAt=at;this.sampleT=this.cpu.state.tStates;
+      }
+    }
+    advance(at,mode){
+      if(mode!=='REALTIME'&&mode!=='TURBO')throw new Error('Unknown execution pace');
+      const elapsed=at-this.lastAt;this.lastAt=at;
+      // Hidden/suspended hosts must never accumulate an unbounded catch-up run.
+      if(elapsed<0||elapsed>250){this.reset(at);return 0;}
+      if(mode==='REALTIME')this.credit=Math.min(this.hz*0.1,this.credit+elapsed*this.hz/1000);
+      else this.credit=0;
+      const startT=this.cpu.state.tStates,deadline=this.now()+this.workMs;
+      let count=0;
+      while(count<this.maxInstructions&&(mode==='TURBO'||this.cpu.state.tStates-startT<this.credit)){
+        if(count%32===0&&this.now()>=deadline)break;
+        this.cpu.step();count++;
+      }
+      if(mode==='REALTIME')this.credit-=this.cpu.state.tStates-startT;
+      this.sample(at);
+      return count;
+    }
+  }
+  return {ExecutionPace};
+});
+
+(function(){
   'use strict';
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
@@ -1980,8 +2025,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const hex=(v,w=2)=>(Number(v)>>>0).toString(16).toUpperCase().padStart(w,'0');
   const bits=(v,width)=>Array.from({length:width},(_,i)=>Boolean(v&(1<<(width-1-i))));
 
-  const ui={view:'display',running:false,powered:false,paceIndex:0,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'display',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
-  const paces=[{label:'VISUAL',mode:'interval',ms:125,batch:1},{label:'FAST',mode:'interval',ms:16,batch:8},{label:'MAX',mode:'raf',ms:0,batch:256}];
+  const ui={view:'display',running:false,powered:false,paceIndex:1,traceOpen:matchMedia('(min-width:1200px)').matches,selectedDevice:'display',dirty:true,lastFetchAddress:0,pulseUntil:0,activeSignals:new Set()};
+  const paces=[{label:'VISUAL',mode:'interval',ms:125},{label:'REALTIME',mode:'raf'},{label:'TURBO',mode:'raf'}];
+  const executionPace=new globalThis.SHINO_PACE.ExecutionPace(cpu);
   let runTimer=null;
   let morePreviousFocus=null;
 
@@ -2111,13 +2157,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     queryOne('#crtViewport').setAttribute('aria-disabled',String(!ui.powered));
     queryOne('#runPauseBtn').disabled=!ui.powered;queryOne('#stepBtn').disabled=!ui.powered;queryOne('#resetBtn').disabled=!ui.powered;
     queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();
+    queryOne('#actualClock').textContent=`ACTUAL ${ui.running&&!document.hidden?executionPace.mhz.toFixed(2):'0.00'} MHz`;
     queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;
   }
   function markSignals(events){ui.activeSignals=new Set(events.flatMap(e=>e.signals||[]));ui.pulseUntil=performance.now()+180;}
   function stepBatch(count){
     if(!ui.powered)return;
-    const before=bus.trace.length;
-    try{cpu.runInstructions(count);markSignals(bus.trace.slice(before));ui.dirty=true;}
+    const before=bus.sequence;
+    try{cpu.runInstructions(count);markSignals(bus.trace.filter(e=>e.seq>before));ui.dirty=true;}
     catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);}
   }
   function stepOne(){stepBatch(1);}
@@ -2130,9 +2177,19 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     return 1;
   }
   function scheduleRun(){
-    clearRunHandle();if(!ui.running||!ui.powered)return;const p=paces[ui.paceIndex];
-    if(p.mode==='interval')runTimer=setInterval(()=>stepBatch(ui.paceIndex===0?visualBatch():p.batch),p.ms);
-    else{const loop=()=>{if(!ui.running||!ui.powered)return;stepBatch(p.batch);runTimer=requestAnimationFrame(loop);};runTimer=requestAnimationFrame(loop);}
+    clearRunHandle();executionPace.reset();
+    if(!ui.running||!ui.powered||document.hidden)return;const p=paces[ui.paceIndex];
+    if(p.mode==='interval')runTimer=setInterval(()=>{stepBatch(visualBatch());executionPace.sample();},p.ms);
+    else{
+      const loop=at=>{
+        if(!ui.running||!ui.powered||document.hidden)return;
+        const before=bus.sequence;
+        try{executionPace.advance(at,p.label);markSignals(bus.trace.filter(e=>e.seq>before));ui.dirty=true;}
+        catch(err){stopRun();queryOne('#machineState').textContent='FAULT';queryOne('#statusRun').textContent='FAULT';console.error(err);return;}
+        runTimer=requestAnimationFrame(loop);
+      };
+      runTimer=requestAnimationFrame(loop);
+    }
   }
   function clearRunHandle(){if(runTimer==null)return;clearInterval(runTimer);cancelAnimationFrame(runTimer);runTimer=null;}
   function startRun(){if(!ui.powered)return;ui.running=true;scheduleRun();ui.dirty=true;}
@@ -2159,7 +2216,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function syncMoreSheet(){
     const menu=queryOne('#moreMenu');
     if(!menu)return;
-    queryOne('#morePaceValue').textContent=paces[ui.paceIndex].label;
+    queryOne('#morePaceValue').textContent=`${paces[ui.paceIndex].label} · ${ui.running&&!document.hidden?executionPace.mhz.toFixed(2):'0.00'} MHz`;
   }
 
   function openMore(){
@@ -2257,6 +2314,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     queryOne('#clearTraceBtn').addEventListener('click',()=>{bus.clearTrace();ui.dirty=true;});
     queryOne('#traceToggleBtn').addEventListener('click',toggleTrace);
     addEventListener('resize',()=>{ui.dirty=true;});
+    document.addEventListener('visibilitychange',()=>{scheduleRun();ui.dirty=true;});
     const keyboardCapture=queryOne('#keyboardCapture'),crt=queryOne('#crtViewport');
     crt.addEventListener('click',activateKeyboard);
     crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});

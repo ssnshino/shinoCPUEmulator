@@ -27,7 +27,6 @@ with sync_playwright() as p:
 
     page.locator('#powerBtn').click();page.wait_for_timeout(100)
     page.locator('#moreBtn').click();page.locator('[data-more-action="pace"]').click()
-    page.locator('[data-more-action="pace"]').click()
     page.locator('#moreCloseBtn').click();page.wait_for_timeout(220)
 
     page.locator('#runPauseBtn').click()

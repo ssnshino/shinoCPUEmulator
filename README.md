@@ -14,6 +14,14 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+Latest: `feature/shino80-realtime-pace-20260926`, stacked on MON v0.2
+`6707ace` / PR #19 (Human functional PASS). Default REALTIME replaces MAX;
+VISUAL and TURBO remain selectable. 4 MHz is a target, measured MHz is shown.
+Current plan/spec/worklog: `SHINO80_REALTIME_PACE_PLAN.md`,
+`SHINO80_EXECUTION_PACE_v0.1.md`, `SHINO80_REALTIME_PACE_WORKLOG.md` in head
+directories. Speed candidate mobile QA and all merges remain pending.
+The following bullets describe the parent candidate.
+
 - Reviewed keyboard/MON baseline: PR #17, main `f6444c6`.
 - 64 KiB Memory Inspector: PR #18, `f0903e0`; Human iPhone/Edge QA PASS.
 - Active branch: `feature/shino80-monitor-lines-dump-20260926`, stacked on PR #18.
