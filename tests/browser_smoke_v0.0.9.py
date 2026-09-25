@@ -30,9 +30,11 @@ with sync_playwright() as p:
     page.locator('#moreCloseBtn').click();page.wait_for_timeout(220)
 
     page.locator('#runPauseBtn').click()
+    page.locator('.bottom-nav button[data-view="bus"]').click()
     page.wait_for_function("document.querySelector('#busTrace')?.textContent.includes('IO_READ')",timeout=4000)
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert 'IO_READ' in page.locator('#busTrace').inner_text()
+    page.locator('.bottom-nav button[data-view="display"]').click()
 
     before=page.locator('#crtCanvas').evaluate('canvas => canvas.toDataURL()')
     page.locator('#runPauseBtn').click()

@@ -1,5 +1,9 @@
 # LAST RUN
 
+Newest: 2026-09-26 trace/observer optimization. See
+working-logs/head/SHINO80_TRACE_OBSERVER_PERF_WORKLOG.md. Current branch
+perf/shino80-trace-observer-20260926 on 3f4f90d / PR #20. iPhone QA pending.
+
 Latest override: 2026-09-26 REALTIME pacing candidate. Read
 working-logs/head/SHINO80_REALTIME_PACE_WORKLOG.md. Branch
 feature/shino80-realtime-pace-20260926, stacked on 6707ace / PR #19.

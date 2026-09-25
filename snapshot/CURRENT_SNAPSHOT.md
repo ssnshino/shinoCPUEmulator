@@ -1,6 +1,11 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+Newest override 2026-09-26: perf/shino80-trace-observer-20260926 on 3f4f90d /
+PR #20. Read TRACE_OBSERVER_PERF plan/spec/worklog. Ring storage and lazy
+observers; exact CPU/Bus equivalence tested. Chrome ~4 MHz, phone QA pending.
+No CPU/firmware/pacing changes; no merges. Earlier candidates follow.
+
 Latest override 2026-09-26: feature/shino80-realtime-pace-20260926, parent
 6707ace / PR #19 (MON Human PASS). REALTIME default / VISUAL / TURBO, actual
 MHz, bounded host slices and hidden-page suspension. See REALTIME_PACE plan
