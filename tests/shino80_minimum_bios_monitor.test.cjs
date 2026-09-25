@@ -108,14 +108,15 @@ function cursor(bus){
   assert.equal(cpu.state.sp,0xF000);
 }
 
-// The last visible cell advances and wraps to the top-left cursor position.
+// The last visible cell advances and scrolls up one row.
 {
   const {bus,cpu}=machine();
   setCursor(bus,TEXT_VRAM_END-1,79);
   cpu.state.a='X'.charCodeAt(0);
   loadProgram(bus,[0xCF,0x76]);runToHalt(cpu);
-  assert.equal(bus.debugPeek(TEXT_VRAM_END-1),'X'.charCodeAt(0));
-  assert.equal(cursor(bus),TEXT_VRAM_BASE);assert.equal(bus.debugPeek(BIOS_WORK_COLUMN),0);
+  assert.equal(bus.debugPeek(TEXT_VRAM_END-81),'X'.charCodeAt(0));
+  assert.equal(bus.debugPeek(TEXT_VRAM_END-1),0);
+  assert.equal(cursor(bus),TEXT_VRAM_END-80);assert.equal(bus.debugPeek(BIOS_WORK_COLUMN),0);
 }
 
 // Public NEWLINE advances from an arbitrary column to the next row start.

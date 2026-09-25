@@ -1,6 +1,18 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+## Active candidate override — 2026-09-26T01:45:00+09:00
+
+Current branch: `feature/shino80-monitor-lines-dump-20260926`.
+Parent: Memory Inspector `f0903e0`, PR #18 (unmerged, Human mobile PASS).
+Reviewed main includes keyboard PR #17 at `f6444c6`.
+Current plan/spec/worklog: `SHINO80_MONITOR_CONSOLE_V2_PLAN.md`,
+`SHINO80_MONITOR_CONSOLE_v0.2.md`, `SHINO80_MONITOR_CONSOLE_V2_WORKLOG.md`
+in their respective head directories. GETLINE, Backspace, scroll and D xxxx
+are implemented; every command now needs Enter. CPU and CG-ROM unchanged.
+Next: Human mobile QA, then explicit merge authorization; do not merge by default.
+Remaining text below records the earlier foundation baseline.
+
 Last updated: 2026-09-25T23:58:41+09:00
 
 ## Reviewed runtime baseline

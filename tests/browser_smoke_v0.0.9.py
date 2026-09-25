@@ -36,6 +36,7 @@ with sync_playwright() as p:
     assert 'IO_READ' in page.locator('#busTrace').inner_text()
 
     before=page.locator('#crtCanvas').evaluate('canvas => canvas.toDataURL()')
+    page.locator('#runPauseBtn').click()
     page.locator('#moreBtn').click()
     page.locator('[data-more-action="keyboard"]').click()
     assert page.evaluate('document.activeElement?.id')=='keyboardCapture'
@@ -43,12 +44,12 @@ with sync_playwright() as p:
     assert page.locator('.toolbar').evaluate("element => getComputedStyle(element).display")=='none'
     assert page.locator('.bottom-nav').evaluate("element => getComputedStyle(element).display")=='none'
     page.keyboard.type('h')
-    page.locator('#runPauseBtn').click()
+    page.keyboard.press('Enter')
     page.wait_for_function("previous => document.querySelector('#crtCanvas').toDataURL() !== previous",arg=before,timeout=4000)
-    page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 
     page.locator('#keyboardCapture').evaluate('element => element.blur()')
+    page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert not page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
 
     page.locator('.bottom-nav button[data-view="cpu"]').click();page.wait_for_timeout(80)

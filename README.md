@@ -12,6 +12,20 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ## Current status
 
+### Active candidate — 2026-09-26
+
+- Reviewed keyboard/MON baseline: PR #17, main `f6444c6`.
+- 64 KiB Memory Inspector: PR #18, `f0903e0`; Human iPhone/Edge QA PASS.
+- Active branch: `feature/shino80-monitor-lines-dump-20260926`, stacked on PR #18.
+- BIOS GETLINE / Backspace / scroll / hex output and MON `D xxxx` implemented.
+- **All MON commands require Enter in this candidate**, including H and C.
+- Current plan: `plan/head/SHINO80_MONITOR_CONSOLE_V2_PLAN.md`.
+- Current spec: `docs/head/SHINO80_MONITOR_CONSOLE_v0.2.md`.
+- Current worklog: `working-logs/head/SHINO80_MONITOR_CONSOLE_V2_WORKLOG.md`.
+- Main merge and real-device review of this candidate remain pending.
+
+The status below is the historical BIOS-foundation closeout, not the candidate.
+
 - Repository: `ssnshino/shinoCPUEmulator`
 - Default branch: `main`
 - Current machine: **SHINO-80**

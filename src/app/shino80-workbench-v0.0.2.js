@@ -319,6 +319,11 @@
     const keyboardCapture=queryOne('#keyboardCapture'),crt=queryOne('#crtViewport');
     crt.addEventListener('click',activateKeyboard);
     crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});
+    keyboardCapture.addEventListener('keydown',e=>{
+      if(!e.isComposing&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&(e.key==='Enter'||e.key==='Backspace')){
+        e.preventDefault();enqueueHostKey(e.key);
+      }
+    });
     keyboardCapture.addEventListener('beforeinput',e=>{
       if(e.inputType==='insertLineBreak'){e.preventDefault();enqueueHostKey('Enter');}
       if(e.inputType==='deleteContentBackward'){e.preventDefault();enqueueHostKey('Backspace');}
