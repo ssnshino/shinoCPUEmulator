@@ -110,15 +110,16 @@ jobs:
         run: |
           npm run build
           git diff --check
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Working tree is dirty after rebuild:"
-            git status --short
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "Tracked working tree is dirty after rebuild:"
+            git status --short --untracked-files=no
             git diff -- deploy/one_page_shino80_v0.0.9_z80_base_complete.html || true
             exit 1
           fi
-          echo "Working tree clean"
+          echo "Tracked working tree clean (QA screenshots are intentionally untracked)"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: shino80-display-qa
           path: qa/
