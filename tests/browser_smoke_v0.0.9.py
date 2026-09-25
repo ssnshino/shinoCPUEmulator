@@ -31,9 +31,9 @@ with sync_playwright() as p:
     page.locator('#moreCloseBtn').click();page.wait_for_timeout(220)
 
     page.locator('#runPauseBtn').click()
-    page.wait_for_function("document.querySelector('#statusPc')?.textContent === '009C'",timeout=3000)
+    page.wait_for_function("document.querySelector('#statusPc')?.textContent === '0220'",timeout=4000)
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
-    assert page.locator('#statusPc').inner_text()=='009C'
+    assert page.locator('#statusPc').inner_text()=='0220'
 
     page.locator('.bottom-nav button[data-view="cpu"]').click();page.wait_for_timeout(80)
     inspector=page.locator('#inspectorContent').inner_text()

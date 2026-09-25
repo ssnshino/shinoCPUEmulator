@@ -1,0 +1,38 @@
+{
+  "project": "SHINO-80",
+  "candidate": "MINIMUM BIOS + MONITOR FOUNDATION v0.1",
+  "date": "2026-09-25",
+  "branch": "feature/shino80-minimum-bios-monitor-20260925",
+  "reviewed_main_base": "6d46743d6efac93a66ad79a61515e6adfc6e8ff1",
+  "cgrom_dm80_reviewed_head": "e04a951183fa6eb429cf61bcfd3d9655bea883b2",
+  "result": "PASS_INTEGRATION_CANDIDATE",
+  "checks": {
+    "rom_size_8192": "PASS",
+    "reset_vector_0000_to_ipl_0200": "PASS",
+    "rst08_putchar_vector": "PASS",
+    "reserved_vectors_explicit_stub": "PASS",
+    "bios_jump_table_0100": "PASS",
+    "putchar_register_and_stack_preservation": "PASS",
+    "newline_and_screen_wrap": "PASS",
+    "cls_full_text_region": "PASS",
+    "print_string_via_rst08": "PASS",
+    "cpu_bus_vram_write_evidence": "PASS",
+    "ipl_four_line_display": "PASS",
+    "monitor_loop_0220": "PASS",
+    "z80_phase1_regression": "PASS",
+    "phase2a_video_ipl_regression": "PASS",
+    "phase2a1_power_reset_display_regression": "PASS",
+    "source_syntax": "PASS",
+    "final_generated_artifact_static_regression": "PASS",
+    "final_generated_artifact_reproducibility": "PASS",
+    "final_generated_artifact_sha256": "a059110e7599e7252ec5b419dee1d2c2c31d84d1b4e0e59002043d260e78d33c",
+    "in_memory_one_page_build_inline_syntax": "PASS",
+    "generated_artifact_chrome_ipl_to_monitor": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "deferred": [
+    "repository README and restart snapshot closeout after merge",
+    "keyboard GETCHAR and interactive Monitor commands",
+    "disk, serial, printer, interrupt and NMI BIOS services"
+  ]
+}
