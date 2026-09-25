@@ -7,11 +7,12 @@ const {CG_ROM_IMAGE,CG_ROM_BYTES,GLYPH_HEIGHT}=require('../src/firmware/shino80/
 
 const rom=buildSystemRom();
 assert.equal(rom.bytes.length,0x2000);
-assert.equal(rom.bytes[0],0x31);
+assert.equal(rom.bytes[0],0xC3);
+assert.equal(rom.bytes[1]|(rom.bytes[2]<<8),rom.labels.IPL_ENTRY);
 assert.equal(rom.meta.romSize,0x2000);
 assert(rom.meta.instructionsBeforeLoop>0);
 
-const bus=new Shino80Bus({traceLimit:4096,romRanges:[[0x0000,0x1FFF]]});
+const bus=new Shino80Bus({traceLimit:50000,romRanges:[[0x0000,0x1FFF]]});
 const cpu=new Z80Core(bus);
 bus.load(rom.bytes,0);cpu.reset();bus.clearTrace();
 cpu.runInstructions(rom.meta.instructionsBeforeLoop);

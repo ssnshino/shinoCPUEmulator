@@ -6,17 +6,16 @@ const {buildSystemRom,TEXT_VRAM_BASE}=require('../src/firmware/shino80/shino80-s
 const {CG_ROM_IMAGE,GLYPH_HEIGHT}=require('../src/firmware/shino80/shino80-cgrom.js');
 
 const rom=buildSystemRom();
-assert.equal(rom.labels.VRAM_TEST_LOOP,0x000A);
-assert.equal(rom.labels.VRAM_TEST_DONE,0x0012);
-assert.equal(rom.labels.VRAM_TEST_HOLD_LOOP,0x0014);
-assert.equal(rom.labels.VRAM_TEST_HOLD_DONE,0x0016);
-assert.equal(rom.labels.VRAM_CLEAR_LOOP,0x001D);
-assert.equal(rom.labels.VRAM_CLEAR_DONE,0x0024);
-assert.equal(rom.labels.MONITOR_LOOP,0x009C);
+assert.equal(rom.labels.IPL_ENTRY,0x0200);
+assert.equal(rom.labels.VRAM_TEST_LOOP,0x020B);
+assert.equal(rom.labels.VRAM_TEST_DONE,0x0213);
+assert.equal(rom.labels.VRAM_TEST_HOLD_LOOP,0x0215);
+assert.equal(rom.labels.VRAM_TEST_HOLD_DONE,0x0217);
+assert.equal(rom.labels.MONITOR_LOOP,0x0220);
 assert.equal(rom.meta.vramBytes,2048);
 assert.equal(rom.meta.testPageInstructions,771);
 assert.equal(rom.meta.clearPageInstructions,770);
-assert.equal(rom.meta.instructionsBeforeLoop,12640);
+assert.equal(rom.meta.instructionsBeforeLoop,13976);
 
 const bus=new Shino80Bus({traceLimit:256,romRanges:[[0x0000,0x1FFF]]});
 const cpu=new Z80Core(bus);

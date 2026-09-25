@@ -1,0 +1,38 @@
+{
+  "project": "SHINO-80",
+  "candidate": "MINIMUM BIOS + MONITOR FOUNDATION v0.1",
+  "date": "2026-09-25",
+  "branch": "feature/shino80-minimum-bios-monitor-20260925",
+  "reviewed_main_base": "d46de4e460a148c2d52a3024cc0767e48e5a1d64",
+  "stacked_cgrom_dm80_base": "52edcafa9a76702b8b22fcd69a26a527488959d0",
+  "result": "PASS_SOURCE_CANDIDATE",
+  "checks": {
+    "rom_size_8192": "PASS",
+    "reset_vector_0000_to_ipl_0200": "PASS",
+    "rst08_putchar_vector": "PASS",
+    "reserved_vectors_explicit_stub": "PASS",
+    "bios_jump_table_0100": "PASS",
+    "putchar_register_and_stack_preservation": "PASS",
+    "newline_and_screen_wrap": "PASS",
+    "cls_full_text_region": "PASS",
+    "print_string_via_rst08": "PASS",
+    "cpu_bus_vram_write_evidence": "PASS",
+    "ipl_four_line_display": "PASS",
+    "monitor_loop_0220": "PASS",
+    "z80_phase1_regression": "PASS",
+    "phase2a_video_ipl_regression": "PASS",
+    "phase2a1_power_reset_display_regression": "PASS",
+    "source_syntax": "PASS",
+    "stacked_base_artifact_static_regression": "PASS",
+    "in_memory_one_page_build_inline_syntax": "PASS",
+    "in_memory_chrome_ipl_to_monitor": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "deferred": [
+    "generated deploy HTML update after CG-ROM / DM-80 merge",
+    "package script integration",
+    "repository README and restart snapshot refresh",
+    "keyboard GETCHAR and interactive Monitor commands",
+    "disk, serial, printer, interrupt and NMI BIOS services"
+  ]
+}
