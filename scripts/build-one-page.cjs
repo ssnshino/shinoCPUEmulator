@@ -7,6 +7,7 @@ const source={
   template:'src/app/shino80-workbench-v0.0.2.template.html',
   css:'src/ui/shino80-workbench-v0.0.2.css',
   bus:'src/machine/shino80/shino80-bus.js',
+  keyboard:'src/devices/shino80/shino80-keyboard.js',
   flags:'src/cpu/z80/z80-flags.js',
   decoder:'src/cpu/z80/z80-decoder.js',
   cpu:'src/cpu/z80/z80-core.js',
@@ -18,6 +19,7 @@ const source={
 let html=read(source.template)
   .replace('/*__CSS__*/',read(source.css))
   .replace('/*__BUS__*/',read(source.bus))
+  .replace('/*__KEYBOARD__*/',read(source.keyboard))
   .replace('/*__FLAGS__*/',read(source.flags))
   .replace('/*__DECODER__*/',read(source.decoder))
   .replace('/*__CPU__*/',read(source.cpu))

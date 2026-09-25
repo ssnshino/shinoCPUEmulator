@@ -31,9 +31,25 @@ with sync_playwright() as p:
     page.locator('#moreCloseBtn').click();page.wait_for_timeout(220)
 
     page.locator('#runPauseBtn').click()
-    page.wait_for_function("document.querySelector('#statusPc')?.textContent === '0220'",timeout=4000)
+    page.wait_for_function("document.querySelector('#busTrace')?.textContent.includes('IO_READ')",timeout=4000)
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
-    assert page.locator('#statusPc').inner_text()=='0220'
+    assert 'IO_READ' in page.locator('#busTrace').inner_text()
+
+    before=page.locator('#crtCanvas').evaluate('canvas => canvas.toDataURL()')
+    page.locator('#moreBtn').click()
+    page.locator('[data-more-action="keyboard"]').click()
+    assert page.evaluate('document.activeElement?.id')=='keyboardCapture'
+    assert page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
+    assert page.locator('.toolbar').evaluate("element => getComputedStyle(element).display")=='none'
+    assert page.locator('.bottom-nav').evaluate("element => getComputedStyle(element).display")=='none'
+    page.keyboard.type('h')
+    page.locator('#runPauseBtn').click()
+    page.wait_for_function("previous => document.querySelector('#crtCanvas').toDataURL() !== previous",arg=before,timeout=4000)
+    page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+
+    page.locator('#keyboardCapture').evaluate('element => element.blur()')
+    assert not page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
 
     page.locator('.bottom-nav button[data-view="cpu"]').click();page.wait_for_timeout(80)
     inspector=page.locator('#inspectorContent').inner_text()

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="data:,">
 <title>SHINO-80 v0.0.9 — Z80 BASE COMPLETE</title>
 <style>/*__CSS__*/</style>
 </head>
@@ -36,7 +37,7 @@
         <div class="display-stage">
           <div class="computer-shell monitor-shell" id="displayDevice">
             <div class="monitor-head"><span class="monitor-model">DM-80</span></div>
-            <div class="crt-bezel"><div class="crt" id="crtViewport"><canvas id="crtCanvas" width="640" height="400" aria-label="DM-80 green monochrome digital display"></canvas></div></div>
+            <div class="crt-bezel"><div class="crt" id="crtViewport" tabindex="0" role="button" aria-label="DM-80 display; activate SHINO-80 keyboard"><canvas id="crtCanvas" width="640" height="400" aria-label="DM-80 green monochrome digital display"></canvas></div></div>
             <div class="monitor-foot"><span class="monitor-maker">SHINOMIYA</span><span class="monitor-type">GREEN MONO DIGITAL DISPLAY</span></div>
           </div>
         </div>
@@ -81,7 +82,7 @@
       </section>
 
       <section class="view" data-view-panel="devices" aria-label="Devices">
-        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">TEXT VIDEO ONLINE · other slots reserved</span></div><div class="devices" id="deviceList"></div></div>
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">VIDEO + KEYBOARD ONLINE</span></div><div class="devices" id="deviceList"></div></div>
       </section>
     </main>
 
@@ -116,6 +117,7 @@
       <button class="more-close" id="moreCloseBtn" aria-label="Close more actions">×</button>
     </div>
     <div class="more-actions">
+      <button class="more-action" data-more-action="keyboard"><span>KEYBOARD</span><b>TYPE INTO MON</b></button>
       <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">VISUAL</b></button>
       <button class="more-action" data-more-action="burst"><span>BURST</span><b>×256</b></button>
       <button class="more-action" data-more-action="clear"><span>CLEAR TRACE</span><b>BUS LOG</b></button>
@@ -123,7 +125,9 @@
     </div>
   </section>
 </div>
+<textarea class="keyboard-capture" id="keyboardCapture" aria-label="SHINO-80 keyboard input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
 <script>/*__BUS__*/</script>
+<script>/*__KEYBOARD__*/</script>
 <script>/*__FLAGS__*/</script>
 <script>/*__DECODER__*/</script>
 <script>/*__CPU__*/</script>

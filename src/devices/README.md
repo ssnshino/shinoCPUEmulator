@@ -1,6 +1,11 @@
 # src/devices
 
-Future SHINO-80 peripheral implementations live here.
+SHINO-80 peripheral implementations live here.
+
+Current device:
+
+- `shino80/shino80-keyboard.js` — low-byte-decoded `20h` DATA / `21h`
+  STATUS ports with a 64-byte host-input FIFO
 
 Planned domains include:
 
@@ -10,7 +15,5 @@ Planned domains include:
 - printer
 - timer
 - sound
-
-Current v0.0.2 UI shows reserved Device Dock slots only; no device implementation belongs here yet.
 
 Create a device directory when that device enters an approved implementation PLAN.

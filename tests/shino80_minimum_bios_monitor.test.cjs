@@ -19,13 +19,15 @@ function assertJump(address,target){
 
 assertJump(0x0000,IPL_ENTRY);
 assertJump(0x0008,rom.labels.BIOS_PUTCHAR);
-for(const vector of [0x0010,0x0018,0x0020,0x0028,0x0030,0x0038,0x0066]){
+assertJump(0x0010,rom.labels.BIOS_GETCHAR);
+for(const vector of [0x0018,0x0020,0x0028,0x0030,0x0038,0x0066]){
   assertJump(vector,rom.labels.BIOS_UNIMPLEMENTED);
 }
 assertJump(BIOS_JUMP_TABLE+0x00,rom.labels.BIOS_PUTCHAR);
 assertJump(BIOS_JUMP_TABLE+0x03,rom.labels.BIOS_NEWLINE);
 assertJump(BIOS_JUMP_TABLE+0x06,rom.labels.BIOS_CLS);
 assertJump(BIOS_JUMP_TABLE+0x09,rom.labels.BIOS_PRINT_STRING);
+assertJump(BIOS_JUMP_TABLE+0x0C,rom.labels.BIOS_GETCHAR);
 
 function machine(){
   const bus=new Shino80Bus({traceLimit:20000,romRanges:[[0x0000,0x1FFF]]});
