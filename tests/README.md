@@ -20,6 +20,11 @@ PHASE 1E exhaustively checks:
 
 - shino80_phase2a_video_ipl.test.cjs
 - shino80_phase2a1_power_reset.test.cjs
+- shino80_minimum_bios_monitor.test.cjs
+- shino80_keyboard_monitor.test.cjs
+
+Keyboard / Monitor regression checks the controller FIFO, debugger-safe peek,
+full-address I/O trace, BIOS GETCHAR ABI, and ROM commands `H` / `?` / `C` / CR.
 
 ## Current artifact QA
 

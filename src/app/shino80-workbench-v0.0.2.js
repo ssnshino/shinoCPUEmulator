@@ -1,10 +1,12 @@
 (function(){
   'use strict';
   const {Shino80Bus}=globalThis.SHINO_BUS;
+  const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
-  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]]});
+  const keyboard=new Shino80Keyboard();
+  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]],ioDevices:[keyboard]});
   const cpu=new Z80Core(bus);
   const systemRom=buildSystemRom();
   bus.load(systemRom.bytes,0x0000);
@@ -45,6 +47,7 @@
   const devices=[
     {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
+    {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
@@ -72,7 +75,7 @@
   }
 
   function renderDevices(){
-    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
+    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
   }
 
   function setView(view){
@@ -104,10 +107,11 @@
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){
       const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
-      const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;
+      const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;
       html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${state}</b></div></div>`;
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
+      else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -120,6 +124,8 @@
     queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);
     queryOne('#powerBtn').classList.toggle('on',ui.powered);queryOne('#powerBtn').setAttribute('aria-pressed',String(ui.powered));
     queryOne('#app').classList.toggle('power-off',!ui.powered);
+    queryOne('#crtViewport').classList.toggle('keyboard-ready',ui.powered);
+    queryOne('#crtViewport').setAttribute('aria-disabled',String(!ui.powered));
     queryOne('#runPauseBtn').disabled=!ui.powered;queryOne('#stepBtn').disabled=!ui.powered;queryOne('#resetBtn').disabled=!ui.powered;
     queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();
     queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;
@@ -136,7 +142,8 @@
     const pc=cpu.state.pc&0xFFFF;
     if(pc===systemRom.labels.VRAM_TEST_LOOP)return systemRom.meta.testPageInstructions;
     if(pc===systemRom.labels.VRAM_TEST_HOLD_LOOP)return 32;
-    if(pc===systemRom.labels.VRAM_CLEAR_LOOP)return systemRom.meta.clearPageInstructions;
+    if(pc===systemRom.labels.BIOS_CLS_LOOP)return systemRom.meta.clearPageInstructions;
+    if(pc===systemRom.labels.MONITOR_LOOP||pc===systemRom.labels.BIOS_GETCHAR_WAIT)return 32;
     return 1;
   }
   function scheduleRun(){
@@ -150,16 +157,16 @@
   function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
   function resetCpu(){
     if(!ui.powered)return;
-    stopRun();cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+    stopRun();keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
   }
   function powerOn(){
     if(ui.powered)return;
-    stopRun();bus.clearWritableMemory(0);cpu.reset();video.setPower(true);ui.powered=true;
+    stopRun();bus.clearWritableMemory(0);keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function powerOff(){
     if(!ui.powered)return;
-    stopRun();ui.powered=false;bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    stopRun();ui.powered=false;keyboard.reset();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function togglePower(){ui.powered?powerOff():powerOn();}
@@ -184,16 +191,56 @@
     if(close)close.focus({preventScroll:true});
   }
 
-  function closeMore(){
+  function closeMore({restoreFocus=true}={}){
     const menu=queryOne('#moreMenu');
     if(!menu||menu.hidden)return;
     menu.classList.remove('open');
     menu.setAttribute('aria-hidden','true');
     setTimeout(()=>{menu.hidden=true;},180);
-    if(morePreviousFocus&&typeof morePreviousFocus.focus==='function')morePreviousFocus.focus({preventScroll:true});
+    if(restoreFocus&&morePreviousFocus&&typeof morePreviousFocus.focus==='function')morePreviousFocus.focus({preventScroll:true});
+  }
+
+  function syncKeyboardViewport(){
+    const app=queryOne('#app');
+    if(!app.classList.contains('keyboard-mode'))return;
+    const height=globalThis.visualViewport?globalThis.visualViewport.height:innerHeight;
+    app.style.setProperty('--keyboard-viewport-height',`${Math.round(height)}px`);
+    ui.dirty=true;
+  }
+
+  function setKeyboardMode(active){
+    const app=queryOne('#app');
+    app.classList.toggle('keyboard-mode',active);
+    if(active){syncKeyboardViewport();requestAnimationFrame(syncKeyboardViewport);}
+    else app.style.removeProperty('--keyboard-viewport-height');
+    ui.dirty=true;
+  }
+
+  function activateKeyboard(){
+    if(!ui.powered)return;
+    closeMore({restoreFocus:false});
+    setView('display');
+    const input=queryOne('#keyboardCapture');
+    input.value='';
+    input.focus({preventScroll:true});
+  }
+
+  function hostKeyByte(key){
+    if(key==='Enter'||key==='\n'||key==='\r')return 0x0D;
+    if(key==='Backspace')return 0x08;
+    if(typeof key==='string'&&key.length===1){const code=key.charCodeAt(0);if(code>=0x20&&code<=0x7E)return code;}
+    return null;
+  }
+
+  function enqueueHostKey(key){
+    if(!ui.powered)return false;
+    const byte=hostKeyByte(key);
+    if(byte===null)return false;
+    keyboard.enqueueByte(byte);ui.dirty=true;return true;
   }
 
   function moreAction(action){
+    if(action==='keyboard'){activateKeyboard();return;}
     if(action==='reset')resetCpu();
     if(action==='burst')stepBatch(256);
     if(action==='clear'){bus.clearTrace();ui.dirty=true;}
@@ -211,13 +258,31 @@
     queryOne('#resetBtn').addEventListener('click',resetCpu);
     queryOne('#moreBtn').addEventListener('click',openMore);
     queryOne('#moreCloseBtn').addEventListener('click',closeMore);
-    queryOne('#moreBackdrop').addEventListener('click',closeMore);
+    queryOne('#moreBackdrop').addEventListener('click',()=>closeMore());
     queryAll('[data-more-action]').forEach(b=>b.addEventListener('click',()=>moreAction(b.dataset.moreAction)));
     queryOne('#burstBtn').addEventListener('click',()=>stepBatch(256));
     queryOne('#clearTraceBtn').addEventListener('click',()=>{bus.clearTrace();ui.dirty=true;});
     queryOne('#traceToggleBtn').addEventListener('click',toggleTrace);
     addEventListener('resize',()=>{ui.dirty=true;});
-    addEventListener('keydown',e=>{if(e.key==='Escape')closeMore();});
+    const keyboardCapture=queryOne('#keyboardCapture'),crt=queryOne('#crtViewport');
+    crt.addEventListener('click',activateKeyboard);
+    crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});
+    keyboardCapture.addEventListener('beforeinput',e=>{
+      if(e.inputType==='insertLineBreak'){e.preventDefault();enqueueHostKey('Enter');}
+      if(e.inputType==='deleteContentBackward'){e.preventDefault();enqueueHostKey('Backspace');}
+    });
+    keyboardCapture.addEventListener('input',()=>{
+      const text=keyboardCapture.value;keyboardCapture.value='';
+      for(const char of text)enqueueHostKey(char==='\n'?'Enter':char);
+    });
+    keyboardCapture.addEventListener('focus',()=>setKeyboardMode(true));
+    keyboardCapture.addEventListener('blur',()=>setKeyboardMode(false));
+    if(globalThis.visualViewport)globalThis.visualViewport.addEventListener('resize',syncKeyboardViewport);
+    addEventListener('keydown',e=>{
+      if(e.key==='Escape'){closeMore();return;}
+      if(e.target===keyboardCapture||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
+      if(enqueueHostKey(e.key))e.preventDefault();
+    });
   }
 
   function selfTest(){

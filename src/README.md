@@ -14,9 +14,17 @@ src/
 ├ cpu/
 │  └ z80/
 │     └ z80-core.js
+├ devices/
+│  └ shino80/
+│     └ shino80-keyboard.js
+├ firmware/
+│  └ shino80/
+│     ├ shino80-cgrom.js
+│     └ shino80-system-rom.js
 ├ machine/
 │  └ shino80/
-│     └ shino80-bus.js
+│     ├ shino80-bus.js
+│     └ shino80-video.js
 └ ui/
    └ shino80-workbench-v0.0.2.css
 ```

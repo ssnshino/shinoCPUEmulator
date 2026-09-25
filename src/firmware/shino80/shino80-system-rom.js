@@ -16,6 +16,8 @@
   const IPL_ENTRY=0x0200;
   const BIOS_WORK_CURSOR=0xE000;
   const BIOS_WORK_COLUMN=0xE002;
+  const KEY_DATA_PORT=0x20;
+  const KEY_STATUS_PORT=0x21;
 
   const lo=v=>v&0xFF,hi=v=>(v>>8)&0xFF;
 
@@ -78,8 +80,8 @@
     // unimplemented stub rather than falling through into adjacent vectors.
     a.org(0x0000);a.label('RESET');jp('IPL_ENTRY');
     a.org(0x0008);a.label('RST_08_PUTCHAR');jp('BIOS_PUTCHAR');
+    a.org(0x0010);a.label('RST_10_GETCHAR');jp('BIOS_GETCHAR');
     for(const [address,name] of [
-      [0x0010,'RST_10_GETCHAR_RESERVED'],
       [0x0018,'RST_18_DISK_READ_RESERVED'],
       [0x0020,'RST_20_DISK_WRITE_RESERVED'],
       [0x0028,'RST_28_SERIAL_RESERVED'],
@@ -96,6 +98,7 @@
     a.label('BIOS_API_NEWLINE');jp('BIOS_NEWLINE');
     a.label('BIOS_API_CLS');jp('BIOS_CLS');
     a.label('BIOS_API_PRINT_STRING');jp('BIOS_PRINT_STRING');
+    a.label('BIOS_API_GETCHAR');jp('BIOS_GETCHAR');
 
     a.org(0x0120);
     a.label('BIOS_UNIMPLEMENTED');
@@ -178,6 +181,16 @@
     a.emit(0x7E,0xB7,0xC8,0xCF,0x23);       // LD A,(HL); OR A; RET Z; RST 08; INC HL
     jr(0x18,'BIOS_PRINT_STRING_LOOP');
 
+    // GETCHAR returns one byte in A. Keyboard ports use low-byte decode, while
+    // the Bus trace retains the full Z80 I/O address driven by A:n.
+    a.org(0x01B0);
+    a.label('BIOS_GETCHAR');
+    a.label('BIOS_GETCHAR_WAIT');
+    a.emit(0xAF,0xDB,KEY_STATUS_PORT);        // XOR A / IN A,(KEY_STATUS)
+    a.emit(0xE6,0x01);                       // AND RX_READY
+    jr(0x28,'BIOS_GETCHAR_WAIT');
+    a.emit(0xAF,0xDB,KEY_DATA_PORT,0xC9);    // XOR A / IN A,(KEY_DATA) / RET
+
     // IPL retains the page diagnostic, then uses BIOS to clear and print.
     a.org(IPL_ENTRY);a.label('IPL_ENTRY');
     a.emit(0xF3);                           // DI
@@ -200,11 +213,47 @@
     call('BIOS_API_CLS');
     a.ldHLLabel('BOOT_TEXT');
     call('BIOS_API_PRINT_STRING');
+
+    // Immediate one-byte Monitor command foundation.
     a.label('MONITOR_LOOP');
+    call('BIOS_API_GETCHAR');
+    a.emit(0xFE,0x0D);jr(0x28,'MONITOR_CR'); // Enter does not echo a raw CR
+    a.emit(0xFE,0x61);jr(0x38,'MONITOR_DISPATCH');
+    a.emit(0xFE,0x7B);jr(0x30,'MONITOR_DISPATCH');
+    a.emit(0xE6,0xDF);                       // ASCII lower-case -> upper-case
+    a.label('MONITOR_DISPATCH');
+    a.emit(0xCF);                            // echo through BIOS PUTCHAR
+    a.emit(0xFE,'H'.charCodeAt(0));jr(0x28,'MONITOR_HELP');
+    a.emit(0xFE,'?'.charCodeAt(0));jr(0x28,'MONITOR_HELP');
+    a.emit(0xFE,'C'.charCodeAt(0));jr(0x28,'MONITOR_CLEAR');
+    a.ldHLLabel('MONITOR_UNKNOWN_TEXT');
+    call('BIOS_API_PRINT_STRING');
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_CR');
+    call('BIOS_API_NEWLINE');
+    a.emit(0x3E,'*'.charCodeAt(0),0xCF);     // prompt through PUTCHAR
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_HELP');
+    a.ldHLLabel('MONITOR_HELP_TEXT');
+    call('BIOS_API_PRINT_STRING');
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_CLEAR');
+    call('BIOS_API_CLS');
+    a.ldHLLabel('MONITOR_CLEAR_TEXT');
+    call('BIOS_API_PRINT_STRING');
     jp('MONITOR_LOOP');
 
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_HELP_TEXT');
+    a.emit(...[...'\r\nH HELP  C CLEAR\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_UNKNOWN_TEXT');
+    a.emit(...[...'\r\n?\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_CLEAR_TEXT');
+    a.emit(...[...'MON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
 
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
@@ -234,6 +283,7 @@
     ROM_SIZE,
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
+    KEY_DATA_PORT,KEY_STATUS_PORT,
     buildSystemRom
   };
 });

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="data:,">
 <title>SHINO-80 v0.0.9 — Z80 BASE COMPLETE</title>
 <style>:root{
   --shell-bg:#0a0d11;--shell-surface:#14191f;--shell-elev:#1b222a;--shell-line:#303a44;
@@ -65,6 +66,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .more-handle{width:38px;height:4px;border-radius:999px;background:#52606b;margin:2px auto 8px}
 .more-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 9px}.more-head h2{font-size:18px;margin:2px 0 0}.more-close{width:44px;height:44px;border:0;border-radius:50%;background:#2a333b;color:#dce6ed;font-size:24px;line-height:1;cursor:pointer}
 .more-actions{display:grid;gap:7px}.more-action{min-height:56px;border:1px solid #34414b;border-radius:13px;background:#11171c;color:var(--text);padding:8px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer}.more-action span{font-size:13px;font-weight:650}.more-action b{font:10px var(--mono);color:var(--muted);font-weight:500}.more-action.danger{border-color:#68454c}.more-action.danger span{color:#ff9299}.more-action:active{transform:scale(.985)}
+.keyboard-capture{position:fixed;z-index:-1;left:50%;top:max(1px,env(safe-area-inset-top));width:2px;height:2px;min-width:0;min-height:0;padding:0;border:0;opacity:.01;resize:none;pointer-events:none}
+.crt.keyboard-ready{cursor:text}.crt.keyboard-ready:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:719px){
+  .app.keyboard-mode{height:var(--keyboard-viewport-height,100dvh);grid-template-rows:minmax(0,1fr)}
+  .app.keyboard-mode .toolbar,.app.keyboard-mode .bottom-nav{display:none}
+  .app.keyboard-mode .workbench{height:100%;min-height:0}
+  .app.keyboard-mode .main{height:100%;padding:8px;overflow:hidden}
+  .app.keyboard-mode [data-view-panel="display"]{height:100%;min-height:0}
+  .app.keyboard-mode .display-stage{height:100%;min-height:0;padding:5px;place-items:center}
+}
 @media(min-width:720px){.more-sheet{justify-items:end;align-items:start}.more-panel{width:360px;margin:68px 12px 0 0;border-radius:16px}}
 @media(prefers-reduced-motion:reduce){.more-backdrop,.more-panel{transition:none!important}}
 
@@ -133,7 +144,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         <div class="display-stage">
           <div class="computer-shell monitor-shell" id="displayDevice">
             <div class="monitor-head"><span class="monitor-model">DM-80</span></div>
-            <div class="crt-bezel"><div class="crt" id="crtViewport"><canvas id="crtCanvas" width="640" height="400" aria-label="DM-80 green monochrome digital display"></canvas></div></div>
+            <div class="crt-bezel"><div class="crt" id="crtViewport" tabindex="0" role="button" aria-label="DM-80 display; activate SHINO-80 keyboard"><canvas id="crtCanvas" width="640" height="400" aria-label="DM-80 green monochrome digital display"></canvas></div></div>
             <div class="monitor-foot"><span class="monitor-maker">SHINOMIYA</span><span class="monitor-type">GREEN MONO DIGITAL DISPLAY</span></div>
           </div>
         </div>
@@ -178,7 +189,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       </section>
 
       <section class="view" data-view-panel="devices" aria-label="Devices">
-        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">TEXT VIDEO ONLINE · other slots reserved</span></div><div class="devices" id="deviceList"></div></div>
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">VIDEO + KEYBOARD ONLINE</span></div><div class="devices" id="deviceList"></div></div>
       </section>
     </main>
 
@@ -213,6 +224,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       <button class="more-close" id="moreCloseBtn" aria-label="Close more actions">×</button>
     </div>
     <div class="more-actions">
+      <button class="more-action" data-more-action="keyboard"><span>KEYBOARD</span><b>TYPE INTO MON</b></button>
       <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">VISUAL</b></button>
       <button class="more-action" data-more-action="burst"><span>BURST</span><b>×256</b></button>
       <button class="more-action" data-more-action="clear"><span>CLEAR TRACE</span><b>BUS LOG</b></button>
@@ -220,6 +232,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </div>
   </section>
 </div>
+<textarea class="keyboard-capture" id="keyboardCapture" aria-label="SHINO-80 keyboard input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
 <script>
 (function(root,factory){
   const api=factory();
@@ -232,7 +245,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const DATA_MASK=0xFF;
 
   class Shino80Bus {
-    constructor({traceLimit=256,romRanges=[]}={}){
+    constructor({traceLimit=256,romRanges=[],ioDevices=[]}={}){
       this.memory=new Uint8Array(0x10000);
       this.ioPorts=new Uint8Array(0x10000);
       this.ioPorts.fill(0xFF);
@@ -244,6 +257,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         if(end<start)throw new RangeError('ROM range must not wrap');
         return [start,end];
       });
+      this.ioDevices=[];
+      for(const device of ioDevices||[])this.attachIoDevice(device);
     }
 
     normalizeAddress(address){return Number(address)&ADDRESS_MASK;}
@@ -254,6 +269,24 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     }
 
     clearTrace(){this.trace.length=0;}
+
+    attachIoDevice(device){
+      if(!device||typeof device.handlesPort!=='function')throw new TypeError('I/O device must implement handlesPort(port)');
+      if(this.ioDevices.includes(device))return device;
+      this.ioDevices.push(device);
+      return device;
+    }
+
+    detachIoDevice(device){
+      const index=this.ioDevices.indexOf(device);
+      if(index>=0)this.ioDevices.splice(index,1);
+      return index>=0;
+    }
+
+    ioDeviceFor(port){
+      const address=this.normalizeAddress(port);
+      return this.ioDevices.find(device=>device.handlesPort(address))||null;
+    }
 
     emit(event){
       const record={seq:++this.sequence,...event};
@@ -312,20 +345,23 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
     cpuIoRead(port,{tState=0,purpose='IO_READ',signals=['IORQ','RD'],meta={}}={}){
       const address=this.normalizeAddress(port);
-      const data=this.ioPorts[address];
+      const device=this.ioDeviceFor(address);
+      const data=this.normalizeData(device&&typeof device.readPort==='function'?device.readPort(address):this.ioPorts[address]);
       this.emit({
         tState,actor:'CPU',space:'IO',operation:'READ',address,data,purpose,
-        signals:[...signals],meta:{...meta}
+        signals:[...signals],meta:{...meta,...(device?{device:device.id||'IO_DEVICE'}:{})}
       });
       return data;
     }
 
     cpuIoWrite(port,value,{tState=0,purpose='IO_WRITE',signals=['IORQ','WR'],meta={}}={}){
       const address=this.normalizeAddress(port),data=this.normalizeData(value);
-      this.ioPorts[address]=data;
+      const device=this.ioDeviceFor(address);
+      if(device&&typeof device.writePort==='function')device.writePort(address,data);
+      else this.ioPorts[address]=data;
       this.emit({
         tState,actor:'CPU',space:'IO',operation:'WRITE',address,data,purpose,
-        signals:[...signals],meta:{...meta}
+        signals:[...signals],meta:{...meta,...(device?{device:device.id||'IO_DEVICE'}:{})}
       });
       return data;
     }
@@ -351,9 +387,17 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
     debugPeek(address){return this.memory[this.normalizeAddress(address)];}
     debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
-    debugIoPeek(port){return this.ioPorts[this.normalizeAddress(port)];}
-    debugIoPoke(port,value){this.ioPorts[this.normalizeAddress(port)]=this.normalizeData(value);}
+    debugIoPeek(port){
+      const address=this.normalizeAddress(port),device=this.ioDeviceFor(address);
+      return this.normalizeData(device&&typeof device.debugPeekPort==='function'?device.debugPeekPort(address):this.ioPorts[address]);
+    }
+    debugIoPoke(port,value){
+      const address=this.normalizeAddress(port),data=this.normalizeData(value),device=this.ioDeviceFor(address);
+      if(device&&typeof device.debugPokePort==='function')device.debugPokePort(address,data);
+      else this.ioPorts[address]=data;
+    }
     clearIoPorts(value=0xFF){this.ioPorts.fill(this.normalizeData(value));}
+    resetIoDevices(){for(const device of this.ioDevices)if(typeof device.reset==='function')device.reset();}
     clearWritableMemory(value=0){
       const data=this.normalizeData(value);
       for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;
@@ -367,7 +411,80 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   return {Shino80Bus,ADDRESS_MASK,DATA_MASK};
 });
+</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_KEYBOARD=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
 
+  const KEY_DATA_PORT=0x20;
+  const KEY_STATUS_PORT=0x21;
+  const KEY_STATUS_READY=0x01;
+  const KEY_STATUS_OVERRUN=0x80;
+  const DEFAULT_FIFO_CAPACITY=64;
+
+  class Shino80Keyboard {
+    constructor({capacity=DEFAULT_FIFO_CAPACITY}={}){
+      const size=Number(capacity);
+      if(!Number.isInteger(size)||size<1)throw new RangeError('Keyboard FIFO capacity must be a positive integer');
+      this.id='SHINO80_KEYBOARD';
+      this.capacity=size;
+      this.queue=[];
+      this.overrun=false;
+    }
+
+    lowPort(port){return Number(port)&0xFF;}
+    handlesPort(port){const low=this.lowPort(port);return low===KEY_DATA_PORT||low===KEY_STATUS_PORT;}
+    status(){return (this.queue.length?KEY_STATUS_READY:0)|(this.overrun?KEY_STATUS_OVERRUN:0);}
+
+    enqueueByte(value){
+      if(this.queue.length>=this.capacity){this.overrun=true;return false;}
+      this.queue.push(Number(value)&0xFF);
+      return true;
+    }
+
+    enqueueText(text){
+      let accepted=0;
+      for(const char of String(text))if(this.enqueueByte(char.charCodeAt(0)))accepted++;
+      return accepted;
+    }
+
+    readPort(port){
+      const low=this.lowPort(port);
+      if(low===KEY_STATUS_PORT)return this.status();
+      if(low===KEY_DATA_PORT)return this.queue.length?this.queue.shift():0x00;
+      return 0xFF;
+    }
+
+    writePort(port,value){
+      if(this.lowPort(port)===KEY_STATUS_PORT&&(Number(value)&KEY_STATUS_OVERRUN))this.overrun=false;
+    }
+
+    debugPeekPort(port){
+      const low=this.lowPort(port);
+      if(low===KEY_STATUS_PORT)return this.status();
+      if(low===KEY_DATA_PORT)return this.queue.length?this.queue[0]:0x00;
+      return 0xFF;
+    }
+
+    debugPokePort(port,value){
+      const low=this.lowPort(port);
+      if(low===KEY_DATA_PORT)this.enqueueByte(value);
+      if(low===KEY_STATUS_PORT&&!((Number(value)&KEY_STATUS_OVERRUN)))this.overrun=false;
+    }
+
+    reset(){this.queue.length=0;this.overrun=false;}
+    get depth(){return this.queue.length;}
+  }
+
+  return {
+    Shino80Keyboard,
+    KEY_DATA_PORT,KEY_STATUS_PORT,KEY_STATUS_READY,KEY_STATUS_OVERRUN,
+    DEFAULT_FIFO_CAPACITY
+  };
+});
 </script>
 <script>(function(root,factory){
   const api=factory();
@@ -1389,6 +1506,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const IPL_ENTRY=0x0200;
   const BIOS_WORK_CURSOR=0xE000;
   const BIOS_WORK_COLUMN=0xE002;
+  const KEY_DATA_PORT=0x20;
+  const KEY_STATUS_PORT=0x21;
 
   const lo=v=>v&0xFF,hi=v=>(v>>8)&0xFF;
 
@@ -1451,8 +1570,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     // unimplemented stub rather than falling through into adjacent vectors.
     a.org(0x0000);a.label('RESET');jp('IPL_ENTRY');
     a.org(0x0008);a.label('RST_08_PUTCHAR');jp('BIOS_PUTCHAR');
+    a.org(0x0010);a.label('RST_10_GETCHAR');jp('BIOS_GETCHAR');
     for(const [address,name] of [
-      [0x0010,'RST_10_GETCHAR_RESERVED'],
       [0x0018,'RST_18_DISK_READ_RESERVED'],
       [0x0020,'RST_20_DISK_WRITE_RESERVED'],
       [0x0028,'RST_28_SERIAL_RESERVED'],
@@ -1469,6 +1588,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BIOS_API_NEWLINE');jp('BIOS_NEWLINE');
     a.label('BIOS_API_CLS');jp('BIOS_CLS');
     a.label('BIOS_API_PRINT_STRING');jp('BIOS_PRINT_STRING');
+    a.label('BIOS_API_GETCHAR');jp('BIOS_GETCHAR');
 
     a.org(0x0120);
     a.label('BIOS_UNIMPLEMENTED');
@@ -1551,6 +1671,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.emit(0x7E,0xB7,0xC8,0xCF,0x23);       // LD A,(HL); OR A; RET Z; RST 08; INC HL
     jr(0x18,'BIOS_PRINT_STRING_LOOP');
 
+    // GETCHAR returns one byte in A. Keyboard ports use low-byte decode, while
+    // the Bus trace retains the full Z80 I/O address driven by A:n.
+    a.org(0x01B0);
+    a.label('BIOS_GETCHAR');
+    a.label('BIOS_GETCHAR_WAIT');
+    a.emit(0xAF,0xDB,KEY_STATUS_PORT);        // XOR A / IN A,(KEY_STATUS)
+    a.emit(0xE6,0x01);                       // AND RX_READY
+    jr(0x28,'BIOS_GETCHAR_WAIT');
+    a.emit(0xAF,0xDB,KEY_DATA_PORT,0xC9);    // XOR A / IN A,(KEY_DATA) / RET
+
     // IPL retains the page diagnostic, then uses BIOS to clear and print.
     a.org(IPL_ENTRY);a.label('IPL_ENTRY');
     a.emit(0xF3);                           // DI
@@ -1573,11 +1703,47 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     call('BIOS_API_CLS');
     a.ldHLLabel('BOOT_TEXT');
     call('BIOS_API_PRINT_STRING');
+
+    // Immediate one-byte Monitor command foundation.
     a.label('MONITOR_LOOP');
+    call('BIOS_API_GETCHAR');
+    a.emit(0xFE,0x0D);jr(0x28,'MONITOR_CR'); // Enter does not echo a raw CR
+    a.emit(0xFE,0x61);jr(0x38,'MONITOR_DISPATCH');
+    a.emit(0xFE,0x7B);jr(0x30,'MONITOR_DISPATCH');
+    a.emit(0xE6,0xDF);                       // ASCII lower-case -> upper-case
+    a.label('MONITOR_DISPATCH');
+    a.emit(0xCF);                            // echo through BIOS PUTCHAR
+    a.emit(0xFE,'H'.charCodeAt(0));jr(0x28,'MONITOR_HELP');
+    a.emit(0xFE,'?'.charCodeAt(0));jr(0x28,'MONITOR_HELP');
+    a.emit(0xFE,'C'.charCodeAt(0));jr(0x28,'MONITOR_CLEAR');
+    a.ldHLLabel('MONITOR_UNKNOWN_TEXT');
+    call('BIOS_API_PRINT_STRING');
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_CR');
+    call('BIOS_API_NEWLINE');
+    a.emit(0x3E,'*'.charCodeAt(0),0xCF);     // prompt through PUTCHAR
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_HELP');
+    a.ldHLLabel('MONITOR_HELP_TEXT');
+    call('BIOS_API_PRINT_STRING');
+    jp('MONITOR_LOOP');
+
+    a.label('MONITOR_CLEAR');
+    call('BIOS_API_CLS');
+    a.ldHLLabel('MONITOR_CLEAR_TEXT');
+    call('BIOS_API_PRINT_STRING');
     jp('MONITOR_LOOP');
 
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_HELP_TEXT');
+    a.emit(...[...'\r\nH HELP  C CLEAR\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_UNKNOWN_TEXT');
+    a.emit(...[...'\r\n?\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_CLEAR_TEXT');
+    a.emit(...[...'MON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
 
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
@@ -1607,6 +1773,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     ROM_SIZE,
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
+    KEY_DATA_PORT,KEY_STATUS_PORT,
     buildSystemRom
   };
 });
@@ -1694,10 +1861,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 <script>(function(){
   'use strict';
   const {Shino80Bus}=globalThis.SHINO_BUS;
+  const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
-  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]]});
+  const keyboard=new Shino80Keyboard();
+  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]],ioDevices:[keyboard]});
   const cpu=new Z80Core(bus);
   const systemRom=buildSystemRom();
   bus.load(systemRom.bytes,0x0000);
@@ -1738,6 +1907,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const devices=[
     {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
+    {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
@@ -1765,7 +1935,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
 
   function renderDevices(){
-    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
+    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
   }
 
   function setView(view){
@@ -1797,10 +1967,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.trace.length}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){
       const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
-      const state=(d.id==='video'||d.id==='display')&&!ui.powered?'OFF':d.state;
+      const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;
       html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${state}</b></div></div>`;
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
+      else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -1813,6 +1984,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);
     queryOne('#powerBtn').classList.toggle('on',ui.powered);queryOne('#powerBtn').setAttribute('aria-pressed',String(ui.powered));
     queryOne('#app').classList.toggle('power-off',!ui.powered);
+    queryOne('#crtViewport').classList.toggle('keyboard-ready',ui.powered);
+    queryOne('#crtViewport').setAttribute('aria-disabled',String(!ui.powered));
     queryOne('#runPauseBtn').disabled=!ui.powered;queryOne('#stepBtn').disabled=!ui.powered;queryOne('#resetBtn').disabled=!ui.powered;
     queryOne('#paceLabel').textContent=paces[ui.paceIndex].label;syncMoreSheet();
     queryOne('#tracePanel').classList.toggle('closed',!ui.traceOpen);queryOne('#tracePanel').classList.toggle('open',ui.traceOpen);queryOne('#traceToggleBtn').textContent=ui.traceOpen?'▲':'▼';ui.dirty=false;
@@ -1829,7 +2002,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const pc=cpu.state.pc&0xFFFF;
     if(pc===systemRom.labels.VRAM_TEST_LOOP)return systemRom.meta.testPageInstructions;
     if(pc===systemRom.labels.VRAM_TEST_HOLD_LOOP)return 32;
-    if(pc===systemRom.labels.VRAM_CLEAR_LOOP)return systemRom.meta.clearPageInstructions;
+    if(pc===systemRom.labels.BIOS_CLS_LOOP)return systemRom.meta.clearPageInstructions;
+    if(pc===systemRom.labels.MONITOR_LOOP||pc===systemRom.labels.BIOS_GETCHAR_WAIT)return 32;
     return 1;
   }
   function scheduleRun(){
@@ -1843,16 +2017,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
   function resetCpu(){
     if(!ui.powered)return;
-    stopRun();cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+    stopRun();keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
   }
   function powerOn(){
     if(ui.powered)return;
-    stopRun();bus.clearWritableMemory(0);cpu.reset();video.setPower(true);ui.powered=true;
+    stopRun();bus.clearWritableMemory(0);keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function powerOff(){
     if(!ui.powered)return;
-    stopRun();ui.powered=false;bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    stopRun();ui.powered=false;keyboard.reset();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function togglePower(){ui.powered?powerOff():powerOn();}
@@ -1877,16 +2051,56 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     if(close)close.focus({preventScroll:true});
   }
 
-  function closeMore(){
+  function closeMore({restoreFocus=true}={}){
     const menu=queryOne('#moreMenu');
     if(!menu||menu.hidden)return;
     menu.classList.remove('open');
     menu.setAttribute('aria-hidden','true');
     setTimeout(()=>{menu.hidden=true;},180);
-    if(morePreviousFocus&&typeof morePreviousFocus.focus==='function')morePreviousFocus.focus({preventScroll:true});
+    if(restoreFocus&&morePreviousFocus&&typeof morePreviousFocus.focus==='function')morePreviousFocus.focus({preventScroll:true});
+  }
+
+  function syncKeyboardViewport(){
+    const app=queryOne('#app');
+    if(!app.classList.contains('keyboard-mode'))return;
+    const height=globalThis.visualViewport?globalThis.visualViewport.height:innerHeight;
+    app.style.setProperty('--keyboard-viewport-height',`${Math.round(height)}px`);
+    ui.dirty=true;
+  }
+
+  function setKeyboardMode(active){
+    const app=queryOne('#app');
+    app.classList.toggle('keyboard-mode',active);
+    if(active){syncKeyboardViewport();requestAnimationFrame(syncKeyboardViewport);}
+    else app.style.removeProperty('--keyboard-viewport-height');
+    ui.dirty=true;
+  }
+
+  function activateKeyboard(){
+    if(!ui.powered)return;
+    closeMore({restoreFocus:false});
+    setView('display');
+    const input=queryOne('#keyboardCapture');
+    input.value='';
+    input.focus({preventScroll:true});
+  }
+
+  function hostKeyByte(key){
+    if(key==='Enter'||key==='\n'||key==='\r')return 0x0D;
+    if(key==='Backspace')return 0x08;
+    if(typeof key==='string'&&key.length===1){const code=key.charCodeAt(0);if(code>=0x20&&code<=0x7E)return code;}
+    return null;
+  }
+
+  function enqueueHostKey(key){
+    if(!ui.powered)return false;
+    const byte=hostKeyByte(key);
+    if(byte===null)return false;
+    keyboard.enqueueByte(byte);ui.dirty=true;return true;
   }
 
   function moreAction(action){
+    if(action==='keyboard'){activateKeyboard();return;}
     if(action==='reset')resetCpu();
     if(action==='burst')stepBatch(256);
     if(action==='clear'){bus.clearTrace();ui.dirty=true;}
@@ -1904,13 +2118,31 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     queryOne('#resetBtn').addEventListener('click',resetCpu);
     queryOne('#moreBtn').addEventListener('click',openMore);
     queryOne('#moreCloseBtn').addEventListener('click',closeMore);
-    queryOne('#moreBackdrop').addEventListener('click',closeMore);
+    queryOne('#moreBackdrop').addEventListener('click',()=>closeMore());
     queryAll('[data-more-action]').forEach(b=>b.addEventListener('click',()=>moreAction(b.dataset.moreAction)));
     queryOne('#burstBtn').addEventListener('click',()=>stepBatch(256));
     queryOne('#clearTraceBtn').addEventListener('click',()=>{bus.clearTrace();ui.dirty=true;});
     queryOne('#traceToggleBtn').addEventListener('click',toggleTrace);
     addEventListener('resize',()=>{ui.dirty=true;});
-    addEventListener('keydown',e=>{if(e.key==='Escape')closeMore();});
+    const keyboardCapture=queryOne('#keyboardCapture'),crt=queryOne('#crtViewport');
+    crt.addEventListener('click',activateKeyboard);
+    crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});
+    keyboardCapture.addEventListener('beforeinput',e=>{
+      if(e.inputType==='insertLineBreak'){e.preventDefault();enqueueHostKey('Enter');}
+      if(e.inputType==='deleteContentBackward'){e.preventDefault();enqueueHostKey('Backspace');}
+    });
+    keyboardCapture.addEventListener('input',()=>{
+      const text=keyboardCapture.value;keyboardCapture.value='';
+      for(const char of text)enqueueHostKey(char==='\n'?'Enter':char);
+    });
+    keyboardCapture.addEventListener('focus',()=>setKeyboardMode(true));
+    keyboardCapture.addEventListener('blur',()=>setKeyboardMode(false));
+    if(globalThis.visualViewport)globalThis.visualViewport.addEventListener('resize',syncKeyboardViewport);
+    addEventListener('keydown',e=>{
+      if(e.key==='Escape'){closeMore();return;}
+      if(e.target===keyboardCapture||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
+      if(enqueueHostKey(e.key))e.preventDefault();
+    });
   }
 
   function selfTest(){

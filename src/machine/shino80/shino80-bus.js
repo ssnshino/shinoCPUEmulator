@@ -10,7 +10,7 @@
   const DATA_MASK=0xFF;
 
   class Shino80Bus {
-    constructor({traceLimit=256,romRanges=[]}={}){
+    constructor({traceLimit=256,romRanges=[],ioDevices=[]}={}){
       this.memory=new Uint8Array(0x10000);
       this.ioPorts=new Uint8Array(0x10000);
       this.ioPorts.fill(0xFF);
@@ -22,6 +22,8 @@
         if(end<start)throw new RangeError('ROM range must not wrap');
         return [start,end];
       });
+      this.ioDevices=[];
+      for(const device of ioDevices||[])this.attachIoDevice(device);
     }
 
     normalizeAddress(address){return Number(address)&ADDRESS_MASK;}
@@ -32,6 +34,24 @@
     }
 
     clearTrace(){this.trace.length=0;}
+
+    attachIoDevice(device){
+      if(!device||typeof device.handlesPort!=='function')throw new TypeError('I/O device must implement handlesPort(port)');
+      if(this.ioDevices.includes(device))return device;
+      this.ioDevices.push(device);
+      return device;
+    }
+
+    detachIoDevice(device){
+      const index=this.ioDevices.indexOf(device);
+      if(index>=0)this.ioDevices.splice(index,1);
+      return index>=0;
+    }
+
+    ioDeviceFor(port){
+      const address=this.normalizeAddress(port);
+      return this.ioDevices.find(device=>device.handlesPort(address))||null;
+    }
 
     emit(event){
       const record={seq:++this.sequence,...event};
@@ -90,20 +110,23 @@
 
     cpuIoRead(port,{tState=0,purpose='IO_READ',signals=['IORQ','RD'],meta={}}={}){
       const address=this.normalizeAddress(port);
-      const data=this.ioPorts[address];
+      const device=this.ioDeviceFor(address);
+      const data=this.normalizeData(device&&typeof device.readPort==='function'?device.readPort(address):this.ioPorts[address]);
       this.emit({
         tState,actor:'CPU',space:'IO',operation:'READ',address,data,purpose,
-        signals:[...signals],meta:{...meta}
+        signals:[...signals],meta:{...meta,...(device?{device:device.id||'IO_DEVICE'}:{})}
       });
       return data;
     }
 
     cpuIoWrite(port,value,{tState=0,purpose='IO_WRITE',signals=['IORQ','WR'],meta={}}={}){
       const address=this.normalizeAddress(port),data=this.normalizeData(value);
-      this.ioPorts[address]=data;
+      const device=this.ioDeviceFor(address);
+      if(device&&typeof device.writePort==='function')device.writePort(address,data);
+      else this.ioPorts[address]=data;
       this.emit({
         tState,actor:'CPU',space:'IO',operation:'WRITE',address,data,purpose,
-        signals:[...signals],meta:{...meta}
+        signals:[...signals],meta:{...meta,...(device?{device:device.id||'IO_DEVICE'}:{})}
       });
       return data;
     }
@@ -129,9 +152,17 @@
 
     debugPeek(address){return this.memory[this.normalizeAddress(address)];}
     debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
-    debugIoPeek(port){return this.ioPorts[this.normalizeAddress(port)];}
-    debugIoPoke(port,value){this.ioPorts[this.normalizeAddress(port)]=this.normalizeData(value);}
+    debugIoPeek(port){
+      const address=this.normalizeAddress(port),device=this.ioDeviceFor(address);
+      return this.normalizeData(device&&typeof device.debugPeekPort==='function'?device.debugPeekPort(address):this.ioPorts[address]);
+    }
+    debugIoPoke(port,value){
+      const address=this.normalizeAddress(port),data=this.normalizeData(value),device=this.ioDeviceFor(address);
+      if(device&&typeof device.debugPokePort==='function')device.debugPokePort(address,data);
+      else this.ioPorts[address]=data;
+    }
     clearIoPorts(value=0xFF){this.ioPorts.fill(this.normalizeData(value));}
+    resetIoDevices(){for(const device of this.ioDevices)if(typeof device.reset==='function')device.reset();}
     clearWritableMemory(value=0){
       const data=this.normalizeData(value);
       for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;
@@ -145,4 +176,3 @@
 
   return {Shino80Bus,ADDRESS_MASK,DATA_MASK};
 });
-
