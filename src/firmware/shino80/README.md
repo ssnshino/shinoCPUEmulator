@@ -7,7 +7,7 @@ Firmware and ROM images owned by SHINO-80.
 - `shino80-system-rom.js` — 16 KiB firmware builder: fixed 8 KiB Boot/Recovery
   ROM plus 8 KiB Extension bank 0, with RESET/IPL, BIOS and Monitor
 - `shino80-cgrom.js` — fixed 4 KiB character-generator ROM
-- `shino80-cbios.js` — original RAM-resident CBIOS v0.1 image builder
+- `shino80-cbios.js` — original RAM-resident CBIOS/WBOOT v0.2 image builder
 - `shino80-system-disk.js` — original S80B v1 system-disk image builder
 
 The minimum BIOS currently provides:
@@ -23,6 +23,11 @@ seven-family `U start [end]`, v0.5 `B` RAM-handoff proof and `O` System Disk
 boot. `O` validates sector 1, loads the original payload to 8000h and CBIOS to
 FA00h from sectors 2–7, then enters all-RAM mode. Serial, printer, application
 GO/BREAK and interrupt/NMI service bodies remain reserved or unimplemented.
+
+CBIOS v0.2 WBOOT at FA03h reloads A: track 0 sector 2 to 8000h through its
+ordinary READ path and jumps to the restored payload. Failure is reported by
+the loaded CBIOS itself and HALTs. It is an original warm-boot proof, not a
+CCP/BDOS reload claim.
 
 The current BIOS/MON executable remains in fixed ROM. Its compressed
 disassembler tables live in Extension bank 0 at 2000h. The machine provides

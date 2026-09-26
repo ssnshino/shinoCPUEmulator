@@ -50,7 +50,7 @@ function buildData(){
  const cbiosImage=cbios.buildCbios();
  const diskImage=systemDisk.buildSystemDisk();
  const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/firmware/shino80/shino80-cbios.js','src/firmware/shino80/shino80-system-disk.js','src/devices/shino80/shino80-keyboard.js','src/devices/shino80/shino80-block-device.js'];
- return {version:'0.1',baseline:'BIOS/MON v0.3 + pageable firmware v0.4 + RAM handoff v0.5 + block device/CBIOS/system disk v0.1 candidates',revision:'feature/shino80-system-disk-loader-v01-20260926',families,instructions,
+ return {version:'0.1',baseline:'BIOS/MON v0.3 + pageable firmware v0.4 + RAM handoff v0.5 + block device/system disk v0.1 + CBIOS warm boot v0.2 candidates',revision:'feature/shino80-warm-boot-v02-20260926',families,instructions,
   sources:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),
   machine:{romSize:rom.ROM_SIZE,bootRomSize:memory.BOOT_ROM_SIZE,extensionRomSize:memory.EXTENSION_ROM_SIZE,memoryControlPort:memory.MEMORY_CONTROL_PORT,vramBase:video.TEXT_VRAM_BASE,vramCells:video.CELL_COUNT,width:video.SCREEN_W,height:video.SCREEN_H,cols:video.COLS,rows:video.ROWS,
    keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,

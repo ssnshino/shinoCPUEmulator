@@ -900,6 +900,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const CBIOS_ORG=0xFA00;
   const CBIOS_ENTRY_SIZE=3;
   const CBIOS_DEFAULT_DMA=0x0080;
+  const CBIOS_SYSTEM_TRACK=0;
+  const CBIOS_SYSTEM_SECTOR=2;
+  const CBIOS_SYSTEM_ENTRY=0x8000;
   const TEXT_VRAM_BASE=0xC000;
   const TEXT_VRAM_END=0xC7D0;
   const TEXT_COLS=80;
@@ -965,8 +968,20 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('CBIOS_JUMP_TABLE');
     for(const name of CBIOS_ENTRY_NAMES){a.label(`CBIOS_API_${name}`);jp(`CBIOS_${name}`);}
 
-    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // v0.1 returns
-    a.label('CBIOS_WBOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // loader is future work
+    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9);
+    a.label('CBIOS_WBOOT');
+    call('CBIOS_INIT');
+    a.word(0x01,CBIOS_SYSTEM_TRACK);call('CBIOS_SETTRK');
+    a.word(0x01,CBIOS_SYSTEM_SECTOR);call('CBIOS_SETSEC');
+    a.word(0x01,CBIOS_SYSTEM_ENTRY);call('CBIOS_SETDMA');
+    call('CBIOS_READ');a.emit(0xB7);jpNZ('CBIOS_WBOOT_FAIL');a.word(0xC3,CBIOS_SYSTEM_ENTRY);
+
+    a.label('CBIOS_WBOOT_FAIL');a.absolute(0x21,'CBIOS_WBOOT_ERROR_TEXT');call('CBIOS_PRINT_STRING');a.emit(0xF3);
+    a.label('CBIOS_WBOOT_FAIL_HALT');a.emit(0x76);jp('CBIOS_WBOOT_FAIL_HALT');
+
+    a.label('CBIOS_PRINT_STRING');
+    a.emit(0x7E,0xB7,0xC8,0xE5,0x4F);call('CBIOS_CONOUT');a.emit(0xE1,0x23);jp('CBIOS_PRINT_STRING');
+    a.label('CBIOS_WBOOT_ERROR_TEXT');a.emit(...[...'WBOOT DISK ERROR\r\n'].map(char=>char.charCodeAt(0)),0);
 
     a.label('CBIOS_INIT');
     a.emit(0xAF);ldATo('CBIOS_SELECTED_DRIVE');ldATo('CBIOS_SELECTED_TRACK');ldATo('CBIOS_SELECTED_TRACK_HI');
@@ -1063,12 +1078,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       origin:CBIOS_ORG,
       end:assembled.end,
       labels:assembled.labels,
-      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dpb:DPB})
+      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
     };
   }
 
   return {
-    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,DPB,
+    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,
+    CBIOS_SYSTEM_TRACK,CBIOS_SYSTEM_SECTOR,CBIOS_SYSTEM_ENTRY,DPB,
     TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
     KEY_DATA_PORT,KEY_STATUS_PORT,
     BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
@@ -3134,7 +3150,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,54,2,23]){
+    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,123,2,92]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){
@@ -3496,7 +3512,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} SYSTEM</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O reads the mounted original system image and hands off to RAM + CBIOS. Media stays mounted across RESET and POWER; this is not CP/M yet.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} SYSTEM</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O reads the original system image into RAM + CBIOS. Page zero JP FA03h provides disk-backed WBOOT. Media stays mounted across RESET and POWER; this is not CP/M yet.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;

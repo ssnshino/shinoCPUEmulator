@@ -1,3 +1,12 @@
+CURRENT WARM BOOT v0.2 OVERRIDE 2026-09-26:
+Resume feature/shino80-warm-boot-v02-20260926, parent 4d5e81a / PR #33. Read
+README -> AGENTS -> current snapshot -> SHINO80_WARM_BOOT_V02 plan, spec and
+worklog. Page zero JP FA03h enters CBIOS WBOOT, which reloads A: track 0 sector
+2 to 8000h through READ/INIR and jumps to the original payload. Destroyed-RAM
+and missing-media tests prove restore/error behavior without ROM fetches. No
+CCP, BDOS, filesystem or CP/M image exists. Finish verification/delivery if
+pending; do not merge/deploy automatically. Everything below is historical.
+
 CURRENT SYSTEM DISK / LOADER v0.1 OVERRIDE 2026-09-26:
 Resume feature/shino80-system-disk-loader-v01-20260926, parent 4116919 / PR #32.
 Read README -> AGENTS -> current snapshot -> SHINO80_SYSTEM_DISK_LOADER_V01

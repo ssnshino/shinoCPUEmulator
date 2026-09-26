@@ -1,8 +1,8 @@
 # SHINO-80 Technical Manual v0.1
 
 2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4, RAM handoff v0.5,
-Virtual Disk A v0.1 and CBIOS v0.1 candidates, stacked on `128f031`
-plus System Disk / Loader v0.1 stacked on `4116919` (not reviewed main).
+Virtual Disk A/System Disk v0.1 and CBIOS/WBOOT v0.2 candidates, stacked through
+System Disk / Loader `4d5e81a` / PR #33 (not reviewed main).
 
 ## Deliverable / authority
 
@@ -30,7 +30,7 @@ does not automatically update explanatory prose or validate CPU correctness.
 - Clickable logical system diagram; text alternatives; diagram back link.
 - Physical/visible memory map, port 00h overlay control, Virtual Disk A ports
   30h–36h, current BIOS jump table and MON H/?/C/D range/R/U/B/O.
-- S80B v1 System Disk layout, MON O cold path, RAM-resident CBIOS v0.1,
+- S80B v1 System Disk layout, MON O cold path, RAM-resident CBIOS/WBOOT v0.2,
   standard 17-entry order, DPB and explicit not-yet-CP/M boundary.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
@@ -67,6 +67,11 @@ Monitor O now reads the original S80B v1 system image over ports 30h–36h,
 loads a payload at 8000h and CBIOS at FA00h, installs `JP FA03h` at page zero
 and enters all-RAM mode. This closes the loader/media path but still contains
 no CCP, BDOS, filesystem, CP/M or BASIC.
+
+CBIOS WBOOT at FA03h reinitializes private state, reads A: track 0 sector 2 to
+8000h through the ordinary READ/INIR path and jumps to the restored payload.
+Failure prints through loaded CBIOS and HALTs. This remains an original one-
+sector supervisor reload, not a CP/M CCP/BDOS warm boot claim.
 
 CPU milestone remains instruction-level, not electrical/pin-cycle-perfect.
 WAIT/BUSRQ, hardware races and multi-byte device-fed IM0 are outside its scope.
