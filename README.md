@@ -14,6 +14,17 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-cursor-beep-v01-20260926`, parent `4084d0e` / PR #36,
+stacked on PR #35. DM-80 now draws a non-destructive blinking underline at the live
+ROM BIOS or RAM CBIOS cursor pointer. A Bus-visible one-bit beeper at I/O 40h
+is driven by BIOS/CBIOS ASCII BEL 07h; the browser presents an 880 Hz / 80 ms
+tone after a user gesture, while audio failure remains non-fatal. More includes
+a phone-friendly BEEP TEST. CBIOS is now 645 bytes at FA00h–FC84h, so S80B v2
+uses sectors 3–8 for CBIOS and starts the unchanged 44 CP/M sectors at sector
+9. More includes a REFERENCE link to the hidden Shinomiya Daihanten Technical
+Manual route. Full package and installed Chrome desktop/mobile QA pass. No
+merge/deploy.
+
 LATEST: `feature/shino80-cpm22-boot-v01-20260926`, parent `72f16bb` / PR #35.
 The standalone machine now boots license-audited CP/M 2.2 through MON `O`.
 An original 98-byte SHINO loader reads 44 system sectors through CBIOS into
@@ -217,7 +228,7 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_CBIOS_V01_PLAN.md`
+6. `plan/head/SHINO80_CURSOR_BEEP_V01_PLAN.md`
 7. `docs/head/SHINO80_CBIOS_v0.1.md`
 8. `working-logs/head/SHINO80_CBIOS_V01_WORKLOG.md`
 9. `plan/head/SHINO80_SYSTEM_DISK_LOADER_V01_PLAN.md`

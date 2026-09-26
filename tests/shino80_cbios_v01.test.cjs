@@ -22,7 +22,7 @@ assert.equal(CBIOS_ORG,0xFA00);
 assert.equal(CBIOS_ENTRY_NAMES.length,17);
 assert.equal(cbios.origin,CBIOS_ORG);
 assert(cbios.end<=0x10000);
-assert.equal(cbios.bytes.length,637);
+assert.equal(cbios.bytes.length,645);
 
 // The standard 17-entry table is contiguous JP instructions in exact order.
 for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){

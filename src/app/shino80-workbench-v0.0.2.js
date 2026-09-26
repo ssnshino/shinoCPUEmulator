@@ -3,17 +3,19 @@
   const {Shino80Memory}=globalThis.SHINO_MEMORY;
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
+  const {Shino80Beeper,BEEPER_PORT}=globalThis.SHINO_BEEPER;
   const {Shino80BlockDevice}=globalThis.SHINO_BLOCK_DEVICE;
   const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
   const keyboard=new Shino80Keyboard();
+  const beeper=new Shino80Beeper();
   const systemDisk=buildSystemDisk();
   const diskA=new Shino80BlockDevice({image:systemDisk.image});
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
-  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA]});
+  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
   const cpu=new Z80Core(bus);
   cpu.reset();
 
@@ -49,11 +51,13 @@
   const executionPace=new globalThis.SHINO_PACE.ExecutionPace(cpu);
   let runTimer=null;
   let morePreviousFocus=null;
+  let audioContext=null,lastBeepSequence=0;
 
   const devices=[
     {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
+    {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
     {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 77×26×128',state:'ONLINE'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
@@ -62,7 +66,7 @@
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
     {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
   ];
-  const powerSensitiveDevices=new Set(['video','display','keyboard','disk-a']);
+  const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a']);
   function deviceState(device){return powerSensitiveDevices.has(device.id)&&!ui.powered?'OFF':device.state;}
 
   function makeLeds(container,width,color='green'){
@@ -175,6 +179,7 @@
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
+      else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
       else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O loads the SHINO loader and CBIOS; the RAM loader reads 44 CCP/BDOS sectors. JP 0000h performs a disk-backed warm boot. Media stays mounted across RESET and POWER.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
@@ -183,7 +188,13 @@
   }
 
   function render(){
-    if(ui.view==='display'){syncDisplayGeometry();video.render();}
+    if(ui.view==='display'){
+      syncDisplayGeometry();
+      const pointer=memory.lowRamEnabled?systemDisk.cbios.labels.CBIOS_CURSOR:systemRom.meta.biosWorkCursor;
+      const cursorAddress=bus.debugPeek(pointer)|(bus.debugPeek(pointer+1)<<8);
+      const cursorVisible=ui.powered&&(Math.floor(cpu.state.tStates/2000000)&1)===0;
+      video.render({cursorAddress,cursorVisible});
+    }
     updateRegisters();
     if(ui.view==='cpu'||ui.view==='bus'){updateBusLeds();updateSignalLamps();}
     else{const fetch=lastFetch();if(fetch)ui.lastFetchAddress=fetch.address;}
@@ -239,16 +250,37 @@
   function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
   function resetCpu(){
     if(!ui.powered)return;
-    stopRun();bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+    stopRun();bus.resetIoDevices();lastBeepSequence=0;queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+  }
+  function unlockAudio(){
+    const AudioContextClass=globalThis.AudioContext||globalThis.webkitAudioContext;
+    if(!AudioContextClass)return null;
+    try{
+      if(!audioContext)audioContext=new AudioContextClass();
+      if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+    }catch(_error){return null;}
+    return audioContext;
+  }
+  function playPendingBeep(){
+    if(beeper.sequence===lastBeepSequence)return;
+    lastBeepSequence=beeper.sequence;
+    if(!ui.powered)return;
+    const context=unlockAudio();if(!context)return;
+    try{
+      const now=context.currentTime,oscillator=context.createOscillator(),gain=context.createGain();
+      oscillator.type='square';oscillator.frequency.setValueAtTime(880,now);
+      gain.gain.setValueAtTime(0.0001,now);gain.gain.exponentialRampToValueAtTime(0.045,now+0.005);gain.gain.exponentialRampToValueAtTime(0.0001,now+0.08);
+      oscillator.connect(gain);gain.connect(context.destination);oscillator.start(now);oscillator.stop(now+0.09);
+    }catch(_error){}
   }
   function powerOn(){
     if(ui.powered)return;
-    stopRun();bus.clearWritableMemory(0);bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
+    stopRun();bus.clearWritableMemory(0);bus.resetIoDevices();lastBeepSequence=0;unlockAudio();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function powerOff(){
     if(!ui.powered)return;
-    stopRun();ui.powered=false;bus.resetIoDevices();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    stopRun();ui.powered=false;bus.resetIoDevices();lastBeepSequence=0;queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function togglePower(){ui.powered?powerOff():powerOn();}
@@ -323,6 +355,7 @@
 
   function moreAction(action){
     if(action==='keyboard'){activateKeyboard();return;}
+    if(action==='beep'){beeper.writePort(BEEPER_PORT,0x07);ui.dirty=true;}
     if(action==='reset')resetCpu();
     if(action==='burst')stepBatch(256);
     if(action==='clear'){bus.clearTrace();ui.dirty=true;}
@@ -361,6 +394,9 @@
     crt.addEventListener('click',activateKeyboard);
     crt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activateKeyboard();}});
     keyboardCapture.addEventListener('keydown',e=>{
+      if(!e.isComposing&&e.ctrlKey&&!e.metaKey&&!e.altKey&&e.key.toLowerCase()==='g'){
+        e.preventDefault();keyboard.enqueueByte(0x07);ui.dirty=true;return;
+      }
       if(!e.isComposing&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&(e.key==='Enter'||e.key==='Backspace')){
         e.preventDefault();enqueueHostKey(e.key);
       }
@@ -393,7 +429,7 @@
     return firstChar===0x53&&lastClear===0x00&&tc.state.pc===rom.labels.MONITOR_LOOP&&
       tb.debugPeek(0)===romByte&&tb.debugPeek(0x2000)===rom.bytes[0x2000]&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
   }
-  function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
+  function observerLoop(){playPendingBeep();if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
 
   buildStaticUi();bind();const ok=selfTest();queryOne('#selfTest').textContent=ok?'PHASE 2A.1 SELF TEST PASS':'SELF TEST FAIL';setView('display');powerOff();render();requestAnimationFrame(observerLoop);
 })();

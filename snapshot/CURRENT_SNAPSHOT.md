@@ -1,6 +1,16 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: Cursor / BEEP v0.1 PR #36 on CP/M PR #35 head `4084d0e`.
+Branch `feature/shino80-cursor-beep-v01-20260926`. DM-80 renders a CPU-time
+blinking, non-destructive underline from the ROM/CBIOS cursor pointer. BIOS and
+CBIOS route BEL 07h to a Bus-visible beeper at I/O 40h; Web Audio presents an
+880 Hz / 80 ms tone and More offers a touch BEEP TEST. CBIOS is 645 bytes, so
+S80B v2 uses sectors 3-8 and CP/M starts at sector 9. Full package plus installed
+Chrome 390x844/1440x1000 QA pass. More also links the separately published
+Technical Manual. Audible Human check, review and PR remain; no
+merge/deploy. Read the matching plan/spec/worklog. Older snapshots follow.
+
 LATEST 2026-09-26: CP/M 2.2 boot v0.1 candidate on Warm Boot `72f16bb` / PR #35.
 Branch `feature/shino80-cpm22-boot-v01-20260926`. S80B v2 carries licensed 44K
 CCP 9400h and SHINO-ported BDOS 9C00h. MON O loads an original loader + CBIOS;

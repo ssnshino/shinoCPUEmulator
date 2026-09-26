@@ -1,3 +1,14 @@
+CURRENT CURSOR / BEEP v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-cursor-beep-v01-20260926, PR #36, parent 4084d0e on CP/M PR #35.
+Read README -> AGENTS -> current snapshot -> SHINO80_CURSOR_BEEP_V01 plan,
+matching v0.1 spec/worklog. DM-80 has a non-destructive CPU-time underline
+cursor. BIOS/CBIOS BEL 07h triggers I/O 40h; Web Audio presents 880 Hz/80 ms
+and More provides touch BEEP TEST. CBIOS is 645 bytes in sectors 3-8; CP/M's
+44 sectors start at sector 9. More links the separately published Technical
+Manual. Full package and installed Chrome desktop/mobile
+QA pass. Finish Human audible check and delivery if pending. Do not merge or
+deploy automatically. Everything below is historical.
+
 CURRENT CP/M 2.2 BOOT v0.1 OVERRIDE 2026-09-26:
 Resume feature/shino80-cpm22-boot-v01-20260926, parent 72f16bb / PR #35. Read README ->
 AGENTS -> current snapshot -> SHINO80_CPM22_BOOT_V01 plan/spec/worklog and

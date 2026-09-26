@@ -26,6 +26,7 @@
   const BLOCK_SECTOR_PORT=0x34;
   const BLOCK_DATA_PORT=0x35;
   const BLOCK_ERROR_PORT=0x36;
+  const BEEPER_PORT=0x40;
   const MEMORY_CONTROL_PORT=0x00;
   const MEMORY_CONTROL_LOW_RAM=0x01;
   const MEMORY_CONTROL_SHADOW_WRITE=0x02;
@@ -140,6 +141,7 @@
     // PUTCHAR preserves AF/BC/HL. CR and LF share its internal cursor paths.
     a.label('BIOS_PUTCHAR');
     a.emit(0xF5,0xC5,0xE5);                 // PUSH AF / BC / HL
+    a.emit(0xFE,0x07);jr(0x28,'BIOS_PUTCHAR_BELL');
     a.emit(0xFE,0x08);a.absolute(0xCA,'BIOS_BACKSPACE');
     a.emit(0xFE,0x0D);jr(0x28,'BIOS_PUTCHAR_CR');
     a.emit(0xFE,0x0A);jr(0x28,'BIOS_PUTCHAR_LF');
@@ -156,6 +158,9 @@
     a.label('BIOS_PUTCHAR_STORE_COLUMN');
     word(0x32,BIOS_WORK_COLUMN);
     jr(0x18,'BIOS_PUTCHAR_DONE');
+
+    a.label('BIOS_PUTCHAR_BELL');
+    a.emit(0xD3,BEEPER_PORT);jr(0x18,'BIOS_PUTCHAR_DONE');
 
     a.label('BIOS_PUTCHAR_CR');
     word(0x3A,BIOS_WORK_COLUMN);
@@ -598,16 +603,16 @@
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
     // Original system-disk cold path. Sector 1 validates a fixed v2 layout,
-    // sector 2 supplies the RAM payload, and sectors 3-7 supply CBIOS at FA00h.
+    // sector 2 supplies the RAM payload, and sectors 3-8 supply CBIOS at FA00h.
     // Every byte crosses the I/O Bus; only after all reads succeed is page zero
     // shadowed and firmware paged out.
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,5,0,0x80,0,0xFA,98,0,125,2,100]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,98,0,133,2,109]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
     }
-    for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){
+    for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
       word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     }
     a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
@@ -647,7 +652,7 @@
         testPageInstructions,
         clearPageInstructions,
         bootTextBytes:30,
-        instructionsBeforeLoop:14036
+        instructionsBeforeLoop:14096
       })
     };
   }
@@ -657,7 +662,7 @@
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
     KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
-    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BEEPER_PORT,
     RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
     DISK_BOOT_HEADER,
     buildSystemRom
