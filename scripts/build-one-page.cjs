@@ -14,6 +14,7 @@ const source={
   cgrom:'src/firmware/shino80/shino80-cgrom.js',
   systemRom:'src/firmware/shino80/shino80-system-rom.js',
   video:'src/machine/shino80/shino80-video.js',
+  pace:'src/app/shino80-execution-pace.js',
   app:'src/app/shino80-workbench-v0.0.2.js'
 };
 let html=read(source.template)
@@ -26,7 +27,7 @@ let html=read(source.template)
   .replace('/*__CGROM__*/',read(source.cgrom))
   .replace('/*__SYSTEM_ROM__*/',read(source.systemRom))
   .replace('/*__VIDEO__*/',read(source.video))
-  .replace('/*__APP__*/',read(source.app));
+  .replace('/*__APP__*/',read(source.pace)+'\n'+read(source.app));
 const dir=path.join(root,'deploy');fs.mkdirSync(dir,{recursive:true});
 const out=path.join(dir,'one_page_shino80_v0.0.9_z80_base_complete.html');
 fs.writeFileSync(out,html);

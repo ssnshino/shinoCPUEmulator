@@ -1,3 +1,10 @@
+LATEST OVERRIDE 2026-09-26:
+Resume feature/shino80-realtime-pace-20260926 on parent 6707ace / PR #19.
+Read REALTIME_PACE plan/worklog and EXECUTION_PACE_v0.1 spec. Default REALTIME
+targets 4 MHz but measured Chrome speed was ~0.75 MHz; scrolling ~6.5x faster.
+CPU/Bus/ROM unchanged. Mobile speed QA pending. All merges require Human GO.
+Older override follows.
+
 CURRENT OVERRIDE 2026-09-26:
 Resume feature/shino80-monitor-lines-dump-20260926, stacked on Memory PR #18
 (f0903e0). Verify live Git state first. Read MONITOR_CONSOLE v0.2 plan/spec/

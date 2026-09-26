@@ -11,13 +11,13 @@
 <div class="app" id="app">
   <header class="toolbar">
     <div class="brand"><div class="brand-title">SHINO-80</div><div class="brand-sub">VIRTUAL MICROCOMPUTER LAB · Z80 BASE COMPLETE v0.0.9</div></div>
-    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="machineState">READY</span></div>
+    <div class="machine-status">MODEL CLOCK <b>4.000 MHz</b> · <span id="actualClock">ACTUAL 0.00 MHz</span> · <span id="machineState">READY</span></div>
     <div class="toolbar-spacer"></div>
     <div class="control-group" aria-label="Machine controls">
       <button class="control power" id="powerBtn" aria-label="Power on or off" aria-pressed="false"><span class="power-led" aria-hidden="true"></span><span id="powerLabel">POWER</span></button>
       <button class="control primary" id="runPauseBtn" aria-label="Run or pause"><span id="runPauseLabel">RUN</span></button>
       <button class="control compact-label" id="stepBtn" aria-label="Step one instruction">STEP</button>
-      <button class="control pace" id="paceBtn" aria-label="Change observation pace"><span class="wide-label">PACE </span><span id="paceLabel">VISUAL</span></button>
+      <button class="control pace" id="paceBtn" aria-label="Change execution pace: VISUAL, REALTIME, TURBO"><span class="wide-label">PACE </span><span id="paceLabel">REALTIME</span></button>
       <button class="control danger reset-wide" id="resetBtn" aria-label="Reset CPU">RESET</button>
       <button class="control" id="moreBtn" aria-label="More actions">•••</button>
     </div>
@@ -132,7 +132,7 @@
     </div>
     <div class="more-actions">
       <button class="more-action" data-more-action="keyboard"><span>KEYBOARD</span><b>TYPE INTO MON</b></button>
-      <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">VISUAL</b></button>
+      <button class="more-action" data-more-action="pace"><span>PACE</span><b id="morePaceValue">REALTIME · 0.00 MHz</b></button>
       <button class="more-action" data-more-action="burst"><span>BURST</span><b>×256</b></button>
       <button class="more-action" data-more-action="clear"><span>CLEAR TRACE</span><b>BUS LOG</b></button>
       <button class="more-action danger" data-more-action="reset"><span>RESET CPU</span><b>PC → 0000h</b></button>

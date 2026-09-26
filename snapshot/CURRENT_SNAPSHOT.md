@@ -1,6 +1,12 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+Latest override 2026-09-26: feature/shino80-realtime-pace-20260926, parent
+6707ace / PR #19 (MON Human PASS). REALTIME default / VISUAL / TURBO, actual
+MHz, bounded host slices and hidden-page suspension. See REALTIME_PACE plan
+and worklog, EXECUTION_PACE_v0.1 spec. No CPU/Bus/ROM changes. Speed candidate
+mobile QA pending; PR #18/#19 remain unmerged. Older overrides follow.
+
 ## Active candidate override — 2026-09-26T01:45:00+09:00
 
 Current branch: `feature/shino80-monitor-lines-dump-20260926`.
