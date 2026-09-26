@@ -1,6 +1,15 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: feature/shino80-technical-manual-20260926,
+parent fa73816 / PR #26. Separate standalone manual, no CPU/ROM changes.
+Read SHINO80_TECHNICAL_MANUAL plan/spec/worklog. Open
+deploy/shino80_technical_manual_v0.1.html; all package stages and offline Chrome
+1440×1000 /390×844 interactions PASS. 1,780 encoding inventory, logical diagram,
+maps/BIOS/MON,256-glyph atlas. No public hosting, no merge. Real iPhone QA and
+Human review of PR stack remain; next implementation can resume MON expansion
+only after scope agreement. Older snapshots below are historical.
+
 CURRENT 2026-09-26T09:10:24+09:00: feature/shino80-z80-accuracy-closeout-20260926,
 parent d8d30bc / PR #25. PHASE1J instruction-level CPU completion candidate.
 Read PHASE1J_ACCURACY plan/spec/worklog and seven QA reports. Full F, WZ/P/Q,
