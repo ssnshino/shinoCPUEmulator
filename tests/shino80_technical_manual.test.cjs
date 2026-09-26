@@ -45,6 +45,7 @@ assert.equal(data.machine.width,640);assert.equal(data.machine.height,400);
 assert.equal(data.machine.keyData,0x20);assert.equal(data.machine.keyStatus,0x21);assert.equal(data.machine.fifoCapacity,64);
 assert.equal(data.machine.labels.BIOS_API_GETLINE,0x10F);assert.equal(data.machine.labels.BIOS_API_RAM_HANDOFF,0x11E);
 assert.equal(data.machine.ramHandoffTrampoline,0xF800);assert.equal(data.machine.ramHandoffDemoEntry,0x8000);assert.equal(data.machine.ramHandoffSignature,0xE180);
+assert.equal(data.machine.systemDiskMagic,'S80B');assert.equal(data.machine.systemDiskVersion,1);assert.equal(data.machine.systemDiskEntry,0x8000);assert.equal(data.machine.systemDiskHeader.length,17);
 assert.equal(data.machine.cgBytes.length,4096);
 assert.equal(crypto.createHash('sha256').update(Buffer.from(data.machine.cgBytes)).digest('hex'),data.machine.cgHash);
 const html=build();assert.equal(build(),html,'deterministic output');

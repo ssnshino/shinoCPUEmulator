@@ -239,7 +239,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
   </nav>
 
-  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>DISK A 250.25 KiB</span><span>UART —</span></footer>
+  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>DISK A SYSTEM v1</span><span>UART —</span></footer>
 </div>
 
 <div class="more-sheet" id="moreMenu" hidden aria-hidden="true">
@@ -887,6 +887,274 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
     BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
     BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE
+  };
+});
+</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_CBIOS=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const CBIOS_ORG=0xFA00;
+  const CBIOS_ENTRY_SIZE=3;
+  const CBIOS_DEFAULT_DMA=0x0080;
+  const TEXT_VRAM_BASE=0xC000;
+  const TEXT_VRAM_END=0xC7D0;
+  const TEXT_COLS=80;
+  const KEY_DATA_PORT=0x20;
+  const KEY_STATUS_PORT=0x21;
+  const BLOCK_STATUS_PORT=0x30;
+  const BLOCK_COMMAND_PORT=0x31;
+  const BLOCK_DRIVE_PORT=0x32;
+  const BLOCK_TRACK_PORT=0x33;
+  const BLOCK_SECTOR_PORT=0x34;
+  const BLOCK_DATA_PORT=0x35;
+  const BLOCK_ERROR_PORT=0x36;
+  const CBIOS_ENTRY_NAMES=Object.freeze([
+    'BOOT','WBOOT','CONST','CONIN','CONOUT','LIST','PUNCH','READER','HOME',
+    'SELDSK','SETTRK','SETSEC','SETDMA','READ','WRITE','LISTST','SECTRAN'
+  ]);
+
+  const DPB=Object.freeze({
+    spt:26,bsh:3,blm:7,exm:0,dsm:242,drm:63,al0:0xC0,al1:0,cks:16,off:2
+  });
+
+  const lo=value=>Number(value)&0xFF;
+  const hi=value=>(Number(value)>>8)&0xFF;
+
+  function createAssembler(origin){
+    const bytes=new Uint8Array(0x10000-origin),labels={},fixups=[];
+    let pc=origin;
+    const emit=(...values)=>{
+      for(const value of values){
+        if(pc>0xFFFF)throw new RangeError('CBIOS image crosses FFFFh');
+        bytes[pc-origin]=Number(value)&0xFF;pc++;
+      }
+    };
+    const label=name=>{if(labels[name]!==undefined)throw new Error(`Duplicate CBIOS label ${name}`);labels[name]=pc;};
+    const refWord=name=>{fixups.push({offset:pc-origin,name});emit(0,0);};
+    const absolute=(opcode,name)=>{emit(opcode);refWord(name);};
+    const word=(opcode,value)=>emit(opcode,lo(value),hi(value));
+    const dataWord=value=>emit(lo(value),hi(value));
+    const resolve=()=>{
+      for(const fixup of fixups){
+        const address=labels[fixup.name];
+        if(address===undefined)throw new Error(`Unknown CBIOS label ${fixup.name}`);
+        bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);
+      }
+      return {bytes:bytes.slice(0,pc-origin),labels:Object.freeze({...labels}),end:pc};
+    };
+    return {emit,label,refWord,absolute,word,dataWord,resolve,get pc(){return pc;}};
+  }
+
+  function buildCbios(){
+    const a=createAssembler(CBIOS_ORG);
+    const call=name=>a.absolute(0xCD,name);
+    const jp=name=>a.absolute(0xC3,name);
+    const jpZ=name=>a.absolute(0xCA,name);
+    const jpNZ=name=>a.absolute(0xC2,name);
+    const jpC=name=>a.absolute(0xDA,name);
+    const ldAFrom=name=>a.absolute(0x3A,name);
+    const ldATo=name=>a.absolute(0x32,name);
+    const ldHLFrom=name=>a.absolute(0x2A,name);
+    const ldHLTo=name=>a.absolute(0x22,name);
+    const ldBCTo=name=>{a.emit(0xED,0x43);a.refWord(name);};
+
+    a.label('CBIOS_JUMP_TABLE');
+    for(const name of CBIOS_ENTRY_NAMES){a.label(`CBIOS_API_${name}`);jp(`CBIOS_${name}`);}
+
+    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // v0.1 returns
+    a.label('CBIOS_WBOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // loader is future work
+
+    a.label('CBIOS_INIT');
+    a.emit(0xAF);ldATo('CBIOS_SELECTED_DRIVE');ldATo('CBIOS_SELECTED_TRACK');ldATo('CBIOS_SELECTED_TRACK_HI');
+    ldATo('CBIOS_SELECTED_SECTOR_HI');ldATo('CBIOS_COLUMN');
+    a.emit(0x3C);ldATo('CBIOS_SELECTED_SECTOR');
+    a.word(0x21,CBIOS_DEFAULT_DMA);ldHLTo('CBIOS_DMA');
+    a.word(0x21,TEXT_VRAM_BASE);ldHLTo('CBIOS_CURSOR');a.emit(0xC9);
+
+    a.label('CBIOS_CONST');
+    a.emit(0xAF,0xDB,KEY_STATUS_PORT,0xE6,0x01,0xC8,0x3E,0xFF,0xC9);
+
+    a.label('CBIOS_CONIN');
+    a.label('CBIOS_CONIN_WAIT');call('CBIOS_CONST');a.emit(0xB7);jpZ('CBIOS_CONIN_WAIT');
+    a.emit(0xAF,0xDB,KEY_DATA_PORT,0xE6,0x7F,0xC9);
+
+    a.label('CBIOS_CONOUT');
+    a.emit(0x79,0xFE,0x0D);jpZ('CBIOS_CONOUT_CR');a.emit(0xFE,0x0A);jpZ('CBIOS_CONOUT_LF');
+    ldHLFrom('CBIOS_CURSOR');a.emit(0x77,0x23);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');
+    ldAFrom('CBIOS_COLUMN');a.emit(0x3C,0xFE,TEXT_COLS);jpC('CBIOS_CONOUT_STORE_COLUMN');a.emit(0xAF);
+    a.label('CBIOS_CONOUT_STORE_COLUMN');ldATo('CBIOS_COLUMN');a.emit(0xC9);
+
+    a.label('CBIOS_CONOUT_CR');
+    ldAFrom('CBIOS_COLUMN');a.emit(0x5F,0x16,0x00);ldHLFrom('CBIOS_CURSOR');a.emit(0xB7,0xED,0x52);
+    ldHLTo('CBIOS_CURSOR');a.emit(0xAF);ldATo('CBIOS_COLUMN');a.emit(0xC9);
+
+    a.label('CBIOS_CONOUT_LF');
+    ldHLFrom('CBIOS_CURSOR');a.word(0x11,TEXT_COLS);a.emit(0x19);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');a.emit(0xC9);
+
+    a.label('CBIOS_NORMALIZE_CURSOR');
+    a.word(0x11,TEXT_VRAM_END);a.emit(0xB7,0xED,0x52);jpC('CBIOS_CURSOR_BELOW_END');
+    a.word(0x21,TEXT_VRAM_BASE);a.emit(0xC9);
+    a.label('CBIOS_CURSOR_BELOW_END');a.emit(0x19,0xC9); // restore HL after comparison
+
+    a.label('CBIOS_LIST');a.emit(0xC9);
+    a.label('CBIOS_PUNCH');a.emit(0xC9);
+    a.label('CBIOS_READER');a.emit(0x3E,0x1A,0xC9);
+
+    a.label('CBIOS_HOME');a.emit(0x01,0x00,0x00);jp('CBIOS_SETTRK');
+
+    a.label('CBIOS_SELDSK');
+    a.emit(0x79,0xB7);jpNZ('CBIOS_SELDSK_INVALID');ldATo('CBIOS_SELECTED_DRIVE');
+    a.absolute(0x21,'CBIOS_DPH');a.emit(0xC9);
+    a.label('CBIOS_SELDSK_INVALID');a.word(0x21,0);a.emit(0xC9);
+
+    a.label('CBIOS_SETTRK');ldBCTo('CBIOS_SELECTED_TRACK');a.emit(0xC9);
+    a.label('CBIOS_SETSEC');ldBCTo('CBIOS_SELECTED_SECTOR');a.emit(0xC9);
+    a.label('CBIOS_SETDMA');ldBCTo('CBIOS_DMA');a.emit(0xC9);
+
+    a.label('CBIOS_READ');a.emit(0x3E,0x01);call('CBIOS_DISK_COMMAND');a.emit(0xB7,0xC0);
+    ldHLFrom('CBIOS_DMA');a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0xAF,0xC9); // INIR
+
+    a.label('CBIOS_WRITE');a.emit(0x3E,0x02);call('CBIOS_DISK_COMMAND');a.emit(0xB7,0xC0);
+    ldHLFrom('CBIOS_DMA');a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB3,0xAF,0xC9); // OTIR
+
+    a.label('CBIOS_DISK_COMMAND');
+    a.emit(0xF5); // preserve command
+    ldAFrom('CBIOS_SELECTED_DRIVE');a.emit(0xD3,BLOCK_DRIVE_PORT);
+    ldAFrom('CBIOS_SELECTED_TRACK_HI');a.emit(0xB7);jpNZ('CBIOS_DISK_COMMAND_FAIL_POP');
+    ldAFrom('CBIOS_SELECTED_TRACK');a.emit(0xD3,BLOCK_TRACK_PORT);
+    ldAFrom('CBIOS_SELECTED_SECTOR_HI');a.emit(0xB7);jpNZ('CBIOS_DISK_COMMAND_FAIL_POP');
+    ldAFrom('CBIOS_SELECTED_SECTOR');a.emit(0xD3,BLOCK_SECTOR_PORT);
+    a.emit(0xF1,0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);jpNZ('CBIOS_DISK_COMMAND_FAIL');
+    a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);jpZ('CBIOS_DISK_COMMAND_FAIL');a.emit(0xAF,0xC9);
+    a.label('CBIOS_DISK_COMMAND_FAIL_POP');a.emit(0xF1);
+    a.label('CBIOS_DISK_COMMAND_FAIL');a.emit(0x3E,0x01,0xC9);
+
+    a.label('CBIOS_LISTST');a.emit(0x3E,0xFF,0xC9);
+
+    a.label('CBIOS_SECTRAN');
+    a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0xC9); // HL=BC
+    a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0xC9);
+
+    a.label('CBIOS_DPB');
+    a.dataWord(DPB.spt);a.emit(DPB.bsh,DPB.blm,DPB.exm);a.dataWord(DPB.dsm);a.dataWord(DPB.drm);
+    a.emit(DPB.al0,DPB.al1);a.dataWord(DPB.cks);a.dataWord(DPB.off);
+
+    a.label('CBIOS_DPH');
+    a.dataWord(0);a.dataWord(0);a.dataWord(0);a.dataWord(0);
+    a.refWord('CBIOS_DIRBUF');a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV');a.refWord('CBIOS_ALV');
+
+    a.label('CBIOS_SELECTED_DRIVE');a.emit(0);
+    a.label('CBIOS_SELECTED_TRACK');a.emit(0);a.label('CBIOS_SELECTED_TRACK_HI');a.emit(0);
+    a.label('CBIOS_SELECTED_SECTOR');a.emit(1);a.label('CBIOS_SELECTED_SECTOR_HI');a.emit(0);
+    a.label('CBIOS_DMA');a.dataWord(CBIOS_DEFAULT_DMA);
+    a.label('CBIOS_CURSOR');a.dataWord(TEXT_VRAM_BASE);
+    a.label('CBIOS_COLUMN');a.emit(0);
+    a.label('CBIOS_DIRBUF');a.emit(...new Array(128).fill(0));
+    a.label('CBIOS_CSV');a.emit(...new Array(DPB.cks).fill(0));
+    a.label('CBIOS_ALV');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
+
+    const assembled=a.resolve();
+    return {
+      bytes:assembled.bytes,
+      origin:CBIOS_ORG,
+      end:assembled.end,
+      labels:assembled.labels,
+      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dpb:DPB})
+    };
+  }
+
+  return {
+    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,DPB,
+    TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
+    KEY_DATA_PORT,KEY_STATUS_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
+    buildCbios
+  };
+});
+</script>
+<script>(function(root,factory){
+  const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
+  const api=factory(block,cbios);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_SYSTEM_DISK=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios){
+  'use strict';
+
+  const SYSTEM_DISK_MAGIC='S80B';
+  const SYSTEM_DISK_VERSION=1;
+  const SYSTEM_HEADER_SECTOR=1;
+  const SYSTEM_PAYLOAD_SECTOR=2;
+  const SYSTEM_CBIOS_SECTOR=3;
+  const SYSTEM_CBIOS_SECTORS=5;
+  const SYSTEM_ENTRY=0x8000;
+  const SYSTEM_SIGNATURE=0xE260;
+  const SYSTEM_MESSAGE='SHINO-80 SYSTEM DISK\r\nCBIOS + BLOCK I/O OK\r\n';
+
+  const lo=value=>Number(value)&0xFF;
+  const hi=value=>(Number(value)>>8)&0xFF;
+
+  function buildSystemPayload(){
+    const code=[
+      0x31,0x00,0xF7,             // LD SP,F700h
+      0x21,0x00,0xC0,0x36,0x00,  // LD HL,C000h / LD (HL),0
+      0x11,0x01,0xC0,             // LD DE,C001h
+      0x01,0xCF,0x07,0xED,0xB0,  // LD BC,1999 / LDIR
+      0xCD,lo(cbios.CBIOS_ORG),hi(cbios.CBIOS_ORG), // CALL CBIOS BOOT
+      0x21                         // LD HL,message (operand appended below)
+    ];
+    const messagePointer=code.length;
+    code.push(
+      0x00,0x00,
+      0x7E,0xB7,0x28,0x09,        // loop: LD A,(HL) / OR A / JR Z,done
+      0xE5,0x4F,0xCD,lo(cbios.CBIOS_ORG+4*3),hi(cbios.CBIOS_ORG+4*3),0xE1, // preserve HL / C=A / CONOUT
+      0x23,0x18,0xF3,             // INC HL / JR loop
+      0x21,0x44,0x53,0x22,lo(SYSTEM_SIGNATURE),hi(SYSTEM_SIGNATURE),
+      0x21,0x4B,0x21,0x22,lo(SYSTEM_SIGNATURE+2),hi(SYSTEM_SIGNATURE+2),
+      0x76                        // HALT
+    );
+    const messageAddress=SYSTEM_ENTRY+code.length;
+    code[messagePointer]=lo(messageAddress);code[messagePointer+1]=hi(messageAddress);
+    return Uint8Array.from([...code,...[...SYSTEM_MESSAGE].map(char=>char.charCodeAt(0)),0]);
+  }
+
+  function buildSystemDisk(){
+    const image=block.createBlankBlockImage(),payload=buildSystemPayload(),cbiosImage=cbios.buildCbios();
+    if(payload.length>block.BLOCK_SECTOR_SIZE)throw new RangeError('System payload must fit one sector');
+    if(cbiosImage.bytes.length>SYSTEM_CBIOS_SECTORS*block.BLOCK_SECTOR_SIZE)throw new RangeError('CBIOS exceeds reserved system sectors');
+    const header=new Uint8Array(block.BLOCK_SECTOR_SIZE);header.fill(block.BLOCK_BLANK_BYTE);
+    header.set([...SYSTEM_DISK_MAGIC].map(char=>char.charCodeAt(0)),0);
+    header[4]=SYSTEM_DISK_VERSION;
+    header[5]=SYSTEM_PAYLOAD_SECTOR;
+    header[6]=SYSTEM_CBIOS_SECTOR;
+    header[7]=SYSTEM_CBIOS_SECTORS;
+    header[8]=lo(SYSTEM_ENTRY);header[9]=hi(SYSTEM_ENTRY);
+    header[10]=lo(cbios.CBIOS_ORG);header[11]=hi(cbios.CBIOS_ORG);
+    header[12]=lo(payload.length);header[13]=hi(payload.length);
+    header[14]=lo(cbiosImage.bytes.length);header[15]=hi(cbiosImage.bytes.length);
+    header[16]=header.slice(0,16).reduce((sum,value)=>(sum+value)&0xFF,0);
+    image.set(header,(SYSTEM_HEADER_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
+    image.set(payload,(SYSTEM_PAYLOAD_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
+    image.set(cbiosImage.bytes,(SYSTEM_CBIOS_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
+    return {
+      image,header,payload,cbios:cbiosImage,
+      meta:Object.freeze({
+        magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
+        headerSector:SYSTEM_HEADER_SECTOR,payloadSector:SYSTEM_PAYLOAD_SECTOR,
+        cbiosSector:SYSTEM_CBIOS_SECTOR,cbiosSectors:SYSTEM_CBIOS_SECTORS,
+        entry:SYSTEM_ENTRY,signature:SYSTEM_SIGNATURE,message:SYSTEM_MESSAGE
+      })
+    };
+  }
+
+  return {
+    SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_SECTOR,
+    SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_ENTRY,SYSTEM_SIGNATURE,SYSTEM_MESSAGE,
+    buildSystemPayload,buildSystemDisk
   };
 });
 </script>
@@ -2281,12 +2549,20 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BIOS_WORK_COLUMN=0xE002;
   const KEY_DATA_PORT=0x20;
   const KEY_STATUS_PORT=0x21;
+  const BLOCK_STATUS_PORT=0x30;
+  const BLOCK_COMMAND_PORT=0x31;
+  const BLOCK_DRIVE_PORT=0x32;
+  const BLOCK_TRACK_PORT=0x33;
+  const BLOCK_SECTOR_PORT=0x34;
+  const BLOCK_DATA_PORT=0x35;
+  const BLOCK_ERROR_PORT=0x36;
   const MEMORY_CONTROL_PORT=0x00;
   const MEMORY_CONTROL_LOW_RAM=0x01;
   const MEMORY_CONTROL_SHADOW_WRITE=0x02;
   const RAM_HANDOFF_TRAMPOLINE=0xF800;
   const RAM_HANDOFF_DEMO_ENTRY=0x8000;
   const RAM_HANDOFF_SIGNATURE=0xE180;
+  const DISK_BOOT_HEADER=0xE300;
   const MON_BUFFER=0xE100;
   const MON_CONTEXT=0xE140;
   const MON_RANGE_START=0xE158;
@@ -2508,9 +2784,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
-    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT  O DISK BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
-    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy] B\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy] B O\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_CLEAR_TEXT');
     a.emit(...[...'MON\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_RANGE_LIMIT_TEXT');
@@ -2704,6 +2980,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.emit(0xFE,82);a.absolute(0xCA,'MONITOR_REGISTERS_PARSE');
     a.emit(0xFE,85);a.absolute(0xCA,'MONITOR_UNASSEMBLE_PARSE');
     a.emit(0xFE,66);a.absolute(0xCA,'MONITOR_BOOT_TEST');
+    a.emit(0xFE,79);a.absolute(0xCA,'MONITOR_DISK_BOOT');
     a.emit(0x57,0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     a.emit(0x7A,0xFE,72);a.absolute(0xCA,'MONITOR_HELP');
     a.emit(0xFE,63);a.absolute(0xCA,'MONITOR_HELP');
@@ -2850,6 +3127,33 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
+    // Original system-disk cold path. Sector 1 validates a fixed v1 layout,
+    // sector 2 supplies the RAM payload, and sectors 3-7 supply CBIOS at FA00h.
+    // Every byte crosses the I/O Bus; only after all reads succeed is page zero
+    // shadowed and firmware paged out.
+    a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
+    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    word(0x21,DISK_BOOT_HEADER);
+    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,54,2,23]){
+      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
+    }
+    for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){
+      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    }
+    a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
+    a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
+    word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
+
+    a.label('DISK_BOOT_FAIL');a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+    a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
+
+    a.label('DISK_BOOT_READ_SECTOR');
+    a.emit(0x57,0xAF,0xD3,BLOCK_DRIVE_PORT,0xD3,BLOCK_TRACK_PORT,0x7A,0xD3,BLOCK_SECTOR_PORT);
+    a.emit(0x3E,1,0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);a.absolute(0xC2,'DISK_BOOT_READ_FAIL');
+    a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
+    a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0x37,0xC9); // INIR / SCF / RET
+    a.label('DISK_BOOT_READ_FAIL');a.emit(0xB7,0xC9); // OR A clears carry
+
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
     const clearPageInstructions=(256*3)+2;
@@ -2883,7 +3187,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
     KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
     RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
+    DISK_BOOT_HEADER,
     buildSystemRom
   };
 });
@@ -3017,12 +3323,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const {Shino80Memory}=globalThis.SHINO_MEMORY;
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
-  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
+  const {Shino80BlockDevice}=globalThis.SHINO_BLOCK_DEVICE;
+  const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
   const keyboard=new Shino80Keyboard();
-  const diskA=new Shino80BlockDevice({image:createBlankBlockImage()});
+  const systemDisk=buildSystemDisk();
+  const diskA=new Shino80BlockDevice({image:systemDisk.image});
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA]});
@@ -3067,7 +3375,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'77×26×128 / I/O 30h–36h',state:'ONLINE'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM v1 · 77×26×128 / I/O 30h–36h',state:'ONLINE'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
@@ -3188,7 +3496,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">128-byte PIO block device for the future SHINO CBIOS. Media stays mounted across RESET and POWER; seek/rotation timing and host-file persistence are not modeled yet.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} SYSTEM</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O reads the mounted original system image and hands off to RAM + CBIOS. Media stays mounted across RESET and POWER; this is not CP/M yet.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;

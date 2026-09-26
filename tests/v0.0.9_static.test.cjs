@@ -11,6 +11,7 @@ for(const f of [
   'src/firmware/shino80/shino80-cgrom.js',
   'src/firmware/shino80/shino80-system-rom.js',
   'src/firmware/shino80/shino80-cbios.js',
+  'src/firmware/shino80/shino80-system-disk.js',
   'src/machine/shino80/shino80-video.js',
   'src/app/shino80-workbench-v0.0.2.js',
   'src/app/shino80-execution-pace.js'
