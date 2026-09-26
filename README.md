@@ -14,6 +14,15 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+RELEASED BASELINE: all stacked SHINO-80 work through PR #37 is integrated on
+`main` at `5e4091e655f173bb7eb724c5f523a24718808aa4`. This includes the complete
+instruction-level Z80 milestone, BIOS/MON v0.3, pageable 64 KiB RAM, Virtual
+Disk A, SHINO CBIOS/WBOOT, licensed CP/M 2.2 and the writable starter
+filesystem. iPhone Human QA confirms DIR, TYPE, HELLO, S80INFO, Backspace,
+80x25 scrolling, SAVE, copied COM execution and ERA. The current closeout adds
+the offline CP/M command reference and consolidated restart records; CPU and
+guest-machine semantics are unchanged.
+
 LATEST: `feature/shino80-cpm-filesystem-v01-20260926` / PR #37, parent
 `d0457dc`, stacked on cursor/beeper PR #36. A: is now a deterministic writable CP/M 2.2
 filesystem with original `WELCOME.TXT`, `HELLO.COM` and `S80INFO.COM` starter
@@ -240,15 +249,10 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_CURSOR_BEEP_V01_PLAN.md`
-7. `docs/head/SHINO80_CBIOS_v0.1.md`
-8. `working-logs/head/SHINO80_CBIOS_V01_WORKLOG.md`
-9. `plan/head/SHINO80_SYSTEM_DISK_LOADER_V01_PLAN.md`
-10. `docs/head/SHINO80_SYSTEM_DISK_LOADER_v0.1.md`
-11. `working-logs/head/SHINO80_SYSTEM_DISK_LOADER_V01_WORKLOG.md`
-12. `plan/head/SHINO80_WARM_BOOT_V02_PLAN.md`
-13. `docs/head/SHINO80_WARM_BOOT_v0.2.md`
-14. `working-logs/head/SHINO80_WARM_BOOT_V02_WORKLOG.md`
+6. `snapshot/SNAPSHOT_MANIFEST.md`
+7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
+8. `docs/head/SHINO80_CPM_FILESYSTEM_v0.1.md`
+9. `working-logs/head/SHINO80_MAIN_CONSOLIDATION_20260926.md`
 
 ## Core concept
 

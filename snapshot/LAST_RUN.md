@@ -1,5 +1,16 @@
 # LAST RUN
 
+LATEST 2026-09-26: Human iPhone/Edge acceptance is complete. DIR, TYPE,
+WELCOME.TXT, HELLO, S80INFO, Backspace, screen scrolling, SAVE 1 COPY.COM,
+COPY execution, ERA COPY.COM and post-erase DIR all passed; COPY2.COM was also
+created successfully. PRs #18 through #37 were then retargeted and merged in
+dependency order. GitHub main and local main aligned cleanly at
+`5e4091e655f173bb7eb724c5f523a24718808aa4` with no open SHINO-80 PRs. A final
+documentation-only branch now adds the CP/M command reference and consolidated
+handoff before publishing the existing unlisted Daihanten routes.
+
+Previous runs follow.
+
 LATEST 2026-09-26T14:55:37+09:00: CP/M Filesystem & Starter Disk v0.1 PR #37 on
 parent `d0457dc`. Added a DPB-derived CP/M packer and three original starter
 files; mounted them in S80B v2 and exposed them in the app/manual. Real

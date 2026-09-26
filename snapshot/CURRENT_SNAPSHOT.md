@@ -1,6 +1,24 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+CURRENT RELEASED BASELINE 2026-09-26: PRs #18 through #37 are merged in order
+to GitHub `main`; pre-closeout SHA is
+`5e4091e655f173bb7eb724c5f523a24718808aa4`. The working tree was clean before
+this documentation-only closeout. The integrated machine includes all Z80
+instruction families and interrupt/precision closeout, BIOS/MON v0.3, pageable
+64 KiB RAM, Virtual Disk A, SHINO CBIOS/WBOOT, licensed CP/M 2.2 and writable
+A: starter filesystem. CPU external oracle remains 1,604,000 PASS / Failure 0.
+
+iPhone Human QA is complete: DIR, TYPE WELCOME.TXT, HELLO, S80INFO, Backspace,
+80x25 scroll, SAVE 1 COPY.COM, COPY execution and ERA COPY.COM all PASS. The
+current purpose branch adds only the offline CP/M command reference and final
+merge/deployment handoff records. It does not change CPU, ROM, CBIOS, disk or
+display behavior. After this branch is merged, publish the generated machine
+and manual to the existing unlisted Shinomiya Daihanten routes, verify the
+single content auto-deploy, then hand off with NEXT_CHAT_PROMPT.txt.
+
+Everything below is historical candidate chronology.
+
 LATEST 2026-09-26: CP/M Filesystem & Starter Disk v0.1 PR #37 on Cursor /
 BEEP parent `d0457dc`. Branch `feature/shino80-cpm-filesystem-v01-20260926`.
 A: contains original WELCOME.TXT, HELLO.COM and S80INFO.COM in a real writable
