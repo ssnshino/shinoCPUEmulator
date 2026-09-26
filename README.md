@@ -14,6 +14,17 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-technical-manual-20260926`, parent `fa73816` / PR #26.
+Standalone Japanese **Technical Manual v0.1**: 1,780 searchable Z80 encodings,
+bytes/timing/flags/execution examples, clickable system concept diagram,
+memory/I/O and BIOS/MON guide, actual 256-glyph CG-ROM atlas.
+Open [the offline manual](deploy/shino80_technical_manual_v0.1.html) in a browser.
+Build `npm run build:manual`; validate `npm run test:manual` (in `npm test`).
+See [manual spec](docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md) and matching
+plan/worklog. CPU/firmware/emulator artifact unchanged. Real iPhone review and
+Human PR-stack review remain. No public hosting or merges performed.
+CPU status below is the unchanged parent candidate; older entries are history.
+
 CURRENT: `feature/shino80-z80-accuracy-closeout-20260926`, parent `d8d30bc` / PR #25.
 PHASE1J closes the **instruction-level CPU milestone**: all instruction families,
 full F including X/Y, WZ/P/Q, NMI and INT IM0/1/2, EI delay and HALT return.

@@ -1,5 +1,15 @@
 # LAST RUN
 
+LATEST 2026-09-26: Technical Manual v0.1 candidate on fa73816 / PR #26.
+Branch feature/shino80-technical-manual-20260926. All package stages PASS;
+1,780 encoding/flags/timing/example invariants and deterministic build PASS.
+Offline installed Chrome desktop1440×1000/mobile390×844 interactions PASS,
+no runtime/console warnings or errors, network requests or document overflow.
+See working-logs/head/SHINO80_TECHNICAL_MANUAL_WORKLOG.md.
+CPU/firmware/workbench and old deploy artifact unchanged. ImageGen401 fallback
+documented; no public hosting/merge. Human iPhone QA and stack review remain.
+Previous runs below are historical.
+
 CURRENT 2026-09-26: PHASE1J instruction-level CPU completion candidate,
 feature/shino80-z80-accuracy-closeout-20260926 on d8d30bc / PR #25.
 Full F/WZ/P/Q oracle1,604,000 PASS; interrupt748 +XY589,824 checks PASS.

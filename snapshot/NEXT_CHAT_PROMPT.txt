@@ -1,3 +1,14 @@
+CURRENT MANUAL OVERRIDE 2026-09-26:
+Resume feature/shino80-technical-manual-20260926, parent fa73816 / PR #26.
+Read README -> AGENTS -> snapshot -> SHINO80_TECHNICAL_MANUAL plan/spec/worklog.
+Standalone deploy/shino80_technical_manual_v0.1.html complete candidate:
+1,780 encodings, logical diagram, maps/BIOS/MON and actual CG-ROM atlas.
+No CPU/firmware/workbench behavior changes. Package + offline desktop/mobile
+Chrome PASS. Real iPhone review and Human PR-stack integration GO remain.
+Do not auto-merge or publicly host. No FPGA work. CPU phase1J candidate remains
+instruction-level complete, not pin/cycle-perfect. Check live Git/PR status.
+Next feature is MON expansion only when requested. Earlier directions are history.
+
 CURRENT CPU CLOSEOUT OVERRIDE 2026-09-26:
 Resume feature/shino80-z80-accuracy-closeout-20260926, parent d8d30bc / PR #25.
 Read README -> AGENTS -> current snapshot -> PHASE1J_ACCURACY plan/spec/worklog.
