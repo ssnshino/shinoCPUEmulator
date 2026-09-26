@@ -1,5 +1,13 @@
 # LAST RUN
 
+LATEST 2026-09-26: System Disk / Loader v0.1 candidate on CBIOS `4116919` /
+PR #32. Branch `feature/shino80-system-disk-loader-v01-20260926`. Added the
+original S80B v1 image, runtime mount and MON O seven-sector PIO cold loader.
+Exact tests cover header, destinations, error recovery, page zero, all-RAM
+handoff, CBIOS output, Bus traffic and RESET/media preservation. Package and
+browser QA evidence remains in the matching worklog. No third-party OS content,
+merge or deploy. Previous runs below are historical.
+
 LATEST 2026-09-26: SHINO CBIOS v0.1 candidate on Virtual Disk A `128f031`.
 Branch `feature/shino80-cbios-v01-20260926`. Added an original 566-byte FA00h
 CBIOS with all 17 standard slots, RAM-only console, exact DPH/DPB and 128-byte

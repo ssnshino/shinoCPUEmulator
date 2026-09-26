@@ -19,12 +19,20 @@
   const BIOS_WORK_COLUMN=0xE002;
   const KEY_DATA_PORT=0x20;
   const KEY_STATUS_PORT=0x21;
+  const BLOCK_STATUS_PORT=0x30;
+  const BLOCK_COMMAND_PORT=0x31;
+  const BLOCK_DRIVE_PORT=0x32;
+  const BLOCK_TRACK_PORT=0x33;
+  const BLOCK_SECTOR_PORT=0x34;
+  const BLOCK_DATA_PORT=0x35;
+  const BLOCK_ERROR_PORT=0x36;
   const MEMORY_CONTROL_PORT=0x00;
   const MEMORY_CONTROL_LOW_RAM=0x01;
   const MEMORY_CONTROL_SHADOW_WRITE=0x02;
   const RAM_HANDOFF_TRAMPOLINE=0xF800;
   const RAM_HANDOFF_DEMO_ENTRY=0x8000;
   const RAM_HANDOFF_SIGNATURE=0xE180;
+  const DISK_BOOT_HEADER=0xE300;
   const MON_BUFFER=0xE100;
   const MON_CONTEXT=0xE140;
   const MON_RANGE_START=0xE158;
@@ -246,9 +254,9 @@
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
-    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT  O DISK BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
-    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy] B\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy] B O\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_CLEAR_TEXT');
     a.emit(...[...'MON\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_RANGE_LIMIT_TEXT');
@@ -442,6 +450,7 @@
     a.emit(0xFE,82);a.absolute(0xCA,'MONITOR_REGISTERS_PARSE');
     a.emit(0xFE,85);a.absolute(0xCA,'MONITOR_UNASSEMBLE_PARSE');
     a.emit(0xFE,66);a.absolute(0xCA,'MONITOR_BOOT_TEST');
+    a.emit(0xFE,79);a.absolute(0xCA,'MONITOR_DISK_BOOT');
     a.emit(0x57,0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     a.emit(0x7A,0xFE,72);a.absolute(0xCA,'MONITOR_HELP');
     a.emit(0xFE,63);a.absolute(0xCA,'MONITOR_HELP');
@@ -588,6 +597,33 @@
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
+    // Original system-disk cold path. Sector 1 validates a fixed v1 layout,
+    // sector 2 supplies the RAM payload, and sectors 3-7 supply CBIOS at FA00h.
+    // Every byte crosses the I/O Bus; only after all reads succeed is page zero
+    // shadowed and firmware paged out.
+    a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
+    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    word(0x21,DISK_BOOT_HEADER);
+    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,54,2,23]){
+      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
+    }
+    for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){
+      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    }
+    a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
+    a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
+    word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
+
+    a.label('DISK_BOOT_FAIL');a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+    a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
+
+    a.label('DISK_BOOT_READ_SECTOR');
+    a.emit(0x57,0xAF,0xD3,BLOCK_DRIVE_PORT,0xD3,BLOCK_TRACK_PORT,0x7A,0xD3,BLOCK_SECTOR_PORT);
+    a.emit(0x3E,1,0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);a.absolute(0xC2,'DISK_BOOT_READ_FAIL');
+    a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
+    a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0x37,0xC9); // INIR / SCF / RET
+    a.label('DISK_BOOT_READ_FAIL');a.emit(0xB7,0xC9); // OR A clears carry
+
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
     const clearPageInstructions=(256*3)+2;
@@ -621,7 +657,9 @@
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
     KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
     RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
+    DISK_BOOT_HEADER,
     buildSystemRom
   };
 });

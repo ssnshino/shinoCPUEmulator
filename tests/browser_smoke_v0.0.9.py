@@ -46,14 +46,24 @@ with sync_playwright() as p:
     assert page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
     assert page.locator('.toolbar').evaluate("element => getComputedStyle(element).display")=='none'
     assert page.locator('.bottom-nav').evaluate("element => getComputedStyle(element).display")=='none'
-    page.keyboard.type('h')
+    page.keyboard.type('o')
     page.keyboard.press('Enter')
     page.wait_for_function("previous => document.querySelector('#crtCanvas').toDataURL() !== previous",arg=before,timeout=4000)
+    page.wait_for_timeout(1200)
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 
     page.locator('#keyboardCapture').evaluate('element => element.blur()')
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert not page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
+
+    page.locator('.bottom-nav button[data-view="memory"]').click();page.wait_for_timeout(80)
+    page.locator('#memoryAddress').fill('0000');page.locator('#memoryAddressForm').press('Enter');page.wait_for_timeout(80)
+    assert page.locator('[data-address="0000"]').inner_text()=='C3'
+    assert page.locator('[data-address="0001"]').inner_text()=='03'
+    assert page.locator('[data-address="0002"]').inner_text()=='FA'
+    page.locator('#memoryAddress').fill('E260');page.locator('#memoryAddressForm').press('Enter');page.wait_for_timeout(80)
+    assert ''.join(page.locator(f'[data-address="E26{i}"]').inner_text() for i in range(4))=='44534B21'
+    assert 'FULL RAM' in page.locator('#inspectorContent').inner_text()
 
     page.locator('.bottom-nav button[data-view="cpu"]').click();page.wait_for_timeout(80)
     inspector=page.locator('#inspectorContent').inner_text()
@@ -68,6 +78,9 @@ with sync_playwright() as p:
     assert '77 TRACKS × 26 SECTORS' in inspector
     assert '256,256 BYTES' in inspector
     assert '30h–36h' in inspector
+    assert 'S80B v1 SYSTEM' in inspector
+    assert 'A:0/7' in inspector
+    assert 'MON O' in inspector
     assert 'IDLE' in inspector
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 

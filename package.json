@@ -12,7 +12,7 @@
     "test:phase1b": "node tests/z80_phase1b_inc_dec_flags.test.cjs",
     "test:source": "node tests/v0.0.9_static.test.cjs",
     "test:artifact": "node tests/v0.0.9_artifact.test.cjs",
-    "test": "npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:phase1c && npm run test:phase1d && npm run test:phase1e && npm run test:phase1f && npm run test:phase1g && npm run test:phase1h && npm run test:phase1i && npm run test:phase1j && npm run test:phase2a && npm run test:phase2a1 && npm run test:bios && npm run test:keyboard && npm run test:block && npm run test:cbios && npm run test:source && npm run build && npm run test:artifact && npm run test:manual",
+    "test": "npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:phase1c && npm run test:phase1d && npm run test:phase1e && npm run test:phase1f && npm run test:phase1g && npm run test:phase1h && npm run test:phase1i && npm run test:phase1j && npm run test:phase2a && npm run test:phase2a1 && npm run test:bios && npm run test:keyboard && npm run test:block && npm run test:cbios && npm run test:system-disk && npm run test:source && npm run build && npm run test:artifact && npm run test:manual",
     "test:phase1c": "node tests/z80_phase1c_control_flow.test.cjs",
     "test:phase1d": "node tests/z80_phase1d_call_ret_stack.test.cjs",
     "test:phase2a": "node tests/shino80_phase2a_video_ipl.test.cjs",
@@ -26,6 +26,7 @@
     "test:bios": "node tests/shino80_minimum_bios_monitor.test.cjs",
     "test:keyboard": "node tests/shino80_keyboard_monitor.test.cjs && node tests/shino80_monitor_console_v2.test.cjs && node tests/shino80_bios_monitor_v03.test.cjs && node tests/shino80_pageable_firmware_v04.test.cjs && node tests/shino80_ram_handoff_v05.test.cjs && node tests/shino80_execution_pace.test.cjs && node tests/shino80_trace_ring.test.cjs",
     "test:block": "node tests/shino80_block_device_v01.test.cjs",
-    "test:cbios": "node tests/shino80_cbios_v01.test.cjs"
+    "test:cbios": "node tests/shino80_cbios_v01.test.cjs",
+    "test:system-disk": "node tests/shino80_system_disk_loader_v01.test.cjs"
   }
 }

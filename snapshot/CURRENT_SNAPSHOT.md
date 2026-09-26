@@ -1,6 +1,15 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: System Disk / Loader v0.1 candidate on CBIOS `4116919` /
+PR #32. Branch `feature/shino80-system-disk-loader-v01-20260926`. Original S80B
+v1 media is mounted by the one-page runtime. MON O reads seven sectors through
+ports 30h–36h, loads payload 8000h and CBIOS FA00h, installs JP FA03h at page
+zero and performs an all-RAM handoff. Loaded code prints via CBIOS, records DSK!
+and HALTs. Failure preserves ROM/MON; RESET recovers with media mounted. Read
+the matching plan/spec/worklog. No CCP/BDOS/filesystem/CP/M; no merge/deploy.
+Older snapshots follow.
+
 LATEST 2026-09-26T12:09:50+09:00: SHINO CBIOS v0.1 candidate on
 `feature/shino80-cbios-v01-20260926`, parent `128f031` / PR #31. Read matching
 plan/spec/worklog. Original 566-byte FA00h CBIOS has the standard 17-entry

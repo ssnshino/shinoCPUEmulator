@@ -1,3 +1,13 @@
+CURRENT SYSTEM DISK / LOADER v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-system-disk-loader-v01-20260926, parent 4116919 / PR #32.
+Read README -> AGENTS -> current snapshot -> SHINO80_SYSTEM_DISK_LOADER_V01
+plan, matching v0.1 spec and worklog. The one-page runtime mounts original S80B
+v1 media. MON O reads seven sectors over PIO, loads payload 8000h and CBIOS
+FA00h, installs page-zero JP FA03h and enters all-RAM execution. Loaded code
+prints through CBIOS and HALTs; errors return to MON; RESET preserves media.
+No CCP, BDOS, filesystem, CP/M or BASIC exists. Finish verification/delivery if
+pending; no automatic merge/deploy. Everything below is historical.
+
 CURRENT SHINO CBIOS v0.1 OVERRIDE 2026-09-26:
 Resume feature/shino80-cbios-v01-20260926, parent 128f031 / PR #31. Read README
 -> AGENTS -> current snapshot -> SHINO80_CBIOS_V01 plan, CBIOS_v0.1 spec and

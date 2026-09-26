@@ -14,6 +14,16 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-system-disk-loader-v01-20260926`, parent `4116919` /
+PR #32. The distributed one-page machine now mounts an original S80B v1 System
+Disk. ROM MON `O` performs seven real PIO sector reads, validates the header,
+loads an original payload to 8000h and CBIOS to FA00h, installs `JP FA03h` at
+page zero and enters all-RAM mode. The loaded payload prints through loaded
+CBIOS, writes `DSK!` and HALTs; failures return safely to MON and RESET recovers
+ROM while preserving media. This is not CP/M: no CCP, BDOS or filesystem is
+present. See the matching plan/spec/worklog. No merge or public deploy; older
+entries below are history.
+
 LATEST: `feature/shino80-cbios-v01-20260926`, parent `128f031` / PR #31.
 Original RAM-resident SHINO CBIOS v0.1 is 566 bytes at FA00h–FC35h and exposes
 the standard CP/M 2.2 17-entry jump-vector order. Keyboard/VRAM console,
@@ -191,8 +201,9 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 6. `plan/head/SHINO80_CBIOS_V01_PLAN.md`
 7. `docs/head/SHINO80_CBIOS_v0.1.md`
 8. `working-logs/head/SHINO80_CBIOS_V01_WORKLOG.md`
-9. `plan/head/SHINO80_BLOCK_DEVICE_V01_PLAN.md`
-10. `docs/head/SHINO80_VIRTUAL_BLOCK_DEVICE_v0.1.md`
+9. `plan/head/SHINO80_SYSTEM_DISK_LOADER_V01_PLAN.md`
+10. `docs/head/SHINO80_SYSTEM_DISK_LOADER_v0.1.md`
+11. `working-logs/head/SHINO80_SYSTEM_DISK_LOADER_V01_WORKLOG.md`
 
 ## Core concept
 
