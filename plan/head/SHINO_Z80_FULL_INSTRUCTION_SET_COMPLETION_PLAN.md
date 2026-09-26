@@ -92,6 +92,15 @@ Implement indexed bit/rotate families including the register-copy forms.
 
 ### PHASE 1J — INTERRUPT + ACCURACY CLOSEOUT
 
+2026-09-26: instruction-level completion candidate on
+feature/shino80-z80-accuracy-closeout-20260926, parent d8d30bc / PR #25.
+Full F/AF' plus WZ/P/Q: all1,604,000 pinned instruction cases PASS.
+Independent interrupt suite748 and XY589,824 checks PASS; all regressions and
+Chrome desktop/mobile smoke PASS. See PHASE1J_ACCURACY plan/spec/worklog.
+Accuracy ladder1–3 milestone closed as candidate; ladder4 remains M-cycle
+abstract and ladder5/pin-perfect hardware is expressly NOT claimed complete.
+Human review/merge pending. MON may resume after this completion checkpoint.
+
 - NMI
 - INT
 - EI one-instruction inhibit

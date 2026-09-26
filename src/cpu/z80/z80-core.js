@@ -22,14 +22,17 @@
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
   const signed8=value=>{const v=Number(value)&0xFF;return v<0x80?v:v-0x100;};
   const signedText=value=>{const n=signed8(value);return n>=0?`+${n}`:`${n}`;};
+  const FLAG_WRITERS=new Set(['ROT_A','DAA','CPL','SCF','CCF','ADD_HL_DD',
+    'INC_R','DEC_R','INC_MEM_HL','DEC_MEM_HL','ALU_R','ALU_N','CB_BIT','CB_ROTATE',
+    'ED_IN','ED_ARITH16','ED_NEG','ED_NIBBLE','ED_BLOCK']);
 
   function coldState(){
     return {
       a:0,f:0,b:0,c:0,d:0,e:0,h:0,l:0,
       aAlt:0,fAlt:0,bAlt:0,cAlt:0,dAlt:0,eAlt:0,hAlt:0,lAlt:0,
-      ix:0,iy:0,sp:0,pc:0,i:0,r:0,
+      ix:0,iy:0,sp:0,pc:0,i:0,r:0,wz:0,q:0,p:0,
       iff1:false,iff2:false,im:0,halted:false,eiDelay:0,
-      intLine:false,nmiLine:false,waitLine:false,
+      intLine:false,nmiLine:false,waitLine:false,intData:255,nmiPending:false,nmiSeen:false,
       tStates:0,instructions:0
     };
   }
@@ -44,6 +47,7 @@
       const s=this.state;
       s.pc=0;s.i=0;s.r=0;s.iff1=false;s.iff2=false;s.im=0;s.halted=false;s.eiDelay=0;
       s.intLine=false;s.nmiLine=false;s.waitLine=false;s.tStates=0;s.instructions=0;
+      s.wz=0;s.q=0;s.p=0;s.intData=255;s.nmiPending=false;s.nmiSeen=false;
       this.lastInstruction=null;this.bus.clearTrace();
       this.bus.emit({
         tState:0,actor:'BENCH',space:'CONTROL',operation:'RESET',
@@ -57,6 +61,42 @@
       const s=this.state;
       s.r=(s.r&0x80)|(((s.r&0x7F)+1)&0x7F);
       return s.r;
+    }
+
+    // Boolean true means asserted (physical active-low pins are normalized).
+    // Drive these at instruction boundaries; WAIT/BUSRQ pin timing is not modeled.
+    setINT(asserted,data=255){this.state.intLine=!!asserted;this.state.intData=Number(data)&255;}
+    setNMI(asserted){
+      const s=this.state;
+      if(asserted&&!s.nmiLine)s.nmiPending=true;
+      s.nmiLine=!!asserted;s.nmiSeen=s.nmiLine;
+    }
+    pulseNMI(){this.state.nmiPending=true;}
+
+    acceptInterrupt(nmi){
+      const s=this.state,startTState=s.tStates,address=s.pc,stackBefore=s.sp;
+      const ctx={startTState,bytes:[]};
+      s.halted=false;s.iff1=false;s.eiDelay=0;
+      if(nmi){
+        s.nmiPending=false; // IFF2 is preserved, including a nested NMI.
+        this.bus.cpuRead(address,{tState:startTState,purpose:'NMI_ACK',signals:['M1','MREQ','RD'],meta:{precision:'M_CYCLE_ABSTRACT',pcIncrement:false}});
+      }else{
+        s.iff2=false;
+        // NMOS LD A,I / LD A,R immediately interrupted loses P/V.
+        if(s.p)s.f&=~FLAG_MASK.PV;
+      }
+      const data=nmi?null:this.bus.interruptAcknowledge({tState:startTState,address,data:s.intData});
+      this.incrementR();this.bus.emitRefresh({tState:startTState+(nmi?2:4),i:s.i,r:s.r});
+      s.q=0;s.p=0;
+      if(!nmi&&s.im===0)return this.executeInstruction({address,opcode:data,interrupt:'INT',extraTStates:2});
+      this.pushWord(address,ctx,nmi?5:7);
+      const target=nmi?0x66:s.im===2?this.readWord((s.i<<8)|data,ctx,13,'INT_VECTOR_READ'):0x38;
+      s.pc=target;s.wz=target;s.tStates+=nmi?11:s.im===2?19:13;
+      this.lastInstruction={address,opcode:null,bytes:[],mnemonic:nmi?'NMI':`INT IM${s.im}`,
+        family:'INTERRUPT',interrupt:nmi?'NMI':'INT',tStates:s.tStates-startTState,startTState,endTState:s.tStates,
+        branchTaken:true,branchTarget:target,fallThrough:address,condition:'INTERRUPT',
+        stackBefore,stackAfter:s.sp,returnAddress:address};
+      return {...this.lastInstruction,bytes:[]};
     }
 
     fetchOpcode(offsetT=0){
@@ -80,6 +120,7 @@
       this.incrementR();
       this.bus.emitRefresh({tState:startTState+2,i:s.i,r:s.r});
       s.tStates+=4;
+      s.q=0;s.p=0;
       this.lastInstruction={
         address,opcode:0x76,bytes:[0x76],mnemonic:'HALT',family:'CONTROL',
         tStates:4,startTState,endTState:s.tStates,
@@ -277,16 +318,16 @@
 
         case 'CPL':
           s.a=(~s.a)&0xFF;
-          s.f=(s.f&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|FLAG_MASK.C|FLAG_MASK.Y|FLAG_MASK.X))|FLAG_MASK.H|FLAG_MASK.N;
+          s.f=(s.f&0xC5)|(s.a&0x28)|FLAG_MASK.H|FLAG_MASK.N;
           return desc.mnemonic;
 
         case 'SCF':
-          s.f=(s.f&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|FLAG_MASK.Y|FLAG_MASK.X))|FLAG_MASK.C;
+          s.f=(s.f&0xC4)|(((s.q^s.f)|s.a)&0x28)|FLAG_MASK.C;
           return desc.mnemonic;
 
         case 'CCF':{
           const oldC=!!(s.f&FLAG_MASK.C);
-          s.f=(s.f&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|FLAG_MASK.Y|FLAG_MASK.X))|
+          s.f=(s.f&0xC4)|(((s.q^s.f)|s.a)&0x28)|
             (oldC?FLAG_MASK.H:0)|(oldC?0:FLAG_MASK.C);
           return desc.mnemonic;
         }
@@ -312,6 +353,7 @@
           this.writeData((sp+1)&0xFFFF,(oldHL>>8)&0xFF,ctx,11,'STACK_WRITE');
           this.writeData(sp,oldHL&0xFF,ctx,14,'STACK_WRITE');
           this.setPair16(2,fromStack);
+          s.wz=fromStack;
           return desc.mnemonic;
         }
 
@@ -324,6 +366,7 @@
           return desc.mnemonic;
 
         case 'ADD_HL_DD':{
+          s.wz=(this.getHL()+1)&65535;
           const next=add16HL(s.f,this.getHL(),this.getPair16(desc.pairCode));
           this.setPair16(2,next.result);s.f=next.f;
           return desc.mnemonic;
@@ -387,29 +430,33 @@
           return `LD (HL),${hex(n,2)}h`;
         }
 
-        case 'LD_A_MEM_BC':s.a=this.readData(this.getBC(),ctx,4);return desc.mnemonic;
-        case 'LD_A_MEM_DE':s.a=this.readData(this.getDE(),ctx,4);return desc.mnemonic;
-        case 'LD_MEM_BC_A':this.writeData(this.getBC(),s.a,ctx,4);return desc.mnemonic;
-        case 'LD_MEM_DE_A':this.writeData(this.getDE(),s.a,ctx,4);return desc.mnemonic;
+        case 'LD_A_MEM_BC':s.wz=(this.getBC()+1)&65535;s.a=this.readData(this.getBC(),ctx,4);return desc.mnemonic;
+        case 'LD_A_MEM_DE':s.wz=(this.getDE()+1)&65535;s.a=this.readData(this.getDE(),ctx,4);return desc.mnemonic;
+        case 'LD_MEM_BC_A':s.wz=(s.a<<8)|((s.c+1)&255);this.writeData(this.getBC(),s.a,ctx,4);return desc.mnemonic;
+        case 'LD_MEM_DE_A':s.wz=(s.a<<8)|((s.e+1)&255);this.writeData(this.getDE(),s.a,ctx,4);return desc.mnemonic;
 
         case 'LD_A_MEM_NN':{
           const nn=this.fetchOperandWord(ctx,4);s.a=this.readData(nn,ctx,10);
+          s.wz=(nn+1)&65535;
           return `LD A,(${hex(nn,4)}h)`;
         }
 
         case 'LD_MEM_NN_A':{
           const nn=this.fetchOperandWord(ctx,4);this.writeData(nn,s.a,ctx,10);
+          s.wz=(s.a<<8)|((nn+1)&255);
           return `LD (${hex(nn,4)}h),A`;
         }
 
         case 'LD_MEM_NN_HL':{
           const nn=this.fetchOperandWord(ctx,4);this.writeWord(nn,this.getHL(),ctx,10);
+          s.wz=(nn+1)&65535;
           return `LD (${hex(nn,4)}h),HL`;
         }
 
         case 'LD_HL_MEM_NN':{
           const nn=this.fetchOperandWord(ctx,4),word=this.readWord(nn,ctx,10);
           this.setPair16(2,word);
+          s.wz=(nn+1)&65535;
           return `LD HL,(${hex(nn,4)}h)`;
         }
 
@@ -418,12 +465,13 @@
 
         case 'JP_NN':{
           const target=this.fetchOperandWord(ctx,4),fallThrough=s.pc;
-          s.pc=target;
+          s.pc=target;s.wz=target;
           return this.flowResult(`JP ${hex(target,4)}h`,desc.tStates,true,target,fallThrough,'ALWAYS');
         }
 
         case 'JP_CC_NN':{
           const target=this.fetchOperandWord(ctx,4),fallThrough=s.pc,taken=this.conditionTrue(desc.condition);
+          s.wz=target;
           if(taken)s.pc=target;
           return this.flowResult(`JP ${desc.condition},${hex(target,4)}h`,desc.tStates,taken,target,fallThrough,desc.condition);
         }
@@ -435,14 +483,14 @@
 
         case 'JR_E':{
           const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
-          s.pc=target;
+          s.pc=target;s.wz=target;
           return this.flowResult(`JR ${signedText(e)}`,desc.tStates,true,target,fallThrough,'ALWAYS');
         }
 
         case 'JR_CC_E':{
           const e=this.fetchOperandByte(ctx,4),fallThrough=s.pc,target=this.relativeTarget(e);
           const taken=this.conditionTrue(desc.condition);
-          if(taken)s.pc=target;
+          if(taken){s.pc=target;s.wz=target;}
           return this.flowResult(`JR ${desc.condition},${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,desc.condition);
         }
 
@@ -450,12 +498,13 @@
           const e=this.fetchOperandByte(ctx,5),fallThrough=s.pc,target=this.relativeTarget(e);
           s.b=(s.b-1)&0xFF;
           const taken=s.b!==0;
-          if(taken)s.pc=target;
+          if(taken){s.pc=target;s.wz=target;}
           return this.flowResult(`DJNZ ${signedText(e)}`,taken?desc.tStatesTaken:desc.tStatesNotTaken,taken,target,fallThrough,'B!=0');
         }
 
         case 'CALL_NN':{
           const target=this.fetchOperandWord(ctx,4),returnAddress=s.pc,stackBefore=s.sp;
+          s.wz=target;
           this.pushWord(returnAddress,ctx,11);
           const stackAfter=s.sp;s.pc=target;
           return {
@@ -467,6 +516,7 @@
 
         case 'CALL_CC_NN':{
           const target=this.fetchOperandWord(ctx,4),returnAddress=s.pc,taken=this.conditionTrue(desc.condition);
+          s.wz=target;
           const stackBefore=s.sp;
           if(taken){this.pushWord(returnAddress,ctx,11);s.pc=target;}
           return {
@@ -479,7 +529,7 @@
 
         case 'RET':{
           const fallThrough=s.pc,stackBefore=s.sp,returnAddress=this.popWord(ctx,4),stackAfter=s.sp;
-          s.pc=returnAddress;
+          s.pc=returnAddress;s.wz=returnAddress;
           return {
             mnemonic:'RET',tStates:desc.tStates,
             branchTaken:true,branchTarget:returnAddress,fallThrough,condition:'RET',
@@ -495,6 +545,7 @@
             stackBefore,stackAfter:s.sp,returnAddress:null
           };
           const returnAddress=this.popWord(ctx,5),stackAfter=s.sp;s.pc=returnAddress;
+          s.wz=returnAddress;
           return {
             mnemonic:`RET ${desc.condition}`,tStates:desc.tStatesTaken,
             branchTaken:true,branchTarget:returnAddress,fallThrough,condition:desc.condition,
@@ -505,7 +556,7 @@
         case 'RST':{
           const returnAddress=s.pc,stackBefore=s.sp;
           this.pushWord(returnAddress,ctx,5);
-          s.pc=desc.vector;
+          s.pc=desc.vector;s.wz=desc.vector;
           return {
             mnemonic:desc.mnemonic,tStates:desc.tStates,
             branchTaken:true,branchTarget:desc.vector,fallThrough:returnAddress,condition:'RST',
@@ -527,6 +578,7 @@
 
         case 'IN_A_N':{
           const n=this.fetchOperandByte(ctx,4),oldA=s.a&0xFF,port=((oldA<<8)|n)&0xFFFF;
+          s.wz=(port+1)&65535;
           s.a=this.bus.cpuIoRead(port,{
             tState:ctx.startTState+7,purpose:'IO_READ',signals:['IORQ','RD'],
             meta:{precision:'M_CYCLE_ABSTRACT',portMode:'A_HIGH_N_LOW'}
@@ -536,6 +588,7 @@
 
         case 'OUT_N_A':{
           const n=this.fetchOperandByte(ctx,4),port=((s.a<<8)|n)&0xFFFF;
+          s.wz=(s.a<<8)|((n+1)&255);
           this.bus.cpuIoWrite(port,s.a,{
             tState:ctx.startTState+7,purpose:'IO_WRITE',signals:['IORQ','WR'],
             meta:{precision:'M_CYCLE_ABSTRACT',portMode:'A_HIGH_N_LOW'}
@@ -552,7 +605,7 @@
       const s=this.state,memory=desc.targetCode===6,address=this.getHL();
       const value=memory?this.readData(address,ctx,8):s[REG8_KEYS[desc.targetCode]];
       let result=value;
-      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation);
+      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation,memory?s.wz>>>8:value);
       else{
         if(desc.kind==='CB_ROTATE'){
           const shifted=rotateShift8(s.f,value,desc.rotate);result=shifted.result;s.f=shifted.f;
@@ -570,17 +623,20 @@
       switch(desc.kind){
         case 'ED_NOP':break;
         case 'ED_IN':{
+          s.wz=(this.getBC()+1)&65535;
           const value=this.bus.cpuIoRead(this.getBC(),ioOptions(8,false));
           if(desc.regCode!==6)this.setReg8(desc.regCode,value);
           s.f=logicFlags(s.f,value,false)|(s.f&1);break;
         }
-        case 'ED_OUT':this.bus.cpuIoWrite(this.getBC(),desc.regCode===6?0:this.getReg8(desc.regCode),ioOptions(8,true));break;
+        case 'ED_OUT':s.wz=(this.getBC()+1)&65535;this.bus.cpuIoWrite(this.getBC(),desc.regCode===6?0:this.getReg8(desc.regCode),ioOptions(8,true));break;
         case 'ED_ARITH16':{
+          s.wz=(this.getHL()+1)&65535;
           const result=carryArithmetic16(s.f,this.getHL(),this.getPair16(desc.pairCode),desc.subtract);
           this.setPair16(2,result.result);s.f=result.f;break;
         }
         case 'ED_LD16':{
           const address=this.fetchOperandWord(ctx,8);
+          s.wz=(address+1)&65535;
           if(desc.load)this.setPair16(desc.pairCode,this.readWord(address,ctx,14));
           else this.writeWord(address,this.getPair16(desc.pairCode),ctx,14);
           return desc.mnemonic.replace('nn',hex(address,4)+'h');
@@ -588,6 +644,8 @@
         case 'ED_NEG':{const result=sub8(s.f,0,s.a);s.a=result.result;s.f=result.f;break;}
         case 'ED_RETURN':{
           const stackBefore=s.sp,fallThrough=s.pc;s.pc=this.popWord(ctx,8);s.iff1=s.iff2;
+          s.wz=s.pc;
+          if(desc.mnemonic==='RETI')this.bus.interruptReturn({tState:ctx.startTState+14,address:s.pc});
           return {mnemonic:desc.mnemonic,tStates:14,stackBefore,stackAfter:s.sp,branchTaken:true,branchTarget:s.pc,fallThrough};
         }
         case 'ED_IM':s.im=desc.mode;break;
@@ -599,6 +657,7 @@
         }
         case 'ED_NIBBLE':{
           const address=this.getHL(),value=this.readData(address,ctx,8),low=s.a&15;
+          s.wz=(address+1)&65535;
           const result=desc.left?((value<<4)|low)&255:(low<<4)|(value>>4);
           s.a=(s.a&240)|(desc.left?value>>4:value&15);
           this.writeData(address,result,ctx,15);s.f=logicFlags(s.f,s.a,false)|(s.f&1);break;
@@ -610,26 +669,33 @@
             const value=this.readData(address,ctx,8);
             if(op===0){
               this.writeData(this.getDE(),value,ctx,11);this.setPair16(1,this.getDE()+dir);
-              s.f&=0xE9; // retain S/Z/X/Y/C; H/N clear, PV set from remaining BC below
-            }else s.f=(sub8(s.f,s.a,value).f&~5)|(s.f&1);
+              const sum=(s.a+value)&255;
+              s.f=(s.f&0xC1)|(sum&8)|((sum&2)<<4);
+            }else{
+              s.wz=(s.wz+dir)&65535;
+              const next=sub8(s.f,s.a,value),adjusted=(next.result-((next.f&16)?1:0))&255;
+              s.f=(next.f&0xD2)|(s.f&1)|(adjusted&8)|((adjusted&2)<<4);
+            }
             this.setPair16(2,address+dir);this.setPair16(0,this.getBC()-1);
             if(this.getBC()!==0)s.f|=4;
             repeat=desc.repeat&&this.getBC()!==0&&(op===0||!(s.f&0x40));
           }else{
             let value,sum;
             if(op===2){
+              s.wz=(this.getBC()+dir)&65535;
               value=this.bus.cpuIoRead(this.getBC(),ioOptions(9,false));
               this.writeData(address,value,ctx,13);s.b=(s.b-1)&255;
               sum=value+((s.c+dir)&255);
             }else{
               value=this.readData(address,ctx,9);s.b=(s.b-1)&255;
+              s.wz=(this.getBC()+dir)&65535;
               this.bus.cpuIoWrite(this.getBC(),value,ioOptions(12,true));
               sum=value+((address+dir)&255);
             }
             this.setPair16(2,address+dir);repeat=desc.repeat&&s.b!==0;
             s.f=blockIoFlags(s.f,s.b,value,sum,repeat);
           }
-          const fallThrough=s.pc;if(repeat)s.pc=(s.pc-2)&65535;
+          const fallThrough=s.pc;if(repeat){s.pc=(s.pc-2)&65535;s.wz=(s.pc+1)&65535;s.f=(s.f&~0x28)|((s.pc>>>8)&0x28);}
           return {mnemonic:desc.mnemonic,tStates:repeat?21:16,branchTaken:repeat,branchTarget:repeat?s.pc:null,fallThrough};
         }
         default:throw new Error('UNIMPLEMENTED ED KIND '+desc.kind);
@@ -640,7 +706,8 @@
     executeIndexedCB(desc,ctx){
       const s=this.state,address=(s[desc.index.toLowerCase()]+signed8(ctx.displacement))&65535;
       const value=this.readData(address,ctx,11);
-      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation);
+      s.wz=address;
+      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation,address>>>8);
       else{
         let result;
         if(desc.kind==='CB_ROTATE'){const next=rotateShift8(s.f,value,desc.rotate);result=next.result;s.f=next.f;}
@@ -660,6 +727,7 @@
       const set=(code,value)=>{if(code===4)s[key]=((value&255)<<8)|(s[key]&255);else if(code===5)s[key]=(s[key]&0xFF00)|(value&255);else this.setReg8(code,value);};
       if(desc.indexedMemory){
         const displacement=this.fetchOperandByte(ctx,4),address=(s[key]+signed8(displacement))&65535;
+        s.wz=address;
         let mnemonic=desc.mnemonic.replace('+d',signedText(displacement));
         switch(desc.kind){
           case 'LD_R_MEM_HL':this.setReg8(desc.dstCode,this.readData(address,ctx,12));break;
@@ -678,9 +746,10 @@
         case 'LD_DD_NN':s[key]=this.fetchOperandWord(ctx,4);return desc.mnemonic.replace('nn',hex(s[key],4)+'h');
         case 'INC_DD':s[key]=(s[key]+1)&65535;break;
         case 'DEC_DD':s[key]=(s[key]-1)&65535;break;
-        case 'ADD_HL_DD':{const next=add16HL(s.f,s[key],desc.pairCode===2?s[key]:this.getPair16(desc.pairCode));s[key]=next.result;s.f=next.f;break;}
+        case 'ADD_HL_DD':{s.wz=(s[key]+1)&65535;const next=add16HL(s.f,s[key],desc.pairCode===2?s[key]:this.getPair16(desc.pairCode));s[key]=next.result;s.f=next.f;break;}
         case 'LD_MEM_NN_HL':case 'LD_HL_MEM_NN':{
           const address=this.fetchOperandWord(ctx,4);
+          s.wz=(address+1)&65535;
           if(desc.kind==='LD_MEM_NN_HL')this.writeWord(address,s[key],ctx,10);else s[key]=this.readWord(address,ctx,10);
           return desc.mnemonic.replace('nn',hex(address,4)+'h');
         }
@@ -696,7 +765,7 @@
         }
         case 'EX_SP_HL':{
           const old=s[key],sp=s.sp,value=this.readWord(sp,ctx,4,'STACK_READ');
-          this.writeData((sp+1)&65535,old>>>8,ctx,11,'STACK_WRITE');this.writeData(sp,old&255,ctx,14,'STACK_WRITE');s[key]=value;break;
+          this.writeData((sp+1)&65535,old>>>8,ctx,11,'STACK_WRITE');this.writeData(sp,old&255,ctx,14,'STACK_WRITE');s[key]=value;s.wz=value;break;
         }
         default:throw new Error('UNIMPLEMENTED INDEX KIND '+desc.kind);
       }
@@ -705,9 +774,19 @@
 
     step(){
       const s=this.state;
+      // Also sample direct line state for existing hosts; use setNMI/pulseNMI for
+      // pulses that rise and fall entirely between two calls to step().
+      if(s.nmiLine&&!s.nmiSeen)s.nmiPending=true;
+      s.nmiSeen=s.nmiLine;
+      if(s.nmiPending)return this.acceptInterrupt(true);
+      if(s.intLine&&s.iff1&&s.eiDelay===0)return this.acceptInterrupt(false);
       if(s.halted)return this.haltCycle();
+      return this.executeInstruction();
+    }
 
-      const startTState=s.tStates,{address,opcode}=this.fetchOpcode();
+    executeInstruction(injected=null){
+      const s=this.state,startTState=s.tStates,extraTStates=injected?.extraTStates??0;
+      const {address,opcode}=injected??this.fetchOpcode();
       let desc=decodeBase(opcode);
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
 
@@ -717,25 +796,29 @@
         index=terminal===0xDD?'IX':'IY';prefixCount++;
         // A complete address-space loop of prefixes cannot retire; keep the host responsive.
         if(prefixCount>=65536)throw new Error('INDEX PREFIX STREAM exceeds one address space');
-        terminal=this.fetchOpcode(prefixCount*4).opcode;ctx.bytes.push(terminal);
+        terminal=this.fetchOpcode(prefixCount*4+extraTStates).opcode;ctx.bytes.push(terminal);
       }
-      ctx.startTState=startTState+prefixCount*4;
+      ctx.startTState=startTState+prefixCount*4+extraTStates;
       if(index&&terminal===0xCB){
         ctx.displacement=this.fetchOperandByte(ctx,4);
         desc=decodeIndexedCB(this.fetchOperandByte(ctx,7,'OPCODE_READ'),index);
       }
-      else if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
+      else if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4+extraTStates).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
       else if(index)desc=decodeIndex(terminal,index);
+      if(prefixCount)s.q=0; // DD/FD act as a non-flag-writing predecessor for SCF/CCF.
       const execution=terminal===0xCB?(index?this.executeIndexedCB(desc,ctx):this.executeCB(desc,ctx)):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
-      const actualTStates=(detail.tStates??desc.tStates)+(index?(terminal===0xED?prefixCount:prefixCount-1)*4:0);
+      const actualTStates=(detail.tStates??desc.tStates)+(index?(terminal===0xED?prefixCount:prefixCount-1)*4:0)+extraTStates;
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);
 
       s.tStates+=actualTStates;s.instructions+=1;
-      if(s.eiDelay>0&&terminal!==0xFB)s.eiDelay=Math.max(0,s.eiDelay-1);
+      s.p=desc.kind==='ED_SPECIAL'&&desc.loadA?1:0;
+      s.q=FLAG_WRITERS.has(desc.kind)||s.p?s.f:0;
+      if(s.eiDelay>0&&desc.kind!=='EI')s.eiDelay=Math.max(0,s.eiDelay-1);
 
       this.lastInstruction={
         address,opcode,bytes:[...ctx.bytes],mnemonic:detail.mnemonic,family:desc.family,
+        ...(injected?{interrupt:injected.interrupt}:{}),
         tStates:actualTStates,startTState,endTState:s.tStates,
         branchTaken:detail.branchTaken??null,
         branchTarget:detail.branchTarget??null,

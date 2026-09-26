@@ -1,3 +1,16 @@
+CURRENT CPU CLOSEOUT OVERRIDE 2026-09-26:
+Resume feature/shino80-z80-accuracy-closeout-20260926, parent d8d30bc / PR #25.
+Read README -> AGENTS -> current snapshot -> PHASE1J_ACCURACY plan/spec/worklog.
+CPU instruction-level milestone COMPLETE CANDIDATE: all families, full F,
+WZ/P/Q, interrupts NMI/IM0/1/2, EI/HALT and total timing. External1,604,000
+PASS; local interrupt748 +XY589,824 PASS. Do not restart earlier CPU phases.
+Do not call this pin/cycle-perfect. WAIT/BUSRQ, electrical races and multi-byte
+device-fed IM0 streams are excluded. See spec for all accuracy boundaries.
+Next: Human mobile QA, PR-stack review and explicit merge GO; MON expansion
+(range dump / disassembler / registers) is the next feature candidate.
+Single writer. No automatic merges. Check live Git/PR state before operations.
+Everything below is historical and is not the current restart direction.
+
 CURRENT INDEXED CB OVERRIDE 2026-09-26:
 Resume feature/shino80-z80-indexed-cb-20260926, parent e01d5ed / PR #24.
 Read PHASE1I_INDEXED_CB plan/spec/worklog and QA JSONs. All7 instruction

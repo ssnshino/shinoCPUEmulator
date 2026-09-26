@@ -1,6 +1,17 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+CURRENT 2026-09-26T09:10:24+09:00: feature/shino80-z80-accuracy-closeout-20260926,
+parent d8d30bc / PR #25. PHASE1J instruction-level CPU completion candidate.
+Read PHASE1J_ACCURACY plan/spec/worklog and seven QA reports. Full F, WZ/P/Q,
+all instruction families: 1,604,000 external PASS. Interrupt matrix748 and
+589,824 XY checks PASS. NMI/INT IM0/1/2, EI/HALT, R and Bus events implemented.
+M-cycle abstract, NOT pin/cycle-perfect; see explicit limits in the spec.
+Current source src/, generated deploy remains the v0.0.9 standalone filename.
+Next: Human review/mobile QA and authorized stack integration; then resume MON
+range/disassembly/register plan. Do not restart PHASE1F–1J. No merges authorized.
+The earlier snapshots below are historical.
+
 CURRENT 2026-09-26: feature/shino80-z80-indexed-cb-20260926, parent e01d5ed /
 PR #24. DDCB/FDCB256 each; all7 families 1,604,000 external cases PASS.
 Read PHASE1I_INDEXED_CB plan/spec/worklog and QA JSONs. Next PHASE1J interrupt

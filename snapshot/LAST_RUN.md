@@ -1,5 +1,13 @@
 # LAST RUN
 
+CURRENT 2026-09-26: PHASE1J instruction-level CPU completion candidate,
+feature/shino80-z80-accuracy-closeout-20260926 on d8d30bc / PR #25.
+Full F/WZ/P/Q oracle1,604,000 PASS; interrupt748 +XY589,824 checks PASS.
+All package checks, deterministic build and desktop/mobile Chrome smoke PASS.
+See working-logs/head/SHINO_Z80_PHASE1J_ACCURACY_WORKLOG.md for evidence,
+limits and rollback. Human iPhone QA / stack review remain; no merge.
+Prior entries below are historical.
+
 CURRENT: PHASE1I indexed CB, feature/shino80-z80-indexed-cb-20260926.
 Parent e01d5ed / PR #24; all7 external families1,604,000 PASS, failure0.
 See SHINO_Z80_PHASE1I_INDEXED_CB_WORKLOG.md. Next interrupts/precision; no merge.
