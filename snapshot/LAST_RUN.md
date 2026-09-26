@@ -1,6 +1,15 @@
 # LAST RUN
 
-LATEST 2026-09-26: Technical Manual v0.1 candidate on fa73816 / PR #26.
+LATEST 2026-09-26: BIOS/MON v0.3 candidate on parent af6c933.
+Branch feature/shino80-bios-monitor-v03-20260926. Read the matching plan/spec/
+worklog. Added bounded D ranges, diagnostic R, full-family U and BIOS services
+0118h/011Bh. Exact1,780-form disassembly suite, full package, deterministic
+emulator/manual builds and offline Chrome1440×1000/390×844 PASS; console/network/
+overflow findings zero. ROM last byte1FF6h, nine trailing bytes. No CPU/Bus/
+CG-ROM/UI change, public deploy or merge. Human review/merge GO remains.
+Previous runs below are historical.
+
+LATEST 2026-09-26: Technical Manual v0.1 candidate on fa73816 / PR #27.
 Branch feature/shino80-technical-manual-20260926. All package stages PASS;
 1,780 encoding/flags/timing/example invariants and deterministic build PASS.
 Offline installed Chrome desktop1440×1000/mobile390×844 interactions PASS,

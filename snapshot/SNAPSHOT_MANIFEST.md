@@ -5,21 +5,13 @@ Read in order:
 1. `README.md`
 2. `AGENTS.md`
 3. `snapshot/CURRENT_SNAPSHOT.md`
-4. `snapshot/SHINO80_KEYBOARD_MONITOR_SNAPSHOT_20260926.md` when resuming
-   branch `feature/shino80-keyboard-monitor-20260926`
-5. `plan/head/SHINO80_KEYBOARD_INTERACTIVE_MONITOR_PLAN_v0.1.md`
-6. `docs/head/SHINO80_KEYBOARD_INTERACTIVE_MONITOR_SPEC_v0.1.md`
-7. `working-logs/head/SHINO80_KEYBOARD_INTERACTIVE_MONITOR_WORKLOG.md`
-8. `snapshot/LAST_RUN.md`
-9. `snapshot/NEXT_CHAT_PROMPT.txt`
-10. `plan/head/SHINO80_MINIMUM_BIOS_MONITOR_PLAN_v0.1.md`
-11. `docs/head/SHINO80_MINIMUM_BIOS_MONITOR_SPEC_v0.1.md`
-12. `code/head/SHINO80_MINIMUM_BIOS_MONITOR_QA_v0.1.json`
-13. `working-logs/head/SHINO80_MINIMUM_BIOS_MONITOR_WORKLOG.md`
-14. `snapshot/SHINO80_CGROM_DM80_SNAPSHOT_20260925_2234.md`
-15. `working-logs/head/SHINO80_CGROM_DM80_REFINEMENT_WORKLOG.md`
-16. `plan/head/SHINO_Z80_FULL_INSTRUCTION_SET_COMPLETION_PLAN.md`
-17. `working-logs/head/SHINO_Z80_CORE_PHASE1E_WORKLOG.md`
+4. `plan/head/SHINO80_BIOS_MONITOR_V03_PLAN.md`
+5. `docs/head/SHINO80_BIOS_MONITOR_v0.3.md`
+6. `working-logs/head/SHINO80_BIOS_MONITOR_V03_WORKLOG.md`
+7. `snapshot/LAST_RUN.md`
+8. `snapshot/NEXT_CHAT_PROMPT.txt`
+9. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
+10. `working-logs/head/SHINO80_TECHNICAL_MANUAL_WORKLOG.md`
 
 Current artifact:
 

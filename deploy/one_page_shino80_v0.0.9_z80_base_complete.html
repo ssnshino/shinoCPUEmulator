@@ -1923,10 +1923,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 });
 </script>
 <script>(function(root,factory){
-  const api=factory();
+  const decoder=(typeof module==='object'&&module.exports)?require('../../cpu/z80/z80-decoder.js'):root.SHINO_Z80_DECODER;
+  const api=factory(decoder);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_SYSTEM_ROM=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+})(typeof globalThis!=='undefined'?globalThis:this,function(decoder){
   'use strict';
 
   const ROM_SIZE=0x2000;
@@ -1942,6 +1943,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BIOS_WORK_COLUMN=0xE002;
   const KEY_DATA_PORT=0x20;
   const KEY_STATUS_PORT=0x21;
+  const MON_BUFFER=0xE100;
+  const MON_CONTEXT=0xE140;
+  const MON_RANGE_START=0xE158;
+  const MON_RANGE_COUNT=0xE15A;
+  const MON_RANGE_FLAGS=0xE15C;
+  const DA_START=0xE160,DA_NEXT=0xE162,DA_STREAM=0xE164,DA_OPERAND=0xE166;
+  const DA_LENGTH=0xE168,DA_INDEX=0xE169,DA_FAMILY=0xE16A,DA_OPCODE=0xE16B;
+  const DA_DISP=0xE16C,DA_AFFECTED=0xE16D,DA_INDEXED_MEMORY=0xE16E,DA_PREFIXES=0xE16F;
 
   const lo=v=>v&0xFF,hi=v=>(v>>8)&0xFF;
 
@@ -1971,6 +1980,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       emit(opcode,0x00,0x00);
       absoluteFixups.push({operand:pc-2,target});
     };
+    const dataWord=target=>{
+      emit(0x00,0x00);
+      absoluteFixups.push({operand:pc-2,target});
+    };
     const relative=(opcode,target)=>{
       emit(opcode,0x00);
       relativeFixups.push({operand:pc-1,after:pc,target});
@@ -1990,7 +2003,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       }
       return {bytes,labels:Object.freeze({...labels})};
     };
-    return {org,emit,label,absolute,relative,ldHLLabel,resolve};
+    return {org,emit,label,absolute,relative,ldHLLabel,dataWord,resolve};
   }
 
   function buildSystemRom(){
@@ -2026,6 +2039,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BIOS_API_GETLINE');jp('BIOS_GETLINE');
     a.label('BIOS_API_PRINT_HEX8');jp('BIOS_PRINT_HEX8');
     a.label('BIOS_API_PRINT_HEX16');jp('BIOS_PRINT_HEX16');
+    a.label('BIOS_API_PARSE_HEX16');jp('BIOS_PARSE_HEX16');
+    a.label('BIOS_API_DISASM_ONE');jp('BIOS_DISASM_ONE');
 
     a.org(0x0400);
     a.label('BIOS_UNIMPLEMENTED');
@@ -2148,11 +2163,18 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
-    a.emit(...[...'H HELP  C CLEAR  D xxxx DUMP 64 BYTES\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
-    a.emit(...[...'? USE H / C / D xxxx\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy]\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_CLEAR_TEXT');
     a.emit(...[...'MON\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_RANGE_LIMIT_TEXT');
+    a.emit(...[...'... RANGE LIMITED\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    for(const [name,text] of [
+      ['MON_REG_AF','AF='],['MON_REG_BC',' BC='],['MON_REG_DE',' DE='],['MON_REG_HL',' HL='],
+      ['MON_REG_AF2',"AF'= "],['MON_REG_BC2'," BC'= "],['MON_REG_DE2'," DE'= "],['MON_REG_HL2'," HL'= "],
+      ['MON_REG_IX','IX='],['MON_REG_IY',' IY='],['MON_REG_SP',' SP='],['MON_REG_I',' I='],['MON_REG_R',' R=']
+    ]){a.label(name);a.emit(...[...text].map(ch=>ch.charCodeAt(0)),0);}
 
     a.org(0x0520);
     // Called with PUTCHAR's saved AF/BC/HL on the stack.
@@ -2199,11 +2221,143 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BIOS_PRINT_HEX16');a.emit(0xF5,0x7C);call('BIOS_PRINT_HEX8');
     a.emit(0x7D);call('BIOS_PRINT_HEX8');a.emit(0xF1,0xC9);
 
-    a.org(0x0800);
-    a.label('MONITOR_READ');word(0x21,0xE100);a.emit(0x06,63);call('BIOS_GETLINE');
+    // HL points to exactly four hexadecimal characters. On success HL advances
+    // by four, DE is the parsed word and carry is set. BC/A/F are clobbered.
+    a.label('BIOS_PARSE_HEX16');word(0x11,0);a.emit(0x06,4);
+    a.label('BIOS_PARSE_HEX16_LOOP');a.emit(0x7E);call('MONITOR_UPPER');
+    a.emit(0xFE,48);jr(0x38,'BIOS_PARSE_HEX16_FAIL');
+    a.emit(0xFE,58);jr(0x38,'BIOS_PARSE_HEX16_DECIMAL');
+    a.emit(0xFE,65);jr(0x38,'BIOS_PARSE_HEX16_FAIL');
+    a.emit(0xFE,71);jr(0x30,'BIOS_PARSE_HEX16_FAIL');a.emit(0xD6,7);
+    a.label('BIOS_PARSE_HEX16_DECIMAL');a.emit(0xD6,48,0x4F,0xEB,0x29,0x29,0x29,0x29,0x7D,0xB1,0x6F,0xEB,0x23);
+    jr(0x10,'BIOS_PARSE_HEX16_LOOP');a.emit(0x37,0xC9); // SCF / RET
+    a.label('BIOS_PARSE_HEX16_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
+
+    // Capture the machine state at the command-input boundary. This is a MON
+    // diagnostic context, not yet a resumable application context.
+    a.label('MONITOR_SNAPSHOT');
+    word(0x22,MON_CONTEXT+6);                                // HL
+    a.emit(0xED,0x43,lo(MON_CONTEXT+2),hi(MON_CONTEXT+2));   // BC
+    a.emit(0xED,0x53,lo(MON_CONTEXT+4),hi(MON_CONTEXT+4));   // DE
+    a.emit(0xF5,0xE1);word(0x22,MON_CONTEXT);                // AF via stack
+    a.emit(0xDD,0x22,lo(MON_CONTEXT+16),hi(MON_CONTEXT+16)); // IX
+    a.emit(0xFD,0x22,lo(MON_CONTEXT+18),hi(MON_CONTEXT+18)); // IY
+    word(0x21,2);a.emit(0x39);word(0x22,MON_CONTEXT+20);      // caller SP before CALL
+    a.emit(0x08,0xD9);                                      // EX AF,AF' / EXX
+    word(0x22,MON_CONTEXT+14);
+    a.emit(0xED,0x43,lo(MON_CONTEXT+10),hi(MON_CONTEXT+10));
+    a.emit(0xED,0x53,lo(MON_CONTEXT+12),hi(MON_CONTEXT+12));
+    a.emit(0xF5,0xE1);word(0x22,MON_CONTEXT+8);
+    a.emit(0x08,0xD9);                                      // restore primary sets
+    a.emit(0xED,0x57);word(0x32,MON_CONTEXT+22);             // I
+    a.emit(0xED,0x5F);word(0x32,MON_CONTEXT+23);             // R
+    a.emit(0xC9);
+
+    // HL=start. Print one line and return HL=next, A=byte length. Other
+    // registers/flags are scratch. Four consecutive DD/FD prefixes are handled;
+    // a longer chain advances as DB one byte so malformed data always progresses.
+    a.label('BIOS_DISASM_ONE');word(0x22,DA_START);a.emit(0xE5,0xDD,0xE1,0x06,0,0x0E,0); // IX=HL; B=count; C=index
+    a.label('DA_PREFIX_LOOP');a.emit(0xDD,0x7E,0,0xFE,0xDD);jr(0x28,'DA_PREFIX_DD');
+    a.emit(0xFE,0xFD);jr(0x28,'DA_PREFIX_FD');jr(0x18,'DA_AFTER_INDEX_PREFIX');
+    a.label('DA_PREFIX_DD');a.emit(0x0E,1);jr(0x18,'DA_PREFIX_TAKE');
+    a.label('DA_PREFIX_FD');a.emit(0x0E,2);
+    a.label('DA_PREFIX_TAKE');a.emit(0x04,0xDD,0x23,0x78,0xFE,4);jr(0x38,'DA_PREFIX_LOOP');
+    a.emit(0xDD,0x7E,0,0xFE,0xDD);a.absolute(0xCA,'DA_PREFIX_LIMIT');a.emit(0xFE,0xFD);a.absolute(0xCA,'DA_PREFIX_LIMIT');
+    a.label('DA_AFTER_INDEX_PREFIX');a.emit(0x79);word(0x32,DA_INDEX);a.emit(0x78);word(0x32,DA_PREFIXES);
+    a.emit(0xDD,0x7E,0,0xFE,0xCB);a.absolute(0xCA,'DA_SETUP_CB');
+    a.emit(0xFE,0xED);a.absolute(0xCA,'DA_SETUP_ED');
+    a.label('DA_SETUP_BASE');a.emit(0xAF);word(0x32,DA_FAMILY);a.emit(0xDD,0x7E,0);word(0x32,DA_OPCODE);
+    a.emit(0x79,0xB7);jr(0x28,'DA_BASE_FLAGS_DONE');
+    a.emit(0xDD,0x7E,0);a.ldHLLabel('DA_INDEX_AFFECTED_BITS');call('DA_TEST_BIT');
+    a.emit(0x3E,0);jr(0x30,'DA_BASE_STORE_AFFECTED');a.emit(0x3E,1);
+    a.label('DA_BASE_STORE_AFFECTED');word(0x32,DA_AFFECTED);a.emit(0xB7);jr(0x28,'DA_BASE_FLAGS_DONE');
+    a.emit(0xDD,0x7E,0);a.ldHLLabel('DA_INDEX_MEMORY_BITS');call('DA_TEST_BIT');
+    a.emit(0x3E,0);jr(0x30,'DA_BASE_STORE_MEMORY');a.emit(0x3E,1);
+    a.label('DA_BASE_STORE_MEMORY');word(0x32,DA_INDEXED_MEMORY);a.emit(0xB7);jr(0x28,'DA_BASE_LOOKUP');a.emit(0xDD,0x7E,1);word(0x32,DA_DISP);jr(0x18,'DA_BASE_LOOKUP');
+    a.label('DA_BASE_FLAGS_DONE');a.emit(0xAF);word(0x32,DA_AFFECTED);word(0x32,DA_INDEXED_MEMORY);
+    a.label('DA_BASE_LOOKUP');a.emit(0xDD,0x7E,0);a.ldHLLabel('DA_BASE_POINTERS');call('DA_LOOKUP');
+    a.emit(0x7E);word(0x32,DA_LENGTH);a.emit(0x23);word(0x22,DA_STREAM);
+    a.emit(0xDD,0xE5,0xE1,0x23);word(0x3A,DA_INDEXED_MEMORY);a.emit(0xB7);jr(0x28,'DA_BASE_OPERAND_READY');a.emit(0x23);
+    a.label('DA_BASE_OPERAND_READY');word(0x22,DA_OPERAND);word(0x3A,DA_LENGTH);a.emit(0x47);word(0x3A,DA_PREFIXES);a.emit(0x80,0x47);word(0x3A,DA_INDEXED_MEMORY);a.emit(0x80);jr(0x18,'DA_SETUP_FINISH');
+
+    a.label('DA_SETUP_CB');word(0x3A,DA_INDEX);a.emit(0xB7);jr(0x20,'DA_SETUP_INDEX_CB');
+    a.emit(0xDD,0x7E,1);word(0x32,DA_OPCODE);a.emit(0x3E,1);word(0x32,DA_FAMILY);a.emit(0x3E,2);jr(0x18,'DA_SETUP_FINISH');
+    a.label('DA_SETUP_INDEX_CB');a.emit(0xDD,0x7E,1);word(0x32,DA_DISP);a.emit(0xDD,0x7E,2);word(0x32,DA_OPCODE);
+    a.emit(0x3E,3);word(0x32,DA_FAMILY);word(0x3A,DA_PREFIXES);a.emit(0xC6,3);jr(0x18,'DA_SETUP_FINISH');
+
+    a.label('DA_SETUP_ED');a.emit(0xDD,0x7E,1);word(0x32,DA_OPCODE);a.ldHLLabel('DA_ED_POINTERS');call('DA_LOOKUP');
+    a.emit(0x7E,0x47);a.emit(0x23);word(0x22,DA_STREAM);a.emit(0xDD,0xE5,0xE1,0x23,0x23);word(0x22,DA_OPERAND);
+    a.emit(0x3E,2);word(0x32,DA_FAMILY);a.emit(0x78);word(0x32,DA_LENGTH);word(0x3A,DA_PREFIXES);a.emit(0x80);
+    a.label('DA_SETUP_FINISH');word(0x32,DA_LENGTH);a.emit(0x4F,0x06,0);word(0x2A,DA_START);a.emit(0x09);word(0x22,DA_NEXT);jr(0x18,'DA_PRINT_LINE');
+    a.label('DA_PREFIX_LIMIT');a.emit(0xAF);word(0x32,DA_INDEX);word(0x32,DA_AFFECTED);word(0x32,DA_INDEXED_MEMORY);
+    a.emit(0x3E,4);word(0x32,DA_FAMILY);a.emit(0x3E,1);word(0x32,DA_LENGTH);word(0x2A,DA_START);word(0x22,DA_OPERAND);a.emit(0x23);word(0x22,DA_NEXT);
+
+    a.label('DA_PRINT_LINE');word(0x2A,DA_START);call('BIOS_PRINT_HEX16');a.emit(0x3E,58,0xCF,0x3E,32,0xCF);
+    word(0x2A,DA_START);word(0x3A,DA_LENGTH);a.emit(0x47);
+    a.label('DA_PRINT_BYTES');a.emit(0x7E);call('BIOS_PRINT_HEX8');a.emit(0x3E,32,0xCF,0x23);jr(0x10,'DA_PRINT_BYTES');
+    a.emit(0x3E,32,0xCF);word(0x3A,DA_FAMILY);a.emit(0xFE,1);a.absolute(0xCA,'DA_PRINT_CB');
+    a.emit(0xFE,3);a.absolute(0xCA,'DA_PRINT_CB');a.emit(0xFE,4);a.absolute(0xCA,'DA_PRINT_DB');
+    word(0x2A,DA_STREAM);call('DA_PRINT_TEMPLATE');jr(0x18,'DA_PRINT_DONE');
+    a.label('DA_PRINT_DB');a.ldHLLabel('DA_TEXT_DB');call('BIOS_PRINT_STRING');word(0x2A,DA_START);a.emit(0x7E);call('BIOS_PRINT_HEX8');a.ldHLLabel('DA_TEXT_PREFIX_LIMIT');call('BIOS_PRINT_STRING');
+    a.label('DA_PRINT_DONE');call('BIOS_NEWLINE');word(0x2A,DA_NEXT);word(0x3A,DA_LENGTH);a.emit(0xC9);
+
+    // A=opcode, HL=256-bit table. Carry reports membership.
+    a.label('DA_TEST_BIT');a.emit(0x5F,0xE6,7,0x47,0x7B,0x0F,0x0F,0x0F,0xE6,31,0x5F,0x16,0,0x19,0x7E,0x04,0x05);jr(0x28,'DA_TEST_MASKED');
+    a.label('DA_TEST_ROTATE');a.emit(0x0F);jr(0x10,'DA_TEST_ROTATE');
+    a.label('DA_TEST_MASKED');a.emit(0xE6,1,0xC8,0x37,0xC9);
+    // A=index, HL=word pointer table. Return HL=entry.
+    a.label('DA_LOOKUP');a.emit(0x5F,0x16,0,0x19,0x19,0x5E,0x23,0x56,0xEB,0xC9);
+
+    // Print a zero-terminated mnemonic template. Lowercase n/nn, e and d are
+    // runtime operands. Index substitution applies only to affected operands.
+    a.label('DA_PRINT_TEMPLATE');a.emit(0xAF);word(0x32,DA_PREFIXES);
+    a.label('DA_TEMPLATE_LOOP');a.emit(0x7E,0xB7,0xC8,0xFE,110);a.absolute(0xCA,'DA_TEMPLATE_N');
+    a.emit(0xFE,101);a.absolute(0xCA,'DA_TEMPLATE_E');a.emit(0xFE,100);a.absolute(0xCA,'DA_TEMPLATE_D');
+    a.emit(0xFE,32);jr(0x20,'DA_TEMPLATE_INDEX');a.emit(0x3E,1);word(0x32,DA_PREFIXES);a.emit(0x3E,32,0xCF,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_INDEX');word(0x3A,DA_INDEX);a.emit(0xB7);jr(0x28,'DA_TEMPLATE_CHAR');word(0x3A,DA_AFFECTED);a.emit(0xB7);jr(0x28,'DA_TEMPLATE_CHAR');
+    word(0x3A,DA_INDEXED_MEMORY);a.emit(0xB7);jr(0x28,'DA_TEMPLATE_INDEX_REG');
+    a.emit(0x7E,0xFE,40);jr(0x20,'DA_TEMPLATE_CHAR');a.emit(0x23,0x7E,0xFE,72);jr(0x20,'DA_TEMPLATE_REWIND1');
+    a.emit(0x23,0x7E,0xFE,76);jr(0x20,'DA_TEMPLATE_REWIND2');a.emit(0x23,0x7E,0xFE,41);jr(0x20,'DA_TEMPLATE_REWIND3');
+    a.emit(0x3E,40,0xCF);call('DA_PRINT_INDEX');call('DA_PRINT_DISP');a.emit(0x3E,41,0xCF,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_REWIND3');a.emit(0x2B);
+    a.label('DA_TEMPLATE_REWIND2');a.emit(0x2B);
+    a.label('DA_TEMPLATE_REWIND1');a.emit(0x2B);jr(0x18,'DA_TEMPLATE_CHAR');
+    a.label('DA_TEMPLATE_INDEX_REG');word(0x3A,DA_PREFIXES);a.emit(0xB7);jr(0x28,'DA_TEMPLATE_CHAR');
+    a.emit(0x7E,0xFE,72);jr(0x28,'DA_TEMPLATE_H');a.emit(0xFE,76);jr(0x20,'DA_TEMPLATE_CHAR');
+    call('DA_PRINT_INDEX');a.emit(0x3E,76,0xCF,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_H');a.emit(0x23,0x7E,0xFE,76);jr(0x20,'DA_TEMPLATE_H_SINGLE');call('DA_PRINT_INDEX');a.emit(0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_H_SINGLE');a.emit(0x2B);call('DA_PRINT_INDEX');a.emit(0x3E,72,0xCF,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_CHAR');a.emit(0x7E,0xCF,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_N');a.emit(0x23,0x7E,0xFE,110);jr(0x28,'DA_TEMPLATE_NN');a.emit(0x2B,0xE5);word(0x2A,DA_OPERAND);a.emit(0x7E,0x23);word(0x22,DA_OPERAND);call('BIOS_PRINT_HEX8');a.emit(0x3E,104,0xCF,0xE1,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_NN');a.emit(0xE5);word(0x2A,DA_OPERAND);a.emit(0x5E,0x23,0x56,0x23);word(0x22,DA_OPERAND);a.emit(0xEB);call('BIOS_PRINT_HEX16');a.emit(0x3E,104,0xCF,0xE1,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_E');a.emit(0xE5);word(0x2A,DA_OPERAND);a.emit(0x5E,0x7B,0x87,0x9F,0x57,0x23);word(0x22,DA_OPERAND);word(0x2A,DA_NEXT);a.emit(0x19);call('BIOS_PRINT_HEX16');a.emit(0x3E,104,0xCF,0xE1,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_TEMPLATE_D');a.emit(0xE5);call('DA_PRINT_DISP');a.emit(0xE1,0x23);jp('DA_TEMPLATE_LOOP');
+    a.label('DA_PRINT_INDEX');a.emit(0x3E,73,0xCF);word(0x3A,DA_INDEX);a.emit(0xFE,1,0x3E,89);jr(0x20,'DA_PRINT_INDEX_CHAR');a.emit(0x3E,88);
+    a.label('DA_PRINT_INDEX_CHAR');a.emit(0xCF,0xC9);
+    a.label('DA_PRINT_DISP');word(0x3A,DA_DISP);a.emit(0xB7);a.absolute(0xF2,'DA_DISP_POS');a.emit(0x2F,0x3C,0xF5,0x3E,45,0xCF,0xF1);jr(0x18,'DA_DISP_HEX');
+    a.label('DA_DISP_POS');a.emit(0xF5,0x3E,43,0xCF,0xF1);
+    a.label('DA_DISP_HEX');call('BIOS_PRINT_HEX8');a.emit(0x3E,104,0xCF,0xC9);
+
+    a.label('DA_PRINT_CB');word(0x3A,DA_OPCODE);a.emit(0x47,0xE6,0xC0,0x07,0x07,0x4F,0x78,0x0F,0x0F,0x0F,0xE6,7,0x57); // C=group,D=operation
+    a.emit(0x79,0xB7);jr(0x20,'DA_CB_GROUP');a.emit(0x7A);a.ldHLLabel('DA_ROTATE_POINTERS');call('DA_LOOKUP');jr(0x18,'DA_CB_NAME');
+    a.label('DA_CB_GROUP');a.emit(0x3D);a.ldHLLabel('DA_GROUP_POINTERS');call('DA_LOOKUP');
+    a.label('DA_CB_NAME');call('BIOS_PRINT_STRING');a.emit(0x3E,32,0xCF);word(0x3A,DA_OPCODE);a.emit(0xE6,0xC0,0x07,0x07,0xB7);jr(0x28,'DA_CB_OPERAND');
+    word(0x3A,DA_OPCODE);a.emit(0x0F,0x0F,0x0F,0xE6,7,0xC6,48,0xCF,0x3E,44,0xCF);
+    a.label('DA_CB_OPERAND');word(0x3A,DA_FAMILY);a.emit(0xFE,3);jr(0x20,'DA_CB_REGISTER');
+    a.emit(0x3E,40,0xCF);call('DA_PRINT_INDEX');call('DA_PRINT_DISP');a.emit(0x3E,41,0xCF);
+    // BIT indexed forms never copy to a register. Other target codes except 6 do.
+    word(0x3A,DA_OPCODE);a.emit(0x47,0xE6,0xC0,0x07,0x07,0xFE,1);jr(0x28,'DA_CB_DONE');a.emit(0x78,0xE6,7,0xFE,6);jr(0x28,'DA_CB_DONE');a.emit(0xF5,0x3E,44,0xCF,0xF1);jr(0x18,'DA_CB_REGISTER_A');
+    a.label('DA_CB_REGISTER');word(0x3A,DA_OPCODE);a.emit(0xE6,7);
+    a.label('DA_CB_REGISTER_A');a.ldHLLabel('DA_REGISTER_POINTERS');call('DA_LOOKUP');call('BIOS_PRINT_STRING');
+    a.label('DA_CB_DONE');jp('DA_PRINT_DONE');
+
+    a.org(0x0D00);
+    a.label('MONITOR_READ');call('MONITOR_SNAPSHOT');word(0x21,MON_BUFFER);a.emit(0x06,63);call('BIOS_GETLINE');
     a.emit(0xB7);a.absolute(0xCA,'MONITOR_PROMPT');
     a.emit(0x4F,0x7E);call('MONITOR_UPPER');
     a.emit(0xFE,68);a.absolute(0xCA,'MONITOR_DUMP_PARSE');
+    a.emit(0xFE,82);a.absolute(0xCA,'MONITOR_REGISTERS_PARSE');
+    a.emit(0xFE,85);a.absolute(0xCA,'MONITOR_UNASSEMBLE_PARSE');
     a.emit(0x57,0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     a.emit(0x7A,0xFE,72);a.absolute(0xCA,'MONITOR_HELP');
     a.emit(0xFE,63);a.absolute(0xCA,'MONITOR_HELP');
@@ -2215,21 +2369,98 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('MONITOR_UPPER');a.emit(0xFE,97,0xD8,0xFE,123,0xD0,0xE6,0xDF,0xC9);
 
     a.label('MONITOR_DUMP_PARSE');
-    a.emit(0x79,0xFE,6);a.absolute(0xC2,'MONITOR_ERROR');
+    a.emit(0x79);word(0x32,MON_RANGE_FLAGS);
+    a.emit(0x79,0xFE,6);jr(0x28,'MONITOR_DUMP_FIRST');a.emit(0xFE,11);a.absolute(0xC2,'MONITOR_ERROR');
+    a.label('MONITOR_DUMP_FIRST');
     a.emit(0x23,0x7E,0xFE,32);a.absolute(0xC2,'MONITOR_ERROR');
-    a.emit(0x23);word(0x11,0);a.emit(0x06,4);
-    a.label('MONITOR_PARSE_HEX');a.emit(0x7E);call('MONITOR_UPPER');
-    a.emit(0xFE,48);a.absolute(0xDA,'MONITOR_ERROR');
-    a.emit(0xFE,58);jr(0x38,'MONITOR_DECIMAL');
-    a.emit(0xFE,65);a.absolute(0xDA,'MONITOR_ERROR');
-    a.emit(0xFE,71);a.absolute(0xD2,'MONITOR_ERROR');
-    a.emit(0xD6,7);
-    a.label('MONITOR_DECIMAL');a.emit(0xD6,48,0x4F,0xEB,0x29,0x29,0x29,0x29,0x7D,0xB1,0x6F,0xEB,0x23);
-    jr(0x10,'MONITOR_PARSE_HEX');
-    a.emit(0xEB,0x06,8); // HL=address, B=rows
-    a.label('MONITOR_DUMP_ROW');call('BIOS_PRINT_HEX16');a.emit(0x3E,58,0xCF,0x0E,8);
-    a.label('MONITOR_DUMP_BYTE');a.emit(0x3E,32,0xCF,0x7E);call('BIOS_PRINT_HEX8');a.emit(0x23,0x0D);
-    jr(0x20,'MONITOR_DUMP_BYTE');call('BIOS_NEWLINE');jr(0x10,'MONITOR_DUMP_ROW');jp('MONITOR_PROMPT');
+    a.emit(0x23);call('BIOS_PARSE_HEX16');a.absolute(0xD2,'MONITOR_ERROR'); // NC
+    a.emit(0xED,0x53,lo(MON_RANGE_START),hi(MON_RANGE_START));
+    // Legacy form is 64 bytes. Range form computes inclusive modular distance,
+    // capped at 256 bytes so one command cannot monopolize the console.
+    word(0x3A,MON_RANGE_FLAGS);a.emit(0xFE,6);jr(0x20,'MONITOR_DUMP_RANGE');
+    word(0x01,64);a.emit(0xAF);word(0x32,MON_RANGE_FLAGS);jr(0x18,'MONITOR_DUMP_READY');
+    a.label('MONITOR_DUMP_RANGE');a.emit(0x7E,0xFE,32);a.absolute(0xC2,'MONITOR_ERROR');
+    a.emit(0x23);call('BIOS_PARSE_HEX16');a.absolute(0xD2,'MONITOR_ERROR');
+    word(0x2A,MON_RANGE_START);a.emit(0x7B,0x95,0x4F,0x7A,0x9C,0x47,0x03); // BC=end-start+1
+    a.emit(0x78,0xB7);jr(0x20,'MONITOR_DUMP_CAP');a.emit(0x79,0xB7);jr(0x28,'MONITOR_DUMP_CAP');
+    a.emit(0xAF);word(0x32,MON_RANGE_FLAGS);jr(0x18,'MONITOR_DUMP_READY');
+    a.label('MONITOR_DUMP_CAP');word(0x01,256);a.emit(0x3E,1);word(0x32,MON_RANGE_FLAGS);
+    a.label('MONITOR_DUMP_READY');word(0x2A,MON_RANGE_START);
+    a.label('MONITOR_DUMP_ROW');call('BIOS_PRINT_HEX16');a.emit(0x3E,58,0xCF,0x1E,8);
+    a.label('MONITOR_DUMP_BYTE');a.emit(0x3E,32,0xCF,0x7E);call('BIOS_PRINT_HEX8');a.emit(0x23,0x0B,0x78,0xB1);
+    jr(0x28,'MONITOR_DUMP_DONE');a.emit(0x1D);jr(0x20,'MONITOR_DUMP_BYTE');call('BIOS_NEWLINE');jr(0x18,'MONITOR_DUMP_ROW');
+    a.label('MONITOR_DUMP_DONE');call('BIOS_NEWLINE');word(0x3A,MON_RANGE_FLAGS);a.emit(0xB7);jr(0x28,'MONITOR_DUMP_EXIT');
+    a.ldHLLabel('MONITOR_RANGE_LIMIT_TEXT');call('BIOS_PRINT_STRING');
+    a.label('MONITOR_DUMP_EXIT');jp('MONITOR_PROMPT');
+
+    a.label('MONITOR_REGISTERS_PARSE');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
+    for(const [label,address] of [
+      ['MON_REG_AF',0],['MON_REG_BC',2],['MON_REG_DE',4],['MON_REG_HL',6]
+    ]){a.ldHLLabel(label);call('BIOS_PRINT_STRING');word(0x2A,MON_CONTEXT+address);call('BIOS_PRINT_HEX16');}
+    call('BIOS_NEWLINE');
+    for(const [label,address] of [
+      ['MON_REG_AF2',8],['MON_REG_BC2',10],['MON_REG_DE2',12],['MON_REG_HL2',14]
+    ]){a.ldHLLabel(label);call('BIOS_PRINT_STRING');word(0x2A,MON_CONTEXT+address);call('BIOS_PRINT_HEX16');}
+    call('BIOS_NEWLINE');
+    for(const [label,address] of [['MON_REG_IX',16],['MON_REG_IY',18],['MON_REG_SP',20]]){
+      a.ldHLLabel(label);call('BIOS_PRINT_STRING');word(0x2A,MON_CONTEXT+address);call('BIOS_PRINT_HEX16');
+    }
+    a.ldHLLabel('MON_REG_I');call('BIOS_PRINT_STRING');word(0x3A,MON_CONTEXT+22);call('BIOS_PRINT_HEX8');
+    a.ldHLLabel('MON_REG_R');call('BIOS_PRINT_STRING');word(0x3A,MON_CONTEXT+23);call('BIOS_PRINT_HEX8');call('BIOS_NEWLINE');jp('MONITOR_PROMPT');
+
+    a.label('MONITOR_UNASSEMBLE_PARSE');a.emit(0x79);word(0x32,MON_RANGE_FLAGS);
+    a.emit(0xFE,6);jr(0x28,'MONITOR_U_FIRST');a.emit(0xFE,11);a.absolute(0xC2,'MONITOR_ERROR');
+    a.label('MONITOR_U_FIRST');a.emit(0x23,0x7E,0xFE,32);a.absolute(0xC2,'MONITOR_ERROR');a.emit(0x23);
+    call('BIOS_PARSE_HEX16');a.absolute(0xD2,'MONITOR_ERROR');a.emit(0xED,0x53,lo(MON_RANGE_START),hi(MON_RANGE_START));
+    word(0x3A,MON_RANGE_FLAGS);a.emit(0xFE,6);jr(0x20,'MONITOR_U_RANGE');
+    word(0x01,8);a.emit(0xAF);word(0x32,MON_RANGE_FLAGS);jr(0x18,'MONITOR_U_READY');
+    a.label('MONITOR_U_RANGE');a.emit(0x7E,0xFE,32);a.absolute(0xC2,'MONITOR_ERROR');a.emit(0x23);
+    call('BIOS_PARSE_HEX16');a.absolute(0xD2,'MONITOR_ERROR');word(0x2A,MON_RANGE_START);
+    a.emit(0x7B,0x95,0x4F,0x7A,0x9C,0x47,0x03); // BC=end-start+1 modular
+    a.emit(0x78,0xB7);jr(0x20,'MONITOR_U_CAP_BYTES');a.emit(0x79,0xB7);jr(0x28,'MONITOR_U_CAP_BYTES');
+    a.emit(0x3E,1);word(0x32,MON_RANGE_FLAGS);jr(0x18,'MONITOR_U_READY');
+    a.label('MONITOR_U_CAP_BYTES');word(0x01,256);a.emit(0x3E,3);word(0x32,MON_RANGE_FLAGS);
+    a.label('MONITOR_U_READY');a.emit(0xED,0x43,lo(MON_RANGE_COUNT),hi(MON_RANGE_COUNT),0xAF);word(0x32,MON_RANGE_FLAGS+1);word(0x2A,MON_RANGE_START);
+    a.label('MONITOR_U_LOOP');call('BIOS_DISASM_ONE');a.emit(0x5F,0x16,0); // DE=consumed, HL=next
+    word(0x3A,MON_RANGE_FLAGS);a.emit(0xE6,1);jr(0x28,'MONITOR_U_DEFAULT_COUNT');
+    a.emit(0xED,0x4B,lo(MON_RANGE_COUNT),hi(MON_RANGE_COUNT),0x79,0x93,0x4F,0x78,0x9A,0x47);
+    a.emit(0xDA);a.dataWord('MONITOR_U_DONE'); // JP C,done: consumed reached/passed boundary
+    a.emit(0x78,0xB1);jr(0x28,'MONITOR_U_DONE');a.emit(0xED,0x43,lo(MON_RANGE_COUNT),hi(MON_RANGE_COUNT));
+    word(0x3A,MON_RANGE_FLAGS+1);a.emit(0x3C);word(0x32,MON_RANGE_FLAGS+1);a.emit(0xFE,32);jr(0x38,'MONITOR_U_LOOP');
+    word(0x3A,MON_RANGE_FLAGS);a.emit(0xF6,2);word(0x32,MON_RANGE_FLAGS);jr(0x18,'MONITOR_U_DONE');
+    a.label('MONITOR_U_DEFAULT_COUNT');a.emit(0xED,0x4B,lo(MON_RANGE_COUNT),hi(MON_RANGE_COUNT),0x0B,0xED,0x43,lo(MON_RANGE_COUNT),hi(MON_RANGE_COUNT),0x78,0xB1);jr(0x20,'MONITOR_U_LOOP');
+    a.label('MONITOR_U_DONE');word(0x3A,MON_RANGE_FLAGS);a.emit(0xE6,2);jr(0x28,'MONITOR_U_EXIT');a.ldHLLabel('MONITOR_RANGE_LIMIT_TEXT');call('BIOS_PRINT_STRING');
+    a.label('MONITOR_U_EXIT');jp('MONITOR_PROMPT');
+
+    // Compact ROM tables. BASE/ED entries contain instruction length followed
+    // by a zero-terminated template. Index and CB families are derived at runtime.
+    const emitText=(label,text)=>{a.label(label);a.emit(...[...text].map(ch=>ch.charCodeAt(0)),0);};
+    a.org(0x10C0);
+    a.label('DA_INDEX_AFFECTED_BITS');
+    for(let group=0;group<32;group++){
+      let bits=0;for(let bit=0;bit<8;bit++)if(decoder.decodeIndex(group*8+bit,'IX').affected)bits|=1<<bit;a.emit(bits);
+    }
+    a.label('DA_INDEX_MEMORY_BITS');
+    for(let group=0;group<32;group++){
+      let bits=0;for(let bit=0;bit<8;bit++)if(decoder.decodeIndex(group*8+bit,'IX').indexedMemory)bits|=1<<bit;a.emit(bits);
+    }
+    a.label('DA_BASE_POINTERS');for(let op=0;op<256;op++)a.dataWord(`DA_BASE_${op}`);
+    for(let op=0;op<256;op++){
+      const d=decoder.decodeBase(op)||{length:1,mnemonic:'DB n'};
+      a.label(`DA_BASE_${op}`);a.emit(d.length,...[...d.mnemonic].map(ch=>ch.charCodeAt(0)),0);
+    }
+    const edUnique=[],edIndex=[];
+    for(let op=0;op<256;op++){
+      const d=decoder.decodeED(op),mnemonic=d.mnemonic.replace('unused','UNUSED'),key=d.length+'|'+mnemonic;let index=edUnique.findIndex(x=>x.key===key);
+      if(index<0){index=edUnique.length;edUnique.push({key,d:{...d,mnemonic}});}edIndex.push(index);
+    }
+    a.label('DA_ED_POINTERS');for(const index of edIndex)a.dataWord(`DA_ED_${index}`);
+    edUnique.forEach(({d},index)=>{a.label(`DA_ED_${index}`);a.emit(d.length,...[...d.mnemonic].map(ch=>ch.charCodeAt(0)),0);});
+    const rotate=['RLC','RRC','RL','RR','SLA','SRA','SLL','SRL'],groups=['BIT','RES','SET'],regs=['B','C','D','E','H','L','(HL)','A'];
+    a.label('DA_ROTATE_POINTERS');rotate.forEach((_,i)=>a.dataWord(`DA_ROTATE_${i}`));rotate.forEach((s,i)=>emitText(`DA_ROTATE_${i}`,s));
+    a.label('DA_GROUP_POINTERS');groups.forEach((_,i)=>a.dataWord(`DA_GROUP_${i}`));groups.forEach((s,i)=>emitText(`DA_GROUP_${i}`,s));
+    a.label('DA_REGISTER_POINTERS');regs.forEach((_,i)=>a.dataWord(`DA_REGISTER_${i}`));regs.forEach((s,i)=>emitText(`DA_REGISTER_${i}`,s));
+    emitText('DA_TEXT_DB','DB ');emitText('DA_TEXT_PREFIX_LIMIT','h ; PREFIX LIMIT');
 
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;

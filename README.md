@@ -14,7 +14,18 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
-LATEST: `feature/shino80-technical-manual-20260926`, parent `fa73816` / PR #26.
+LATEST: `feature/shino80-bios-monitor-v03-20260926`, parent `af6c933`.
+ROM-resident BIOS/MON v0.3 adds bounded `D start end`, diagnostic `R`, and
+seven-family `U start [end]`; legacy H/?/C/D remains compatible. New BIOS calls
+are PARSE_HEX16 at 0118h and DISASM_ONE at 011Bh. The full 1,780-encoding
+decoder agreement suite, package regression and offline Chrome desktop/mobile
+smoke pass. SYSTEM ROM ends at 1FF6h with nine trailing bytes: further firmware
+growth needs an explicit layout decision. See
+`docs/head/SHINO80_BIOS_MONITOR_v0.3.md` and matching plan/worklog. CPU/Bus/
+CG-ROM/UI behavior is unchanged. Human review/merge remains; no public deploy.
+Older candidate entries below are history.
+
+LATEST: `feature/shino80-technical-manual-20260926`, parent `fa73816` / PR #27.
 Standalone Japanese **Technical Manual v0.1**: 1,780 searchable Z80 encodings,
 bytes/timing/flags/execution examples, clickable system concept diagram,
 memory/I/O and BIOS/MON guide, actual 256-glyph CG-ROM atlas.
@@ -132,14 +143,11 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_MINIMUM_BIOS_MONITOR_PLAN_v0.1.md`
-7. `docs/head/SHINO80_MINIMUM_BIOS_MONITOR_SPEC_v0.1.md`
-8. `code/head/SHINO80_MINIMUM_BIOS_MONITOR_QA_v0.1.json`
-9. `working-logs/head/SHINO80_MINIMUM_BIOS_MONITOR_WORKLOG.md`
-10. `snapshot/SHINO80_CGROM_DM80_SNAPSHOT_20260925_2234.md`
-11. `working-logs/head/SHINO80_CGROM_DM80_REFINEMENT_WORKLOG.md`
-12. `plan/head/SHINO_Z80_FULL_INSTRUCTION_SET_COMPLETION_PLAN.md`
-13. `working-logs/head/SHINO_Z80_CORE_PHASE1E_WORKLOG.md`
+6. `plan/head/SHINO80_BIOS_MONITOR_V03_PLAN.md`
+7. `docs/head/SHINO80_BIOS_MONITOR_v0.3.md`
+8. `working-logs/head/SHINO80_BIOS_MONITOR_V03_WORKLOG.md`
+9. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
+10. `working-logs/head/SHINO80_TECHNICAL_MANUAL_WORKLOG.md`
 
 ## Core concept
 

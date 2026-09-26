@@ -1,7 +1,7 @@
 # SHINO-80 Technical Manual — worklog
 
 2026-09-26 · branch `feature/shino80-technical-manual-20260926`
-Parent `fa73816baaac9121fb14f3b832d1a2f1305e0031` / PR #26.
+Parent `fa73816baaac9121fb14f3b832d1a2f1305e0031` / PR #27.
 
 ## Request / scope
 

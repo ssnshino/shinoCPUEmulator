@@ -1,5 +1,15 @@
+CURRENT BIOS/MON v0.3 OVERRIDE 2026-09-26:
+Resume feature/shino80-bios-monitor-v03-20260926, parent af6c933. Read README ->
+AGENTS -> current snapshot -> SHINO80_BIOS_MONITOR_V03 plan/spec/worklog.
+Candidate adds bounded D range, diagnostic R, full-family U and BIOS calls
+PARSE_HEX16 0118h / DISASM_ONE 011Bh. 1,780-form exact suite, full package and
+offline desktop/mobile Chrome pass. CPU/Bus/CG-ROM/UI unchanged. SYSTEM ROM ends
+1FF6h with only nine trailing bytes: do not grow firmware without a layout/
+compression/banking decision. No automatic merge or public deploy. Verify live
+Git/PR status and wait for Human review/GO. Older prompts below are history.
+
 CURRENT MANUAL OVERRIDE 2026-09-26:
-Resume feature/shino80-technical-manual-20260926, parent fa73816 / PR #26.
+Resume feature/shino80-technical-manual-20260926, parent fa73816 / PR #27.
 Read README -> AGENTS -> snapshot -> SHINO80_TECHNICAL_MANUAL plan/spec/worklog.
 Standalone deploy/shino80_technical_manual_v0.1.html complete candidate:
 1,780 encodings, logical diagram, maps/BIOS/MON and actual CG-ROM atlas.
