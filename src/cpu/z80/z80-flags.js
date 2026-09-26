@@ -23,7 +23,7 @@
   function preserveYX(oldF){return Number(oldF)&YX_MASK;}
   function sz(oldF,result){
     const r=Number(result)&0xFF;
-    let f=preserveYX(oldF);
+    let f=r&YX_MASK;
     if(r&0x80)f|=FLAG_MASK.S;
     if(r===0)f|=FLAG_MASK.Z;
     return f;
@@ -31,7 +31,7 @@
 
   function inc8(oldF,value){
     const before=Number(value)&0xFF,result=(before+1)&0xFF;
-    let f=preserveYX(oldF)|(Number(oldF)&FLAG_MASK.C);
+    let f=(result&YX_MASK)|(Number(oldF)&FLAG_MASK.C);
     if(result&0x80)f|=FLAG_MASK.S;
     if(result===0)f|=FLAG_MASK.Z;
     if((before&0x0F)===0x0F)f|=FLAG_MASK.H;
@@ -40,7 +40,7 @@
   }
   function dec8(oldF,value){
     const before=Number(value)&0xFF,result=(before-1)&0xFF;
-    let f=preserveYX(oldF)|(Number(oldF)&FLAG_MASK.C)|FLAG_MASK.N;
+    let f=(result&YX_MASK)|(Number(oldF)&FLAG_MASK.C)|FLAG_MASK.N;
     if(result&0x80)f|=FLAG_MASK.S;
     if(result===0)f|=FLAG_MASK.Z;
     if((before&0x0F)===0x00)f|=FLAG_MASK.H;
@@ -76,11 +76,11 @@
   function and8(oldF,a,b){const result=(Number(a)&Number(b))&0xFF;return {result,f:logicFlags(oldF,result,true)};}
   function xor8(oldF,a,b){const result=(Number(a)^Number(b))&0xFF;return {result,f:logicFlags(oldF,result,false)};}
   function or8(oldF,a,b){const result=(Number(a)|Number(b))&0xFF;return {result,f:logicFlags(oldF,result,false)};}
-  function cp8(oldF,a,b){return sub8(oldF,a,b,0);}
+  function cp8(oldF,a,b){const out=sub8(oldF,a,b,0);out.f=(out.f&~YX_MASK)|(b&YX_MASK);return out;}
 
   function add16HL(oldF,a,b){
     const av=Number(a)&0xFFFF,bv=Number(b)&0xFFFF,sum=av+bv,result=sum&0xFFFF;
-    let f=Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|YX_MASK);
+    let f=(Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV))|((result>>>8)&YX_MASK);
     if(((av&0x0FFF)+(bv&0x0FFF))>0x0FFF)f|=FLAG_MASK.H;
     if(sum>0xFFFF)f|=FLAG_MASK.C;
     return {result,f};
@@ -96,7 +96,7 @@
       case 'RRA':carry=av&1;result=((oldC<<7)|(av>>1))&0xFF;break;
       default:throw new Error('UNKNOWN ACC ROTATE '+kind);
     }
-    let f=Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV|YX_MASK);
+    let f=(Number(oldF)&(FLAG_MASK.S|FLAG_MASK.Z|FLAG_MASK.PV))|(result&YX_MASK);
     if(carry)f|=FLAG_MASK.C;
     return {result,f};
   }
@@ -110,7 +110,7 @@
     if(oldH||(av&0x0F)>9)correction|=0x06;
     if(oldC||av>0x99){correction|=0x60;carry=true;}
     const result=(n?av-correction:av+correction)&0xFF;
-    let f=preserveYX(oldF);
+    let f=result&YX_MASK;
     if(result&0x80)f|=FLAG_MASK.S;
     if(result===0)f|=FLAG_MASK.Z;
     if(((av^result)&0x10)!==0)f|=FLAG_MASK.H;
@@ -135,15 +135,15 @@
     }
     return {result,f:logicFlags(oldF,result,false)|carry};
   }
-  function bitTest8(oldF,value,bit){
+  function bitTest8(oldF,value,bit,xySource=value){
     const set=(value&(1<<bit))!==0;
-    return preserveYX(oldF)|(oldF&FLAG_MASK.C)|FLAG_MASK.H|
+    return (xySource&YX_MASK)|(oldF&FLAG_MASK.C)|FLAG_MASK.H|
       (set?0:FLAG_MASK.Z|FLAG_MASK.PV)|(bit===7&&set?FLAG_MASK.S:0);
   }
 
   function carryArithmetic16(oldF,a,b,subtract){
     const av=a&65535,bv=b&65535,c=oldF&1,total=subtract?av-bv-c:av+bv+c,result=total&65535;
-    let f=preserveYX(oldF)|(result&0x8000?0x80:0)|(result===0?0x40:0)|(subtract?2:0);
+    let f=((result>>>8)&YX_MASK)|(result&0x8000?0x80:0)|(result===0?0x40:0)|(subtract?2:0);
     if((av^bv^result)&0x1000)f|=0x10;
     if((subtract?(av^bv)&(av^result):~(av^bv)&(av^result))&0x8000)f|=4;
     if(total<0||total>65535)f|=1;

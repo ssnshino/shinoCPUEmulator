@@ -38,11 +38,11 @@ function checkBits(f,expected){
   checkBits(x.f,{S:true,Z:false,H:true,PV:false,N:true,C:true});
 }
 {
-  // Undocumented Y/X are deliberately preserved in PHASE 1B.
+  // PHASE 1J replaces the old approximation: Y/X follow the result, C survives.
   const old=flags.FLAG_MASK.Y|flags.FLAG_MASK.X|flags.FLAG_MASK.C;
   const i=flags.inc8(old,0x01),d=flags.dec8(old,0x02);
-  assert.equal(i.f&(flags.FLAG_MASK.Y|flags.FLAG_MASK.X|flags.FLAG_MASK.C),old);
-  assert.equal(d.f&(flags.FLAG_MASK.Y|flags.FLAG_MASK.X|flags.FLAG_MASK.C),old);
+  assert.equal(i.f&(flags.FLAG_MASK.Y|flags.FLAG_MASK.X|flags.FLAG_MASK.C),flags.FLAG_MASK.C);
+  assert.equal(d.f&(flags.FLAG_MASK.Y|flags.FLAG_MASK.X|flags.FLAG_MASK.C),flags.FLAG_MASK.C);
 }
 
 // Decoder: 7 register forms + (HL) for each instruction.

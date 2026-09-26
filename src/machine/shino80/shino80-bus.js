@@ -153,6 +153,20 @@
       return data;
     }
 
+    interruptAcknowledge({tState=0,address=0,data=255}={}){
+      const value=this.normalizeData(data);
+      this.emit({tState,actor:'CPU',space:'CONTROL',operation:'ACKNOWLEDGE',
+        address:this.normalizeAddress(address),data:value,purpose:'INT_ACK',
+        signals:['M1','IORQ'],meta:{precision:'M_CYCLE_ABSTRACT'}});
+      return value;
+    }
+
+    interruptReturn({tState=0,address=0}={}){
+      this.emit({tState,actor:'CPU',space:'CONTROL',operation:'RETURN',
+        address:this.normalizeAddress(address),data:null,purpose:'RETI',signals:[],
+        meta:{precision:'INSTRUCTION_BOUNDARY'}});
+    }
+
     emitRefresh({tState=0,i=0,r=0}={}){
       const i8=Number(i)&0xFF;
       const r7=Number(r)&0x7F;

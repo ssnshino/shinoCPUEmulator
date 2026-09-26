@@ -14,6 +14,19 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+CURRENT: `feature/shino80-z80-accuracy-closeout-20260926`, parent `d8d30bc` / PR #25.
+PHASE1J closes the **instruction-level CPU milestone**: all instruction families,
+full F including X/Y, WZ/P/Q, NMI and INT IM0/1/2, EI delay and HALT return.
+External full-state baseline: **1,604,000 / 1,604,000 PASS**, zero failures.
+Independent interrupt/sequence suite: 748 cases +589,824 XY checks PASS.
+Not pin/cycle-perfect: WAIT/BUSRQ, electrical timing, peripheral daisy-chain
+and multi-byte external IM0 streams remain outside this milestone.
+See `docs/head/SHINO_Z80_PHASE1J_ACCURACY_SPEC.md`, matching plan/worklog and
+`code/head/SHINO_Z80_PHASE1J_*_QA.json`. Standalone deploy filename remains
+v0.0.9 for compatibility. Human review/merge and iPhone QA remain; next feature
+candidate is MON range/disassembly/register support. No merges performed.
+Everything below is historical candidate context, not unfinished CPU phase work.
+
 LATEST: `feature/shino80-z80-indexed-cb-20260926`, parent `e01d5ed` / PR #24.
 DDCB/FDCB256 each now execute. All7 families externally checked:
 1,604,000 PASS, zero failures under D7 policy. See PHASE1I_INDEXED_CB docs.
