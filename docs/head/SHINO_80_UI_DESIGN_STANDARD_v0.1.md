@@ -1,7 +1,7 @@
 # SHINO-80 UI DESIGN STANDARD v0.1
 
 Created: 2026-09-24T15:13:07+09:00
-Status: **CANDIDATE STANDARD**
+Status: **CURRENT / ADOPTED STANDARD**
 Applies to: SHINO-80 one-page machine shell and future VIRTUAL MICROCOMPUTER LAB workbench
 Basis: `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
 

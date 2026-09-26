@@ -1,6 +1,7 @@
 {
   "name": "shino-cpu-emulator",
   "version": "0.0.9",
+  "packageManager": "pnpm@11.19.0",
   "private": true,
   "description": "ONE-PAGE Z80 COMPUTER / SHINO-80",
   "scripts": {
@@ -12,7 +13,7 @@
     "test:phase1b": "node tests/z80_phase1b_inc_dec_flags.test.cjs",
     "test:source": "node tests/v0.0.9_static.test.cjs",
     "test:artifact": "node tests/v0.0.9_artifact.test.cjs",
-    "test": "npm run test:nop && npm run test:phase1a && npm run test:phase1b && npm run test:phase1c && npm run test:phase1d && npm run test:phase1e && npm run test:phase1f && npm run test:phase1g && npm run test:phase1h && npm run test:phase1i && npm run test:phase1j && npm run test:phase2a && npm run test:phase2a1 && npm run test:bios && npm run test:keyboard && npm run test:block && npm run test:cbios && npm run test:system-disk && npm run test:wboot && npm run test:cpm22 && npm run test:cpmfs && npm run test:cursor-beep && npm run test:source && npm run build && npm run test:artifact && npm run test:manual",
+    "test": "pnpm run test:nop && pnpm run test:phase1a && pnpm run test:phase1b && pnpm run test:phase1c && pnpm run test:phase1d && pnpm run test:phase1e && pnpm run test:phase1f && pnpm run test:phase1g && pnpm run test:phase1h && pnpm run test:phase1i && pnpm run test:phase1j && pnpm run test:phase2a && pnpm run test:phase2a1 && pnpm run test:bios && pnpm run test:keyboard && pnpm run test:block && pnpm run test:cbios && pnpm run test:system-disk && pnpm run test:wboot && pnpm run test:cpm22 && pnpm run test:cpmfs && pnpm run test:cursor-beep && pnpm run test:source && pnpm run build && pnpm run test:artifact && pnpm run test:manual",
     "test:phase1c": "node tests/z80_phase1c_control_flow.test.cjs",
     "test:phase1d": "node tests/z80_phase1d_call_ret_stack.test.cjs",
     "test:phase2a": "node tests/shino80_phase2a_video_ipl.test.cjs",

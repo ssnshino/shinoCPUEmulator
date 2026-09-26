@@ -1,92 +1,67 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4, RAM handoff v0.5,
-Virtual Disk A/System Disk v0.1 and CBIOS/WBOOT v0.2 candidates, stacked through
-System Disk / Loader `4d5e81a` / PR #33 (not reviewed main).
+Status: CURRENT / RELEASED
+Updated: 2026-09-26 JST
+Implementation baseline: `e75d8c0506a7b1bb711b54c352c8b04580cdddaf`
 
-## Deliverable / authority
+## Deliverable and authority
 
-`deploy/shino80_technical_manual_v0.1.html` is a separate standalone manual,
-not a replacement emulator and not a publicly hosted site. Open in a modern
-browser; search, diagram and glyph rendering work offline. Only explicit
-external source links use the network. No font/CDN/runtime dependency.
+`deploy/shino80_technical_manual_v0.1.html` is the generated standalone manual.
+It works offline without font, CDN or runtime network dependencies. It is also
+published as an unlisted/noindex page by the Shinomiya Daihanten content
+repository.
 
-Authoring: `src/manual/` plus `scripts/build-technical-manual.cjs`.
-Build: `npm run build:manual`; checks: `npm run test:manual` (also in `npm test`).
-Do not edit generated HTML. When CPU/firmware changes, review authored facts,
-baseline labels and tests as well as rebuilding: decoder generation alone
-does not automatically update explanatory prose or validate CPU correctness.
+Authoring sources:
 
-## Content
+- `src/manual/`
+- `scripts/build-technical-manual.cjs`
 
-- Searchable BASE252 / CB256 / ED256 / DD252 / FD252 / DDCB256 / FDCB256:
-  **1,780 encodings**, including alias/unused/ignored-prefix entries.
-- Mnemonic, bytes in fetch order, length, conditional/repeat T-states,
-  Japanese semantics, documented flags and X/Y behavior.
-- One-instruction examples generated in a separate CPU/Bus, with register
-  (including alternate), memory and I/O changes. These are implementation
-  demonstrations, not independent oracle results. Repeating instructions
-  show one iteration; arbitrary prefix strings are not enumerated.
-- Clickable logical system diagram; text alternatives; diagram back link.
-- Physical/visible memory map, port 00h overlay control, Virtual Disk A ports
-  30h–36h, current BIOS jump table and MON H/?/C/D range/R/U/B/O.
-- S80B v1 System Disk layout, MON O cold path, RAM-resident CBIOS/WBOOT v0.2,
-  standard 17-entry order, DPB and explicit not-yet-CP/M boundary.
-- Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
-- Source hashes, official/research links and accuracy boundaries.
+Build and verification:
 
-Hash routes: `#reference/BASE-3E`, `#system/cgrom`, `#cgrom/41`.
-Search accepts mnemonics, purpose text, byte patterns and full example bytes
-(e.g. `3E42` matches `3E n`). Family/classification filters and paging combine.
-Searching does not implicitly change the selected instruction; choose a row
-to change the details. Query/filter state survives chapter navigation in-session.
+```bash
+pnpm run build:manual
+pnpm run test:manual
+```
 
-## Important boundaries
+Do not hand-edit the generated HTML. When CPU, firmware or devices change,
+review authored prose, baseline labels, diagrams, examples and tests before
+rebuilding.
 
-The 1,780 inventory is not the 1,604,000-case historical PHASE1J oracle suite.
-That suite has ED80k and other family counts described in the accuracy log.
-The manual's generated examples do not rerun that external dataset.
+## Current content
 
-The machine has 64 KiB physical RAM. RESET overlays fixed Boot ROM at
-0000h–1FFFh and Extension bank 0 at 2000h–3FFFh; port 00h controls page-out,
-shadow writes and extension bank selection. VRAM is part of RAM; video observes
-it via debugPeek, not emulated DMA. CG-ROM
-is renderer-local, not CPU-mapped. DIGITAL_MONO is a logical rendering contract,
-not physical DisplayPort. Virtual Disk A is an implemented 128-byte PIO block
-device, not a mechanical FDD/FDC. Drive B, serial/printer/physical video are
-future/unimplemented; no I/O addresses invented for them. Reserved BIOS vectors are
-RET stubs, not drivers or valid interrupt handlers. R is a MON-entry diagnostic
-context, not a resumable GO context. U treats a fifth consecutive DD/FD prefix
-as `DB` with an explicit PREFIX LIMIT so malformed data always progresses.
-No FPGA implementation.
+- searchable BASE252 / CB256 / ED256 / DD252 / FD252 / DDCB256 / FDCB256:
+  1,780 encodings including aliases, unused ED slots and ignored-prefix forms
+- byte patterns, lengths, timings, flags, X/Y behavior and execution examples
+- logical system wiring diagram and memory/I/O maps
+- ROM BIOS/MON, pageable firmware and RAM handoff
+- DM-80 and actual 4 KiB CG-ROM glyph atlas
+- Virtual Disk A ports 30h–36h and beeper port 40h
+- S80B v2, SHINO CBIOS/WBOOT, CP/M 2.2 memory map and writable A: starter
+  filesystem
+- CP/M command reference for DIR, TYPE, ERA, REN, SAVE, USER and bundled COM
+  programs
+- source hashes, external references and explicit accuracy boundaries
 
-RAM_HANDOFF at 011Eh copies `OUT (00h),A / JP (HL)` to F800h, switches to
-LOW_RAM and never returns. Monitor B is an original RAM-only boot proof, not
-CP/M or BASIC. F800h–F802h is transient boot scratch; RESET restores firmware.
-Monitor O now reads the original S80B v1 system image over ports 30h–36h,
-loads a payload at 8000h and CBIOS at FA00h, installs `JP FA03h` at page zero
-and enters all-RAM mode. This closes the loader/media path but still contains
-no CCP, BDOS, filesystem, CP/M or BASIC.
+The generated examples are demonstrations made by running one instruction in
+an isolated CPU/Bus. They are not a replacement for the pinned external oracle
+suite.
 
-CBIOS WBOOT at FA03h reinitializes private state, reads A: track 0 sector 2 to
-8000h through the ordinary READ/INIR path and jumps to the restored payload.
-Failure prints through loaded CBIOS and HALTs. This remains an original one-
-sector supervisor reload, not a CP/M CCP/BDOS warm boot claim.
+## Accuracy and implementation boundaries
 
-CPU milestone remains instruction-level, not electrical/pin-cycle-perfect.
-WAIT/BUSRQ, hardware races and multi-byte device-fed IM0 are outside its scope.
-See `SHINO_Z80_PHASE1J_ACCURACY_SPEC.md` for authoritative CPU limits.
+- external full-state CPU baseline: `1,604,000 / 1,604,000 PASS`, Failure 0
+- instruction-level, not electrical/pin-cycle-perfect
+- WAIT/BUSRQ, hardware races, daisy chains and multi-byte external IM0 streams
+  remain outside the milestone
+- VRAM is physical RAM observed by video; CG-ROM is renderer-local
+- Virtual Disk A is a PIO block device, not a mechanical FDD/FDC
+- browser-reload disk persistence, host import/export, B: drive, UART, printer
+  and physical display interfaces remain future work
+- reserved BIOS vectors are not implemented drivers or interrupt handlers
+- no FPGA implementation is claimed
 
-## Design / QA
+## Publication
 
-Modern dark documentation shell, readable Japanese sans + monospace data,
-desktop list/detail and stacked mobile layout. Actual CG bitmap/SVG diagram,
-not a generated illustration pretending to be wiring. Current updates cover
-the mapper, block-device/CBIOS/system-disk contracts and matching inspector
-text, not CPU semantics or display rendering.
-
-ImageGen concept attempt was blocked by authentication401; no raster reference
-or fidelity score exists. Existing SHINO visual language and browser screenshots
-are the documented fallback. Browser plugin not available; regular Playwright
-with installed Chrome, no dependency installation, used for offline QA.
-Desktop 1440×1000 / mobile-sized 390×844 tested; real iPhone review remains.
+The published manual is a vendored generated artifact. Publication updates must
+record the exact source commit and SHA-256 in
+`ssnshino/shinomiya-daihanten-content`; machine and manual remain independent
+standalone HTML files.

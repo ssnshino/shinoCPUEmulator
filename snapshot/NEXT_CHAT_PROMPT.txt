@@ -1,66 +1,27 @@
-SHINO-80 HANDOFF — 2026-09-26
+SHINO-80を再開してください。
 
-Repository: ssnshino/shinoCPUEmulator
+最初にREADME.mdを読み、そこに書かれた順でAGENTS.md、
+snapshot/CURRENT_SNAPSHOT.md、snapshot/LAST_RUN.md、
+snapshot/SNAPSHOT_MANIFEST.mdを確認してください。
 
-Start by checking live GitHub/local state. Read in order:
+その後、GitHubをfetchして次をlive確認してください。
 
-1. README.md
-2. AGENTS.md
-3. snapshot/CURRENT_SNAPSHOT.md
-4. snapshot/LAST_RUN.md
-5. snapshot/SNAPSHOT_MANIFEST.md
-6. working-logs/head/SHINO80_MAIN_CONSOLIDATION_20260926.md
-7. docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md
+- current branch / HEAD / upstream
+- dirty state
+- open PR
+- docs/restart-cockpit-20260926 のPRが未mergeか、すでにmainへ入ったか
 
-The full stacked development line from PR #18 through PR #37 was merged to
-main. The pre-closeout main SHA was
-5e4091e655f173bb7eb724c5f523a24718808aa4. A final documentation-only closeout
-adds the CP/M command reference, Human QA evidence and this handoff. Use the
-actual current main SHA after fetching as the authoritative baseline.
+最後の実装基準は shinoCPUEmulator main e75d8c0506a7b1bb711b54c352c8b04580cdddaf
+（PR #38）です。CPU instruction-level milestone、BIOS/MON v0.3、pageable
+64 KiB RAM、DM-80、Virtual Disk A、SHINO CBIOS/WBOOT、licensed CP/M 2.2、
+writable starter filesystemまで統合済みです。外部oracleは
+1,604,000 / 1,604,000 PASS、Failure 0です。
 
-Integrated machine state:
+公開copyは shinomiya-daihanten-content master 743b6038b4a40b8db32463e22ba864855776e152
+からAction 36224728565でデプロイ済みです。
 
-- All Z80 instruction families plus PHASE 1J interrupt/precision closeout
-- External oracle: 1,604,000 PASS / Failure 0
-- BIOS/MON v0.3 with D/R/U/B/O
-- 64 KiB physical RAM and pageable 16 KiB firmware
-- Virtual Disk A, SHINO CBIOS/WBOOT and licensed CP/M 2.2
-- Writable A: CP/M filesystem with WELCOME.TXT, HELLO.COM and S80INFO.COM
-- Cursor, one-bit beeper, native 8x16 CG-ROM and DM-80 presentation
-- Offline Technical Manual with machine-code and CP/M command references
+新しい実装を始める場合は、READMEの候補から一つだけ選び、plan/headへ
+新PLANを作ってください。完了済みhistoryをCURRENTとして復活させたり、
+CPU/firmware/deploy HTMLを無関係な作業で変更したりしないでください。
 
-Human iPhone/Edge QA PASS:
-
-- DIR, TYPE WELCOME.TXT, HELLO, S80INFO
-- Backspace/Delete and 80x25 scroll
-- SAVE 1 COPY.COM, COPY execution, ERA COPY.COM, post-erase DIR
-- second save as COPY2.COM
-
-Important limits:
-
-- Disk changes persist across in-page RESET/POWER/WBOOT, not browser reload.
-- No host disk-image import/export, B: drive, PIP/STAT/ED/ASM/DDT/LOAD or BASIC.
-- CPU is instruction-level complete, not pin/cycle-perfect. WAIT/BUSRQ,
-  electrical races and multi-byte externally supplied IM0 streams remain out.
-- Do not change CPU semantics without a new bounded precision plan and oracle.
-
-Recommended next phase:
-
-Plan browser-reload disk persistence plus explicit image import/export first.
-Keep it outside guest CPU/CBIOS semantics where possible. Then consider an
-original SHINO file utility or license-audited CP/M utilities; add BASIC only
-after storage behavior is stable. One environment, one writer, one purpose
-branch. Do not run ChatGPT and Codex as simultaneous writers.
-
-Current distribution artifacts:
-
-- deploy/one_page_shino80_v0.0.9_z80_base_complete.html
-- deploy/shino80_technical_manual_v0.1.html
-
-Public routes are intentionally unlisted/noindex:
-
-- https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-preview.html
-- https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-reference.html
-- https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-notices.txt
-
-ごっごっごっごっ♪
+合言葉: ごっごっごっごっ♪

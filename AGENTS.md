@@ -11,10 +11,11 @@
 2. `snapshot/CURRENT_SNAPSHOT.md`
 3. `snapshot/LAST_RUN.md`
 4. `snapshot/NEXT_CHAT_PROMPT.txt`
-5. `plan/head/` のCurrent PLAN
-6. `docs/head/` のCurrent Concept / Architecture / Spec
-7. UI変更なら `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-8. 必要に応じて `research/` / `working-logs/head/` / `code/head/`
+5. `snapshot/SNAPSHOT_MANIFEST.md`
+6. manifestが指定するCurrent SPEC / worklog
+7. active実装がある場合だけ`plan/head/`のCurrent PLAN
+8. UI変更なら`docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
+9. 必要に応じて`research/` / `code/head/`
 
 通常の開始時にhistory全体を走査しない。historyは過去仕様比較、regression、廃止方式確認など理由がある場合だけ読む。
 
@@ -25,6 +26,13 @@ GitHubのreview済み `main` を正本とする。
 Active candidateがある場合は `snapshot/CURRENT_SNAPSHOT.md` に記録する。
 
 SHINO-80実装が始まった後、Current one-page HTMLまたはCurrent source/buildがsnapshotで指定された場合、それを基準実装とする。
+
+## 2.1 Codex desktop Node / pnpm runtime
+
+MacのCodex shellでは通常PATHに`node` / `npm`がないことがある。既知の環境差分
+なので毎回探索せず、root `README.md`の`Codex desktop runtime`に記載した
+同梱Node/pnpmを使う。このrepositoryの標準package managerはpnpmであり、
+`pnpm test`を実行する。手動でtest script一覧を再構成しない。
 
 ## 3. Project boundary
 
@@ -169,7 +177,7 @@ Canonical detail:
 UI変更前に必ず以下を読む。
 
 - `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
-- `docs/head/SHINO_80_UI_LAYOUT_BLUEPRINTS_v0.1.md`
+- `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - 必要に応じて `research/ui/SHINO_80_UI_RESEARCH_2026-09-24.md`
 
 Core rules:

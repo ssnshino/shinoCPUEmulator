@@ -1,6 +1,6 @@
 # SHINO-80 CP/M 2.2 Command Reference v0.1
 
-Date: 2026-09-26  
+Date: 2026-09-26
 Scope: the CP/M 2.2 CCP and starter disk currently shipped by SHINO-80
 
 ## Starting CP/M

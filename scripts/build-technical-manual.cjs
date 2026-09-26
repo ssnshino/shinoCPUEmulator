@@ -52,7 +52,7 @@ function buildData(){
  const cbiosImage=cbios.buildCbios();
  const diskImage=systemDisk.buildSystemDisk();
  const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/firmware/shino80/shino80-cbios.js','src/firmware/shino80/shino80-cpm22.js','src/firmware/shino80/shino80-cpm-filesystem.js','src/firmware/shino80/shino80-cpm-starter-files.js','src/firmware/shino80/shino80-system-disk.js','src/devices/shino80/shino80-keyboard.js','src/devices/shino80/shino80-beeper.js','src/devices/shino80/shino80-block-device.js'];
- return {version:'0.1',baseline:'BIOS/MON v0.3 + S80B v2 + CBIOS/WBOOT v0.2 + CP/M 2.2 filesystem v0.1 candidates',revision:'feature/shino80-cpm-filesystem-v01-20260926',families,instructions,
+ return {version:'0.1',baseline:'released SHINO-80: BIOS/MON v0.3 + S80B v2 + CBIOS/WBOOT v0.2 + CP/M 2.2 filesystem v0.1',revision:'e75d8c0506a7b1bb711b54c352c8b04580cdddaf',families,instructions,
   sources:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),
   machine:{romSize:rom.ROM_SIZE,bootRomSize:memory.BOOT_ROM_SIZE,extensionRomSize:memory.EXTENSION_ROM_SIZE,memoryControlPort:memory.MEMORY_CONTROL_PORT,vramBase:video.TEXT_VRAM_BASE,vramCells:video.CELL_COUNT,width:video.SCREEN_W,height:video.SCREEN_H,cols:video.COLS,rows:video.ROWS,
    keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,beeperPort:beeper.BEEPER_PORT,
