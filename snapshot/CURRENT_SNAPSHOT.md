@@ -1,6 +1,18 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26T11:34:31+09:00: RAM handoff v0.5 candidate on
+`feature/shino80-ram-handoff-v05-20260926`, parent `9fd087b` / PR #29. Read the
+matching plan/spec/license research/worklog. BIOS 011Eh copies an
+`OUT (00h),A / JP (HL)` trampoline to F800h and performs a non-returning switch
+to all-RAM execution. MON B prepares shadow page zero, runs an original payload
+at 8000h, displays RAM BOOT / ALL 64K RAM ONLINE without ROM BIOS and HALTs.
+RESET restores ROM-visible bank 0 and MON. Full package plus offline Chrome
+desktop/mobile app/manual QA PASS. No disk, CBIOS, CP/M or BASIC is included;
+next phase is virtual block-device contract and geometry. CPU core/decoder/
+flags, CG-ROM and display CSS unchanged. Commit/push/stacked PR remain. No merge
+or public deploy. Older snapshots below are historical.
+
 LATEST 2026-09-26T11:05:32+09:00: pageable firmware v0.4 candidate on
 `feature/shino80-pageable-firmware-v04-20260926`, parent `d3f223e`. Read the
 matching plan/spec/research/worklog. Physical RAM is 64 KiB; RESET exposes fixed

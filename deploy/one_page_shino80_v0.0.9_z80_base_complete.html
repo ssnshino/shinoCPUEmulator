@@ -2075,6 +2075,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BIOS_WORK_COLUMN=0xE002;
   const KEY_DATA_PORT=0x20;
   const KEY_STATUS_PORT=0x21;
+  const MEMORY_CONTROL_PORT=0x00;
+  const MEMORY_CONTROL_LOW_RAM=0x01;
+  const MEMORY_CONTROL_SHADOW_WRITE=0x02;
+  const RAM_HANDOFF_TRAMPOLINE=0xF800;
+  const RAM_HANDOFF_DEMO_ENTRY=0x8000;
+  const RAM_HANDOFF_SIGNATURE=0xE180;
   const MON_BUFFER=0xE100;
   const MON_CONTEXT=0xE140;
   const MON_RANGE_START=0xE158;
@@ -2173,6 +2179,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BIOS_API_PRINT_HEX16');jp('BIOS_PRINT_HEX16');
     a.label('BIOS_API_PARSE_HEX16');jp('BIOS_PARSE_HEX16');
     a.label('BIOS_API_DISASM_ONE');jp('BIOS_DISASM_ONE');
+    a.label('BIOS_API_RAM_HANDOFF');jp('BIOS_RAM_HANDOFF');
 
     a.org(0x0400);
     a.label('BIOS_UNIMPLEMENTED');
@@ -2295,9 +2302,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('BOOT_TEXT');
     a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
-    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
-    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy]\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'? USE H C D xxxx [yyyy] R U xxxx [yyyy] B\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_CLEAR_TEXT');
     a.emit(...[...'MON\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_RANGE_LIMIT_TEXT');
@@ -2490,6 +2497,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.emit(0xFE,68);a.absolute(0xCA,'MONITOR_DUMP_PARSE');
     a.emit(0xFE,82);a.absolute(0xCA,'MONITOR_REGISTERS_PARSE');
     a.emit(0xFE,85);a.absolute(0xCA,'MONITOR_UNASSEMBLE_PARSE');
+    a.emit(0xFE,66);a.absolute(0xCA,'MONITOR_BOOT_TEST');
     a.emit(0x57,0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     a.emit(0x7A,0xFE,72);a.absolute(0xCA,'MONITOR_HELP');
     a.emit(0xFE,63);a.absolute(0xCA,'MONITOR_HELP');
@@ -2594,6 +2602,48 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('DA_REGISTER_POINTERS');regs.forEach((_,i)=>a.dataWord(`DA_REGISTER_${i}`));regs.forEach((s,i)=>emitText(`DA_REGISTER_${i}`,s));
     emitText('DA_TEXT_DB','DB ');emitText('DA_TEXT_PREFIX_LIMIT','h ; PREFIX LIMIT');
 
+    // RAM handoff is deliberately located in Extension ROM. It validates that
+    // LOW_RAM is requested and the target is outside the lower 16 KiB, copies
+    // the three instruction continuation to high RAM, then never returns.
+    a.org(0x3000);
+    a.label('BIOS_RAM_HANDOFF');
+    a.emit(0x47,0xCB,0x47);                 // LD B,A / BIT 0,A
+    jr(0x28,'BIOS_RAM_HANDOFF_FAIL');
+    a.emit(0x7C,0xFE,0x40);                 // LD A,H / CP 40h
+    jr(0x38,'BIOS_RAM_HANDOFF_FAIL');
+    a.emit(0x78,0xE5,0xF5);                 // LD A,B / PUSH HL / PUSH AF
+    a.ldHLLabel('RAM_HANDOFF_TRAMPOLINE_TEMPLATE');
+    word(0x11,RAM_HANDOFF_TRAMPOLINE);word(0x01,3);a.emit(0xED,0xB0); // LDIR
+    a.emit(0xF1,0xE1);word(0xC3,RAM_HANDOFF_TRAMPOLINE); // POP AF/HL / JP trampoline
+    a.label('BIOS_RAM_HANDOFF_FAIL');a.emit(0xB7,0xC9); // clear carry / RET
+    a.label('RAM_HANDOFF_TRAMPOLINE_TEMPLATE');
+    a.emit(0xD3,MEMORY_CONTROL_PORT,0xE9);   // OUT (00h),A / JP (HL)
+
+    // Visible proof of the future OS-loader path. B copies an original payload
+    // to RAM, constructs the reset vector through shadow writes, then performs
+    // the same non-returning handoff that a disk loader will use.
+    const line1='SHINO-80 RAM BOOT',line2='ALL 64K RAM ONLINE',demo=[];
+    const demoEmit=(...values)=>demo.push(...values.map(value=>Number(value)&0xFF));
+    const demoWord=(opcode,value)=>demoEmit(opcode,lo(value),hi(value));
+    demoWord(0x21,TEXT_VRAM_BASE);demoEmit(0x36,0);demoWord(0x11,TEXT_VRAM_BASE+1);demoWord(0x01,TEXT_VRAM_BYTES-1);demoEmit(0xED,0xB0);
+    const line1Pointer=demo.length+1;demoWord(0x21,0);demoWord(0x11,TEXT_VRAM_BASE);demoWord(0x01,line1.length);demoEmit(0xED,0xB0);
+    const line2Pointer=demo.length+1;demoWord(0x21,0);demoWord(0x11,TEXT_VRAM_BASE+TEXT_COLS);demoWord(0x01,line2.length);demoEmit(0xED,0xB0);
+    demoWord(0x21,0x3852);demoWord(0x22,RAM_HANDOFF_SIGNATURE); // R8
+    demoWord(0x21,0x2130);demoWord(0x22,RAM_HANDOFF_SIGNATURE+2); // 0!
+    demoEmit(0x76); // HALT; no ROM BIOS call exists after page-out
+    const line1Address=RAM_HANDOFF_DEMO_ENTRY+demo.length;
+    const line2Address=line1Address+line1.length;
+    demo[line1Pointer]=lo(line1Address);demo[line1Pointer+1]=hi(line1Address);
+    demo[line2Pointer]=lo(line2Address);demo[line2Pointer+1]=hi(line2Address);
+    demoEmit(...[...line1,...line2].map(ch=>ch.charCodeAt(0)));
+
+    a.label('MONITOR_BOOT_TEST');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
+    a.ldHLLabel('RAM_HANDOFF_DEMO_IMAGE');word(0x11,RAM_HANDOFF_DEMO_ENTRY);word(0x01,demo.length);a.emit(0xED,0xB0);
+    a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
+    a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,RAM_HANDOFF_DEMO_ENTRY);word(0x22,0x0001);
+    word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
+    a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
+
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
     const clearPageInstructions=(256*3)+2;
@@ -2610,6 +2660,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         biosJumpTable:BIOS_JUMP_TABLE,
         biosWorkCursor:BIOS_WORK_CURSOR,
         biosWorkColumn:BIOS_WORK_COLUMN,
+        ramHandoffTrampoline:RAM_HANDOFF_TRAMPOLINE,
+        ramHandoffDemoEntry:RAM_HANDOFF_DEMO_ENTRY,
+        ramHandoffSignature:RAM_HANDOFF_SIGNATURE,
+        ramHandoffDemoBytes:demo.length,
         testPageInstructions,
         clearPageInstructions,
         bootTextBytes:30,
@@ -2622,7 +2676,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     ROM_SIZE,
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
-    KEY_DATA_PORT,KEY_STATUS_PORT,
+    KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
+    RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
     buildSystemRom
   };
 });

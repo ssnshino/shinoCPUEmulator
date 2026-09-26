@@ -1,7 +1,7 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · BIOS/MON v0.3 plus pageable firmware v0.4 candidate, stacked on
-`d3f223e` (not reviewed main).
+2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4 and RAM handoff v0.5
+candidate, stacked on `9fd087b` (not reviewed main).
 
 ## Deliverable / authority
 
@@ -28,7 +28,7 @@ does not automatically update explanatory prose or validate CPU correctness.
   show one iteration; arbitrary prefix strings are not enumerated.
 - Clickable logical system diagram; text alternatives; diagram back link.
 - Physical/visible memory map, port 00h overlay control, current BIOS jump table
-  and MON H/?/C/D range/R/U.
+  and MON H/?/C/D range/R/U/B.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
 
@@ -55,6 +55,10 @@ RET stubs, not drivers or valid interrupt handlers. R is a MON-entry diagnostic
 context, not a resumable GO context. U treats a fifth consecutive DD/FD prefix
 as `DB` with an explicit PREFIX LIMIT so malformed data always progresses.
 No FPGA implementation.
+
+RAM_HANDOFF at 011Eh copies `OUT (00h),A / JP (HL)` to F800h, switches to
+LOW_RAM and never returns. Monitor B is an original RAM-only boot proof, not
+CP/M or BASIC. F800h–F802h is transient boot scratch; RESET restores firmware.
 
 CPU milestone remains instruction-level, not electrical/pin-cycle-perfect.
 WAIT/BUSRQ, hardware races and multi-byte device-fed IM0 are outside its scope.

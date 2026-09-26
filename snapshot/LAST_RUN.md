@@ -1,5 +1,15 @@
 # LAST RUN
 
+LATEST 2026-09-26: RAM handoff v0.5 candidate on pageable firmware `9fd087b`.
+Branch `feature/shino80-ram-handoff-v05-20260926`. Added BIOS 011Eh, F800h RAM
+trampoline and MON B end-to-end boot proof. Exact tests prove shadow page-zero,
+the first post-pageout fetch from RAM, zero later ROM fetches, `R80!`, HALT and
+RESET recovery. All package stages and deterministic builds PASS. Offline
+Chrome 1440×1000 / 390×844 app and manual QA PASS; console warning/error,
+network request and document overflow all zero. License research adopts a later
+CP/M-family audit plus zlib Z80 BBC BASIC only in a future phase; none imported.
+Commit/push/PR remain; no merge/deploy. Previous runs below are historical.
+
 LATEST 2026-09-26: pageable firmware v0.4 candidate on parent `d3f223e`.
 Branch `feature/shino80-pageable-firmware-v04-20260926`. Added fixed Boot 8 KiB
 + banked Extension 8 KiB ROM overlay above 64 KiB physical RAM, port 00h mapping
