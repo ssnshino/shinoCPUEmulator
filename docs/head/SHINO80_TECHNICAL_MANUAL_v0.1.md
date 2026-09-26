@@ -1,7 +1,7 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · CPU baseline `fa73816`; BIOS/MON v0.3 candidate stacked through
-Technical Manual parent `af6c933` (not reviewed main).
+2026-09-26 · BIOS/MON v0.3 plus pageable firmware v0.4 candidate, stacked on
+`d3f223e` (not reviewed main).
 
 ## Deliverable / authority
 
@@ -27,7 +27,8 @@ does not automatically update explanatory prose or validate CPU correctness.
   demonstrations, not independent oracle results. Repeating instructions
   show one iteration; arbitrary prefix strings are not enumerated.
 - Clickable logical system diagram; text alternatives; diagram back link.
-- Memory/I/O map, current BIOS jump table and MON H/?/C/D range/R/U.
+- Physical/visible memory map, port 00h overlay control, current BIOS jump table
+  and MON H/?/C/D range/R/U.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
 
@@ -43,7 +44,10 @@ The 1,780 inventory is not the 1,604,000-case historical PHASE1J oracle suite.
 That suite has ED80k and other family counts described in the accuracy log.
 The manual's generated examples do not rerun that external dataset.
 
-VRAM is part of RAM; video observes it via debugPeek, not emulated DMA. CG-ROM
+The machine has 64 KiB physical RAM. RESET overlays fixed Boot ROM at
+0000h–1FFFh and Extension bank 0 at 2000h–3FFFh; port 00h controls page-out,
+shadow writes and extension bank selection. VRAM is part of RAM; video observes
+it via debugPeek, not emulated DMA. CG-ROM
 is renderer-local, not CPU-mapped. DIGITAL_MONO is a logical rendering contract,
 not physical DisplayPort. FDD/serial/printer/physical video interfaces are
 future/unimplemented; no I/O addresses invented. Reserved BIOS vectors are
@@ -60,7 +64,8 @@ See `SHINO_Z80_PHASE1J_ACCURACY_SPEC.md` for authoritative CPU limits.
 
 Modern dark documentation shell, readable Japanese sans + monospace data,
 desktop list/detail and stacked mobile layout. Actual CG bitmap/SVG diagram,
-not a generated illustration pretending to be wiring. No CPU or emulator UI edit.
+not a generated illustration pretending to be wiring. The v0.4 update changes
+the machine mapper and matching inspector text, not CPU or display rendering.
 
 ImageGen concept attempt was blocked by authentication401; no raster reference
 or fidelity score exists. Existing SHINO visual language and browser screenshots

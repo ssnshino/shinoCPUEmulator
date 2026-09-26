@@ -4,8 +4,8 @@ Firmware and ROM images owned by SHINO-80.
 
 ## Current firmware
 
-- `shino80-system-rom.js` — 8 KiB SYSTEM ROM builder with RESET/IPL,
-  BIOS vectors and jump table, polling GETCHAR, and the interactive Monitor
+- `shino80-system-rom.js` — 16 KiB firmware builder: fixed 8 KiB Boot/Recovery
+  ROM plus 8 KiB Extension bank 0, with RESET/IPL, BIOS and Monitor
 - `shino80-cgrom.js` — fixed 4 KiB character-generator ROM
 
 The minimum BIOS currently provides:
@@ -16,9 +16,14 @@ The minimum BIOS currently provides:
 - CLS
 - zero-terminated PRINT_STRING
 
-The first Monitor command loop accepts `H` / `?` for help, `C` for clear, and
-carriage return for a new prompt. Memory/register commands, disk, serial,
-printer, interrupts, and NMI services remain reserved and unimplemented.
+Monitor v0.3 accepts `H` / `?`, `C`, bounded `D start [end]`, diagnostic `R`,
+and seven-family `U start [end]`. Disk, serial, printer, application GO/BREAK,
+and interrupt/NMI service bodies remain reserved or unimplemented.
+
+The current BIOS/MON executable remains in fixed ROM. Its compressed
+disassembler tables live in Extension bank 0 at 2000h. The machine provides
+64 KiB physical RAM beneath the ROM overlay; low I/O port 00h selects lower
+RAM, shadow writes and the extension bank. RESET restores control 00h.
 
 No external commercial ROM image is embedded.
 

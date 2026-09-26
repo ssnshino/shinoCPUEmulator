@@ -81,7 +81,7 @@
             <button type="submit">GO</button>
             <button type="button" id="memoryPrev" aria-label="Previous memory page">←</button>
             <button type="button" id="memoryNext" aria-label="Next memory page">→</button>
-            <label>JUMP <select id="memoryJump"><option value="">Select region</option><option value="0000">ROM / vectors</option><option value="0100">BIOS</option><option value="0200">IPL / MON</option><option value="2000">RAM</option><option value="C000">VRAM</option><option value="E000">BIOS work</option><option value="EFFF">Initial stack top</option><option value="FF00">Last page</option></select></label>
+            <label>JUMP <select id="memoryJump"><option value="">Select region</option><option value="0000">BOOT ROM / vectors</option><option value="0100">BIOS</option><option value="0200">IPL / MON</option><option value="2000">EXTENSION ROM</option><option value="4000">RAM</option><option value="C000">VRAM</option><option value="E000">BIOS work</option><option value="EFFF">Initial stack top</option><option value="FF00">Last page</option></select></label>
             <label>FOLLOW <select id="memoryFollow"><option value="">OFF</option><option value="pc">PC</option><option value="sp">SP</option><option value="hl">HL</option><option value="cursor">Video cursor</option></select></label>
           </form>
           <div id="memoryRange" class="memory-caption"></div>
@@ -140,6 +140,7 @@
   </section>
 </div>
 <textarea class="keyboard-capture" id="keyboardCapture" aria-label="SHINO-80 keyboard input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
+<script>/*__MEMORY__*/</script>
 <script>/*__BUS__*/</script>
 <script>/*__KEYBOARD__*/</script>
 <script>/*__FLAGS__*/</script>

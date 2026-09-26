@@ -6,7 +6,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(decoder){
   'use strict';
 
-  const ROM_SIZE=0x2000;
+  const ROM_SIZE=0x4000;
   const TEXT_VRAM_BASE=0xC000;
   const TEXT_COLS=80;
   const TEXT_ROWS=25;
@@ -511,7 +511,7 @@
     // Compact ROM tables. BASE/ED entries contain instruction length followed
     // by a zero-terminated template. Index and CB families are derived at runtime.
     const emitText=(label,text)=>{a.label(label);a.emit(...[...text].map(ch=>ch.charCodeAt(0)),0);};
-    a.org(0x10C0);
+    a.org(0x2000);
     a.label('DA_INDEX_AFFECTED_BITS');
     for(let group=0;group<32;group++){
       let bits=0;for(let bit=0;bit<8;bit++)if(decoder.decodeIndex(group*8+bit,'IX').affected)bits|=1<<bit;a.emit(bits);

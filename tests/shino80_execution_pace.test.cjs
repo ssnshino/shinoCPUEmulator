@@ -31,10 +31,11 @@ for(const fps of [30,60,120]){
 }
 // Host batching must not change machine state, RAM or CPU Bus event ordering.
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildSystemRom}=require('../src/firmware/shino80/shino80-system-rom.js');
 const rom=buildSystemRom();
-function machine(){const bus=new Shino80Bus({traceLimit:256,romRanges:[[0,8191]]});bus.load(rom.bytes,0);const cpu=new Z80Core(bus);cpu.reset();return {bus,cpu};}
+function machine(){const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);const bus=new Shino80Bus({traceLimit:256,memoryDevice:memory});const cpu=new Z80Core(bus);cpu.reset();return {bus,cpu};}
 for(const mode of ['REALTIME','TURBO']){
   const a=machine(),b=machine(),pace=new ExecutionPace(a.cpu,{now:()=>0});
   pace.advance(16,mode);b.cpu.runInstructions(a.cpu.state.instructions);

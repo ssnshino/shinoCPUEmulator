@@ -1,5 +1,15 @@
 # LAST RUN
 
+LATEST 2026-09-26: pageable firmware v0.4 candidate on parent `d3f223e`.
+Branch `feature/shino80-pageable-firmware-v04-20260926`. Added fixed Boot 8 KiB
++ banked Extension 8 KiB ROM overlay above 64 KiB physical RAM, port 00h mapping
+control, shadow writes and full-RAM mode. BIOS/MON v0.3 remains compatible;
+disassembler tables moved to 2000h. All package stages and deterministic builds
+PASS. Offline Chrome 1440×1000 / 390×844 app and manual map QA PASS with no
+console warning/error, network request or document overflow. CPU core,
+decoder/flags, CG-ROM and display CSS unchanged. Commit/push/PR remain; no merge
+or public deployment. Previous runs below are historical.
+
 LATEST 2026-09-26: BIOS/MON v0.3 candidate on parent af6c933.
 Branch feature/shino80-bios-monitor-v03-20260926. Read the matching plan/spec/
 worklog. Added bounded D ranges, diagnostic R, full-family U and BIOS services

@@ -1,6 +1,7 @@
 'use strict';
 
 const assert=require('node:assert/strict');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {
@@ -30,16 +31,16 @@ assertJump(BIOS_JUMP_TABLE+0x09,rom.labels.BIOS_PRINT_STRING);
 assertJump(BIOS_JUMP_TABLE+0x0C,rom.labels.BIOS_GETCHAR);
 
 function machine(){
-  const bus=new Shino80Bus({traceLimit:20000,romRanges:[[0x0000,0x1FFF]]});
+  const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
+  const bus=new Shino80Bus({traceLimit:20000,memoryDevice:memory});
   const cpu=new Z80Core(bus);
-  bus.load(rom.bytes,0);
   cpu.reset();
-  cpu.state.pc=0x2000;cpu.state.sp=0xF000;
+  cpu.state.pc=0x4000;cpu.state.sp=0xF000;
   return {bus,cpu};
 }
 
 function loadProgram(bus,bytes){
-  bytes.forEach((byte,index)=>bus.debugPoke(0x2000+index,byte));
+  bytes.forEach((byte,index)=>bus.debugPoke(0x4000+index,byte));
 }
 
 function runToHalt(cpu,limit=20000){
@@ -96,14 +97,14 @@ function cursor(bus){
   setCursor(bus,TEXT_VRAM_BASE,0);
   const text=[...'A\r\nB'].map(ch=>ch.charCodeAt(0));
   text.push(0);
-  text.forEach((byte,index)=>bus.debugPoke(0x2100+index,byte));
-  cpu.state.h=0x21;cpu.state.l=0x00;cpu.state.b=0x12;cpu.state.c=0x34;cpu.state.d=0x56;cpu.state.e=0x78;
+  text.forEach((byte,index)=>bus.debugPoke(0x4100+index,byte));
+  cpu.state.h=0x41;cpu.state.l=0x00;cpu.state.b=0x12;cpu.state.c=0x34;cpu.state.d=0x56;cpu.state.e=0x78;
   loadProgram(bus,[0xCD,(BIOS_JUMP_TABLE+9)&0xFF,(BIOS_JUMP_TABLE+9)>>8,0x76]);
   runToHalt(cpu);
   assert.equal(bus.debugPeek(TEXT_VRAM_BASE),'A'.charCodeAt(0));
   assert.equal(bus.debugPeek(TEXT_VRAM_BASE+80),'B'.charCodeAt(0));
   assert.equal(cursor(bus),TEXT_VRAM_BASE+81);assert.equal(bus.debugPeek(BIOS_WORK_COLUMN),1);
-  assert.equal((cpu.state.h<<8)|cpu.state.l,0x2104);
+  assert.equal((cpu.state.h<<8)|cpu.state.l,0x4104);
   assert.equal((cpu.state.b<<8)|cpu.state.c,0x1234);assert.equal((cpu.state.d<<8)|cpu.state.e,0x5678);
   assert.equal(cpu.state.sp,0xF000);
 }

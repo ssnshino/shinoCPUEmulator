@@ -14,6 +14,17 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-pageable-firmware-v04-20260926`, parent `d3f223e`.
+SHINO-80 now has 64 KiB physical RAM with a RESET-visible 16 KiB firmware
+overlay: fixed Boot/Recovery ROM at 0000h–1FFFh and selectable Extension ROM at
+2000h–3FFFh. Low I/O port 00h controls full lower RAM, shadow writes and bank
+selection; RESET restores bank 0 ROM visibility. BIOS/MON v0.3 behavior is
+preserved and its large disassembler tables now occupy Extension bank 0. See
+`docs/head/SHINO80_PAGEABLE_FIRMWARE_v0.4.md`, matching plan/research/worklog.
+No BASIC, CP/M, disk loader, CPU semantic or CG-ROM/display change. Full package
+and browser evidence must pass before review; no merge or public deploy.
+Older candidate entries below are history.
+
 LATEST: `feature/shino80-bios-monitor-v03-20260926`, parent `af6c933`.
 ROM-resident BIOS/MON v0.3 adds bounded `D start end`, diagnostic `R`, and
 seven-family `U start [end]`; legacy H/?/C/D remains compatible. New BIOS calls

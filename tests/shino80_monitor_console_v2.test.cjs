@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Shino80Keyboard}=require('../src/devices/shino80/shino80-keyboard.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
@@ -7,8 +8,9 @@ const {buildSystemRom}=require('../src/firmware/shino80/shino80-system-rom.js');
 const rom=buildSystemRom();
 function machine(){
   const keyboard=new Shino80Keyboard({capacity:256});
-  const bus=new Shino80Bus({traceLimit:256,romRanges:[[0,0x1FFF]],ioDevices:[keyboard]});
-  bus.load(rom.bytes,0);const cpu=new Z80Core(bus);cpu.reset();
+  const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
+  const bus=new Shino80Bus({traceLimit:256,memoryDevice:memory,ioDevices:[keyboard]});
+  const cpu=new Z80Core(bus);cpu.reset();
   cpu.runInstructions(rom.meta.instructionsBeforeLoop);
   assert.equal(cpu.state.pc,rom.labels.MONITOR_LOOP);
   return {keyboard,bus,cpu};
@@ -17,7 +19,7 @@ function until(cpu,predicate){let n=0;while(!predicate()&&n++<500000)cpu.step();
 function text(bus,address,length){return Array.from({length},(_,i)=>String.fromCharCode(bus.debugPeek((address+i)&65535))).join('');}
 function send(m,s){for(const ch of s)assert(m.keyboard.enqueueByte(ch.charCodeAt(0)));}
 function command(m,s){send(m,s+'\r');m.cpu.step();until(m.cpu,()=>m.cpu.state.pc===rom.labels.MONITOR_LOOP);}
-function invoke(m,address){m.bus.debugPoke(0x2000,0xCD);m.bus.debugPoke(0x2001,address&255);m.bus.debugPoke(0x2002,address>>8);m.bus.debugPoke(0x2003,0x76);m.cpu.state.pc=0x2000;m.cpu.state.halted=false;until(m.cpu,()=>m.cpu.state.halted);}
+function invoke(m,address){m.bus.debugPoke(0x4000,0xCD);m.bus.debugPoke(0x4001,address&255);m.bus.debugPoke(0x4002,address>>8);m.bus.debugPoke(0x4003,0x76);m.cpu.state.pc=0x4000;m.cpu.state.halted=false;until(m.cpu,()=>m.cpu.state.halted);}
 function cursor(m,address,col){m.bus.debugPoke(0xE000,address&255);m.bus.debugPoke(0xE001,address>>8);m.bus.debugPoke(0xE002,col);}
 for(const [address,label] of [[0x10F,'BIOS_GETLINE'],[0x112,'BIOS_PRINT_HEX8'],[0x115,'BIOS_PRINT_HEX16']]){
   assert.equal(rom.bytes[address],0xC3);assert.equal(rom.bytes[address+1]|rom.bytes[address+2]<<8,rom.labels[label]);
@@ -56,8 +58,8 @@ for(const [address,expected] of [[0x112,'AF'],[0x115,'BEEF']]){
   for(const [k,v] of Object.entries(initial))assert.equal(m.cpu.state[k],v,k);
 }
 // Real CPU-read dumps, strict syntax, lowercase and address wrap.
-for(const start of [0x0100,0x2345,0xFFFC]){
-  const m=machine();for(let i=0;i<64;i++){const a=(start+i)&65535;if(a>=0x2000)m.bus.debugPoke(a,i);}
+for(const start of [0x0100,0x4345,0xFFFC]){
+  const m=machine();for(let i=0;i<64;i++){const a=(start+i)&65535;if(a>=0x4000)m.bus.debugPoke(a,i);}
   const expected=Array.from({length:8},(_,row)=>{
     const a=(start+row*8)&65535;return a.toString(16).toUpperCase().padStart(4,'0')+':'+Array.from({length:8},(_,i)=>' '+m.bus.debugPeek((a+i)&65535).toString(16).toUpperCase().padStart(2,'0')).join('');
   });

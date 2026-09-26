@@ -204,7 +204,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
             <button type="submit">GO</button>
             <button type="button" id="memoryPrev" aria-label="Previous memory page">←</button>
             <button type="button" id="memoryNext" aria-label="Next memory page">→</button>
-            <label>JUMP <select id="memoryJump"><option value="">Select region</option><option value="0000">ROM / vectors</option><option value="0100">BIOS</option><option value="0200">IPL / MON</option><option value="2000">RAM</option><option value="C000">VRAM</option><option value="E000">BIOS work</option><option value="EFFF">Initial stack top</option><option value="FF00">Last page</option></select></label>
+            <label>JUMP <select id="memoryJump"><option value="">Select region</option><option value="0000">BOOT ROM / vectors</option><option value="0100">BIOS</option><option value="0200">IPL / MON</option><option value="2000">EXTENSION ROM</option><option value="4000">RAM</option><option value="C000">VRAM</option><option value="E000">BIOS work</option><option value="EFFF">Initial stack top</option><option value="FF00">Last page</option></select></label>
             <label>FOLLOW <select id="memoryFollow"><option value="">OFF</option><option value="pc">PC</option><option value="sp">SP</option><option value="hl">HL</option><option value="cursor">Video cursor</option></select></label>
           </form>
           <div id="memoryRange" class="memory-caption"></div>
@@ -263,6 +263,111 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   </section>
 </div>
 <textarea class="keyboard-capture" id="keyboardCapture" aria-label="SHINO-80 keyboard input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_MEMORY=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const ADDRESS_MASK=0xFFFF;
+  const BOOT_ROM_SIZE=0x2000;
+  const EXTENSION_ROM_BASE=0x2000;
+  const EXTENSION_ROM_SIZE=0x2000;
+  const FIRMWARE_SIZE=BOOT_ROM_SIZE+EXTENSION_ROM_SIZE;
+  const MEMORY_CONTROL_PORT=0x00;
+  const MEMORY_CONTROL_LOW_RAM=0x01;
+  const MEMORY_CONTROL_SHADOW_WRITE=0x02;
+  const MEMORY_CONTROL_BANK_MASK=0xF0;
+  const MEMORY_CONTROL_VALID_MASK=MEMORY_CONTROL_LOW_RAM|MEMORY_CONTROL_SHADOW_WRITE|MEMORY_CONTROL_BANK_MASK;
+
+  class Shino80Memory {
+    constructor({extensionBankCount=1}={}){
+      const count=Number(extensionBankCount);
+      if(!Number.isInteger(count)||count<1||count>16)throw new RangeError('extensionBankCount must be 1..16');
+      this.id='SHINO80_MEMORY_CONTROL';
+      this.ram=new Uint8Array(0x10000);
+      this.bootRom=new Uint8Array(BOOT_ROM_SIZE);this.bootRom.fill(0xFF);
+      this.extensionRomBanks=Array.from({length:count},()=>{const bank=new Uint8Array(EXTENSION_ROM_SIZE);bank.fill(0xFF);return bank;});
+      this.control=0;
+    }
+
+    normalizeAddress(address){return Number(address)&ADDRESS_MASK;}
+    normalizeData(value){return Number(value)&0xFF;}
+    lowPort(port){return Number(port)&0xFF;}
+    handlesPort(port){return this.lowPort(port)===MEMORY_CONTROL_PORT;}
+    get lowRamEnabled(){return Boolean(this.control&MEMORY_CONTROL_LOW_RAM);}
+    get shadowWriteEnabled(){return Boolean(this.control&MEMORY_CONTROL_SHADOW_WRITE);}
+    get extensionBank(){return (this.control&MEMORY_CONTROL_BANK_MASK)>>4;}
+
+    reset(){this.control=0;}
+    readPort(){return this.control;}
+    writePort(port,value){
+      if(this.handlesPort(port))this.control=this.normalizeData(value)&MEMORY_CONTROL_VALID_MASK;
+    }
+    debugPeekPort(){return this.control;}
+    debugPokePort(port,value){this.writePort(port,value);}
+
+    isRomVisibleAddress(address){
+      const addr=this.normalizeAddress(address);
+      return !this.lowRamEnabled&&addr<FIRMWARE_SIZE;
+    }
+    describeAddress(address){
+      const addr=this.normalizeAddress(address);
+      if(this.lowRamEnabled||addr>=FIRMWARE_SIZE)return {memorySource:'RAM',mapping:'RAM'};
+      if(addr<BOOT_ROM_SIZE)return {memorySource:'BOOT_ROM',mapping:'ROM_OVERLAY'};
+      return {memorySource:'EXTENSION_ROM',mapping:'ROM_OVERLAY',extensionBank:this.extensionBank};
+    }
+    read(address){
+      const addr=this.normalizeAddress(address);
+      if(this.lowRamEnabled||addr>=FIRMWARE_SIZE)return this.ram[addr];
+      if(addr<BOOT_ROM_SIZE)return this.bootRom[addr];
+      const bank=this.extensionRomBanks[this.extensionBank];
+      return bank?bank[addr-EXTENSION_ROM_BASE]:0xFF;
+    }
+    write(address,value){
+      const addr=this.normalizeAddress(address),data=this.normalizeData(value);
+      if(this.isRomVisibleAddress(addr)){
+        if(!this.shadowWriteEnabled)return {operation:'WRITE_BLOCKED',purpose:'ROM_WRITE_BLOCKED',memorySource:'ROM_OVERLAY'};
+        this.ram[addr]=data;
+        return {operation:'WRITE_SHADOW',memorySource:'RAM_UNDER_ROM',mapping:'ROM_OVERLAY'};
+      }
+      this.ram[addr]=data;
+      return {operation:'WRITE',memorySource:'RAM',mapping:'RAM'};
+    }
+
+    debugPeek(address){return this.read(address);}
+    debugPeekRam(address){return this.ram[this.normalizeAddress(address)];}
+    debugPoke(address,value){this.ram[this.normalizeAddress(address)]=this.normalizeData(value);}
+    clearRam(value=0){this.ram.fill(this.normalizeData(value));}
+    loadRam(bytes,start=0){
+      const base=this.normalizeAddress(start);
+      for(let n=0;n<bytes.length;n++)this.ram[(base+n)&ADDRESS_MASK]=this.normalizeData(bytes[n]);
+    }
+    loadBootRom(bytes){
+      if(bytes.length>BOOT_ROM_SIZE)throw new RangeError('Boot ROM exceeds 8 KiB');
+      this.bootRom.fill(0xFF);this.bootRom.set(bytes);
+    }
+    loadExtensionBank(index,bytes){
+      const bankIndex=Number(index);
+      if(!Number.isInteger(bankIndex)||bankIndex<0||bankIndex>=this.extensionRomBanks.length)throw new RangeError('Extension ROM bank is not installed');
+      if(bytes.length>EXTENSION_ROM_SIZE)throw new RangeError('Extension ROM bank exceeds 8 KiB');
+      const bank=this.extensionRomBanks[bankIndex];bank.fill(0xFF);bank.set(bytes);
+    }
+    loadFirmware(bytes){
+      if(bytes.length>FIRMWARE_SIZE)throw new RangeError('Firmware image exceeds 16 KiB');
+      this.loadBootRom(bytes.slice(0,BOOT_ROM_SIZE));
+      this.loadExtensionBank(0,bytes.slice(BOOT_ROM_SIZE,FIRMWARE_SIZE));
+    }
+  }
+
+  return {
+    Shino80Memory,
+    BOOT_ROM_SIZE,EXTENSION_ROM_BASE,EXTENSION_ROM_SIZE,FIRMWARE_SIZE,
+    MEMORY_CONTROL_PORT,MEMORY_CONTROL_LOW_RAM,MEMORY_CONTROL_SHADOW_WRITE,MEMORY_CONTROL_BANK_MASK
+  };
+});
+</script>
 <script>
 (function(root,factory){
   const api=factory();
@@ -275,8 +380,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const DATA_MASK=0xFF;
 
   class Shino80Bus {
-    constructor({traceLimit=256,romRanges=[],ioDevices=[]}={}){
-      this.memory=new Uint8Array(0x10000);
+    constructor({traceLimit=256,romRanges=[],ioDevices=[],memoryDevice=null}={}){
+      if(memoryDevice&&(
+        !(memoryDevice.ram instanceof Uint8Array)||
+        typeof memoryDevice.read!=='function'||typeof memoryDevice.write!=='function'
+      ))throw new TypeError('memoryDevice must provide RAM, read and write');
+      this.memoryDevice=memoryDevice;
+      this.memory=memoryDevice?memoryDevice.ram:new Uint8Array(0x10000);
       this.ioPorts=new Uint8Array(0x10000);
       this.ioPorts.fill(0xFF);
       this._traceBuffer=[];this._traceStart=0;this._traceCount=0;this._traceLimit=0;
@@ -288,6 +398,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         return [start,end];
       });
       this.ioDevices=[];
+      if(memoryDevice&&typeof memoryDevice.handlesPort==='function')this.attachIoDevice(memoryDevice);
       for(const device of ioDevices||[])this.attachIoDevice(device);
     }
 
@@ -295,6 +406,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     normalizeData(value){return Number(value)&DATA_MASK;}
     isRomAddress(address){
       const addr=this.normalizeAddress(address);
+      if(this.memoryDevice&&typeof this.memoryDevice.isRomVisibleAddress==='function')return this.memoryDevice.isRomVisibleAddress(addr);
       return this.romRanges.some(([start,end])=>addr>=start&&addr<=end);
     }
 
@@ -349,7 +461,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
     cpuRead(address,{tState=0,purpose='MEMORY_READ',signals=['MREQ','RD'],meta={}}={}){
       const addr=this.normalizeAddress(address);
-      const data=this.memory[addr];
+      const data=this.memoryDevice?this.memoryDevice.read(addr):this.memory[addr];
+      const memoryMeta=this.memoryDevice&&typeof this.memoryDevice.describeAddress==='function'?this.memoryDevice.describeAddress(addr):{};
       this.emit({
         tState,
         actor:'CPU',
@@ -359,13 +472,29 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         data,
         purpose,
         signals:[...signals],
-        meta:{...meta}
+        meta:{...memoryMeta,...meta}
       });
       return data;
     }
 
     cpuWrite(address,value,{tState=0,purpose='MEMORY_WRITE',signals=['MREQ','WR'],meta={}}={}){
       const addr=this.normalizeAddress(address),data=this.normalizeData(value);
+      if(this.memoryDevice){
+        const result=this.memoryDevice.write(addr,data)||{};
+        const {operation='WRITE',purpose:resultPurpose,...memoryMeta}=result;
+        this.emit({
+          tState,
+          actor:'CPU',
+          space:'MEMORY',
+          operation,
+          address:addr,
+          data,
+          purpose:resultPurpose||purpose,
+          signals:[...signals],
+          meta:{...memoryMeta,...meta,...(operation==='WRITE_BLOCKED'?{requestedPurpose:purpose}:{})}
+        });
+        return data;
+      }
       if(this.isRomAddress(addr)){
         this.emit({
           tState,
@@ -451,8 +580,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       });
     }
 
-    debugPeek(address){return this.memory[this.normalizeAddress(address)];}
-    debugPoke(address,value){this.memory[this.normalizeAddress(address)]=this.normalizeData(value);}
+    debugPeek(address){const addr=this.normalizeAddress(address);return this.memoryDevice?this.memoryDevice.debugPeek(addr):this.memory[addr];}
+    debugPoke(address,value){const addr=this.normalizeAddress(address),data=this.normalizeData(value);if(this.memoryDevice)this.memoryDevice.debugPoke(addr,data);else this.memory[addr]=data;}
+    debugPeekRam(address){const addr=this.normalizeAddress(address);return this.memoryDevice?this.memoryDevice.debugPeekRam(addr):this.memory[addr];}
     debugIoPeek(port){
       const address=this.normalizeAddress(port),device=this.ioDeviceFor(address);
       return this.normalizeData(device&&typeof device.debugPeekPort==='function'?device.debugPeekPort(address):this.ioPorts[address]);
@@ -466,11 +596,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     resetIoDevices(){for(const device of this.ioDevices)if(typeof device.reset==='function')device.reset();}
     clearWritableMemory(value=0){
       const data=this.normalizeData(value);
+      if(this.memoryDevice){this.memoryDevice.clearRam(data);return;}
       for(let address=0;address<=ADDRESS_MASK;address++)if(!this.isRomAddress(address))this.memory[address]=data;
     }
 
     load(bytes,start=0){
       const base=this.normalizeAddress(start);
+      if(this.memoryDevice){this.memoryDevice.loadRam(bytes,base);return;}
       for(let n=0;n<bytes.length;n++)this.memory[(base+n)&ADDRESS_MASK]=this.normalizeData(bytes[n]);
     }
   }
@@ -1930,7 +2062,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 })(typeof globalThis!=='undefined'?globalThis:this,function(decoder){
   'use strict';
 
-  const ROM_SIZE=0x2000;
+  const ROM_SIZE=0x4000;
   const TEXT_VRAM_BASE=0xC000;
   const TEXT_COLS=80;
   const TEXT_ROWS=25;
@@ -2435,7 +2567,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     // Compact ROM tables. BASE/ED entries contain instruction length followed
     // by a zero-terminated template. Index and CB families are derived at runtime.
     const emitText=(label,text)=>{a.label(label);a.emit(...[...text].map(ch=>ch.charCodeAt(0)),0);};
-    a.org(0x10C0);
+    a.org(0x2000);
     a.label('DA_INDEX_AFFECTED_BITS');
     for(let group=0;group<32;group++){
       let bits=0;for(let bit=0;bit<8;bit++)if(decoder.decodeIndex(group*8+bit,'IX').affected)bits|=1<<bit;a.emit(bits);
@@ -2621,16 +2753,17 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 (function(){
   'use strict';
+  const {Shino80Memory}=globalThis.SHINO_MEMORY;
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
   const keyboard=new Shino80Keyboard();
-  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]],ioDevices:[keyboard]});
-  const cpu=new Z80Core(bus);
   const systemRom=buildSystemRom();
-  bus.load(systemRom.bytes,0x0000);
+  const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
+  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard]});
+  const cpu=new Z80Core(bus);
   cpu.reset();
 
   const queryOne=s=>document.querySelector(s);
@@ -2670,6 +2803,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
+    {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
     {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
@@ -2744,7 +2878,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     if(memoryView.follow==='cursor')memoryView.address=bus.debugPeek(0xE000)|(bus.debugPeek(0xE001)<<8);
     const start=memoryView.address&0xFF00,columns=matchMedia('(max-width:719px)').matches?8:16;
     const root=queryOne('#memoryGrid');root.style.setProperty('--memory-columns',columns);
-    queryOne('#memoryRange').textContent=`${hex(start,4)}h–${hex(start+255,4)}h · PAGE ${start/256+1}/256 · ${columns} bytes/row`;
+    const mapping=memory.describeAddress(start),mapLabel=mapping.memorySource==='EXTENSION_ROM'?`EXT ROM BANK ${mapping.extensionBank}`:mapping.memorySource.replaceAll('_',' ');
+    queryOne('#memoryRange').textContent=`${hex(start,4)}h–${hex(start+255,4)}h · ${mapLabel} · PAGE ${start/256+1}/256 · ${columns} bytes/row`;
     queryOne('#memoryPrev').disabled=start===0;queryOne('#memoryNext').disabled=start===0xFF00;
     if(document.activeElement!==queryOne('#memoryAddress'))queryOne('#memoryAddress').value=hex(memoryView.address,4);
     const marks={};
@@ -2752,7 +2887,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(event.actor!=='CPU'||event.space!=='MEMORY')continue;
       if(event.purpose==='OPCODE_FETCH')marks.fetch=event.address;
       else if(event.operation==='READ')marks.read=event.address;
-      else if(event.operation==='WRITE')marks.write=event.address;
+      else if(event.operation==='WRITE'||event.operation==='WRITE_SHADOW')marks.write=event.address;
     }
     const fragment=document.createDocumentFragment();
     for(let base=start;base<start+256;base+=columns){
@@ -2778,7 +2913,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.length?li.bytes.map(b=>hex(b,2)).join(' ')+'h ':''}${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>DD / FD</span><b>252 + 252 terminal opcodes ONLINE</b></div><div class="inspector-kv"><span>DDCB / FDCB</span><b>256 + 256 encodings ONLINE</b></div><div class="inspector-kv"><span>Interrupts</span><b>NMI · INT IM0 / IM1 / IM2</b></div><div class="inspector-kv"><span>Accuracy</span><b>Full F / WZ / P / Q / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">Instruction-level CPU milestone: all families, full flags and interrupt dispatch. Oracle: 1,604,000 cases (ED: 80 encodings). Not pin/cycle-perfect; WAIT/BUSRQ and multi-byte device-supplied IM0 streams are not modeled.</div>`;}
-    if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
+    if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Physical RAM</span><b>64 KiB</b></div><div class="inspector-kv"><span>Lower mapping</span><b>${memory.lowRamEnabled?'FULL RAM':'BOOT + EXT ROM'}</b></div><div class="inspector-kv"><span>Extension bank</span><b>${memory.extensionBank}</b></div><div class="inspector-kv"><span>Control port</span><b>00h = ${hex(memory.control)}</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector shows the currently visible mapping with DEBUG PEEK and creates no CPU Bus events. RAM exists underneath the lower ROM overlay.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.traceCount}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){
       const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
@@ -2787,6 +2922,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
+      else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -2849,16 +2985,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
   function resetCpu(){
     if(!ui.powered)return;
-    stopRun();keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+    stopRun();bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
   }
   function powerOn(){
     if(ui.powered)return;
-    stopRun();bus.clearWritableMemory(0);keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
+    stopRun();bus.clearWritableMemory(0);bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function powerOff(){
     if(!ui.powered)return;
-    stopRun();ui.powered=false;keyboard.reset();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    stopRun();ui.powered=false;bus.resetIoDevices();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function togglePower(){ui.powered?powerOff():powerOn();}
@@ -2994,13 +3130,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
 
   function selfTest(){
-    const tb=new Shino80Bus({romRanges:[[0x0000,0x1FFF]]}),tc=new Z80Core(tb),rom=buildSystemRom();
-    tb.load(rom.bytes,0);tb.clearWritableMemory(0xA5);tc.reset();tb.clearTrace();
+    const rom=buildSystemRom(),tm=new Shino80Memory();tm.loadFirmware(rom.bytes);
+    const tb=new Shino80Bus({memoryDevice:tm}),tc=new Z80Core(tb);
+    tb.clearWritableMemory(0xA5);tb.resetIoDevices();tc.reset();tb.clearTrace();
     tc.runInstructions(rom.meta.instructionsBeforeLoop);
     const firstChar=tb.debugPeek(TEXT_VRAM_BASE),lastClear=tb.debugPeek(TEXT_VRAM_BASE+0x7FF);
     const romByte=tb.debugPeek(0);tb.cpuWrite(0,0x00,{purpose:'SELFTEST_ROM_WRITE'});
     return firstChar===0x53&&lastClear===0x00&&tc.state.pc===rom.labels.MONITOR_LOOP&&
-      tb.debugPeek(0)===romByte&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
+      tb.debugPeek(0)===romByte&&tb.debugPeek(0x2000)===rom.bytes[0x2000]&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
   }
   function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
 
