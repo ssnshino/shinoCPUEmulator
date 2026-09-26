@@ -1,3 +1,11 @@
+CURRENT OVERRIDE 2026-09-26:
+Resume feature/shino80-monitor-lines-dump-20260926, stacked on Memory PR #18
+(f0903e0). Verify live Git state first. Read MONITOR_CONSOLE v0.2 plan/spec/
+worklog and CURRENT_SNAPSHOT active override. Keyboard exists; MON now has
+line input, Backspace, scroll and D xxxx (64-byte CPU-read dump). All commands
+need Enter. Human mobile QA of this candidate is pending. Main/PR merges need
+explicit Human authorization. No CPU or CG-ROM changes. Older prompt follows.
+
 SHINO-80 development is cleanly integrated through:
 
 - PR #14: native CG-ROM / DM-80 rendering

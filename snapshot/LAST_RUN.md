@@ -1,4 +1,9 @@
 # LAST RUN
+
+Latest: 2026-09-26 BIOS console / Monitor v0.2 candidate. See
+`working-logs/head/SHINO80_MONITOR_CONSOLE_V2_WORKLOG.md` and the active
+candidate override in CURRENT_SNAPSHOT.md. PR #18 stays unmerged; this branch
+is stacked on its reviewed-by-Human mobile result. Earlier closeout follows.
 ## CG-ROM / DM-80 + MINIMUM BIOS INTEGRATION CLOSEOUT
 
 Updated: 2026-09-25T23:58:41+09:00

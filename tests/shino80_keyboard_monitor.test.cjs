@@ -92,17 +92,17 @@ function runCommand(cpu){
   assert.equal(textAt(bus,0,12),'SHINO-80 IPL');
   assert.equal(textAt(bus,3,1),'*');
 
-  keyboard.enqueueByte('h'.charCodeAt(0));runCommand(cpu);
-  assert.equal(textAt(bus,3,2),'*H');
+  keyboard.enqueueByte('h'.charCodeAt(0));keyboard.enqueueByte(13);runCommand(cpu);
+  assert.equal(textAt(bus,3,2),'*h');
   assert.equal(textAt(bus,4,15),'H HELP  C CLEAR');
   assert.equal(textAt(bus,5,1),'*');
 
-  keyboard.enqueueByte('X'.charCodeAt(0));runCommand(cpu);
+  keyboard.enqueueByte('X'.charCodeAt(0));keyboard.enqueueByte(13);runCommand(cpu);
   assert.equal(textAt(bus,5,2),'*X');
   assert.equal(textAt(bus,6,1),'?');
   assert.equal(textAt(bus,7,1),'*');
 
-  keyboard.enqueueByte('C'.charCodeAt(0));runCommand(cpu);
+  keyboard.enqueueByte('C'.charCodeAt(0));keyboard.enqueueByte(13);runCommand(cpu);
   assert.equal(textAt(bus,0,3),'MON');
   assert.equal(textAt(bus,1,1),'*');
   assert.equal(cursor(bus),TEXT_VRAM_BASE+TEXT_COLS+1);

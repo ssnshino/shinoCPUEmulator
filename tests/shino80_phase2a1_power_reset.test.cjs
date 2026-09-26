@@ -15,7 +15,7 @@ assert.equal(rom.labels.MONITOR_LOOP,0x0220);
 assert.equal(rom.meta.vramBytes,2048);
 assert.equal(rom.meta.testPageInstructions,771);
 assert.equal(rom.meta.clearPageInstructions,770);
-assert.equal(rom.meta.instructionsBeforeLoop,13976);
+assert.equal(rom.meta.instructionsBeforeLoop,14036);
 
 const bus=new Shino80Bus({traceLimit:256,romRanges:[[0x0000,0x1FFF]]});
 const cpu=new Z80Core(bus);
@@ -39,8 +39,8 @@ for(let page=0;page<8;page++){
 assert.equal(bus.debugPeek(TEXT_VRAM_BASE+0x800),0xA5);
 
 // Continue through hold, clear, and boot banner.
-while(cpu.state.pc!==rom.labels.MONITOR_LOOP && guard++<14000)cpu.step();
-assert(guard<14000);
+while(cpu.state.pc!==rom.labels.MONITOR_LOOP && guard++<15000)cpu.step();
+assert(guard<15000);
 assert.equal(bus.debugPeek(TEXT_VRAM_BASE+0x7FF),0x00);
 assert.equal(bus.debugPeek(TEXT_VRAM_BASE+0x800),0xA5);
 assert.equal(cpu.state.pc,rom.labels.MONITOR_LOOP);
