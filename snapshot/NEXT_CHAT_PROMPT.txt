@@ -1,3 +1,10 @@
+NEWEST OVERRIDE 2026-09-26:
+Resume perf/shino80-trace-observer-20260926 on 3f4f90d / PR #20.
+Read TRACE_OBSERVER_PERF plan/spec/worklog. Bus ring and visible-only observers,
+CPU/firmware/pacing unchanged. Chrome benchmark ~4 MHz; iPhone QA pending.
+Trace getter returns an ordered array snapshot; use clearTrace to mutate.
+No main merge authorized. Verify live Git state; older overrides follow.
+
 LATEST OVERRIDE 2026-09-26:
 Resume feature/shino80-realtime-pace-20260926 on parent 6707ace / PR #19.
 Read REALTIME_PACE plan/worklog and EXECUTION_PACE_v0.1 spec. Default REALTIME

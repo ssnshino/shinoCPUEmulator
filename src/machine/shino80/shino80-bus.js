@@ -14,7 +14,7 @@
       this.memory=new Uint8Array(0x10000);
       this.ioPorts=new Uint8Array(0x10000);
       this.ioPorts.fill(0xFF);
-      this.trace=[];
+      this._traceBuffer=[];this._traceStart=0;this._traceCount=0;this._traceLimit=0;
       this.traceLimit=traceLimit;
       this.sequence=0;
       this.romRanges=(romRanges||[]).map(range=>{
@@ -33,7 +33,22 @@
       return this.romRanges.some(([start,end])=>addr>=start&&addr<=end);
     }
 
-    clearTrace(){this.trace.length=0;}
+    // Ordered array snapshot for observers; mutate through clearTrace(), not trace.
+    get trace(){
+      const records=new Array(this._traceCount);
+      for(let i=0;i<records.length;i++)records[i]=this._traceBuffer[(this._traceStart+i)%this._traceLimit];
+      return records;
+    }
+    get traceCount(){return this._traceCount;}
+    get traceLimit(){return this._traceLimit;}
+    set traceLimit(value){
+      if(!Number.isSafeInteger(value)||value<0)throw new RangeError('traceLimit must be a nonnegative integer');
+      const retained=value?this.trace.slice(-value):[];
+      this._traceLimit=value;this._traceBuffer=new Array(value);
+      this._traceStart=0;this._traceCount=retained.length;
+      for(let i=0;i<retained.length;i++)this._traceBuffer[i]=retained[i];
+    }
+    clearTrace(){this._traceBuffer.fill(undefined);this._traceStart=0;this._traceCount=0;}
 
     attachIoDevice(device){
       if(!device||typeof device.handlesPort!=='function')throw new TypeError('I/O device must implement handlesPort(port)');
@@ -55,8 +70,15 @@
 
     emit(event){
       const record={seq:++this.sequence,...event};
-      this.trace.push(record);
-      if(this.trace.length>this.traceLimit)this.trace.splice(0,this.trace.length-this.traceLimit);
+      if(this._traceLimit){
+        if(this._traceCount<this._traceLimit){
+          this._traceBuffer[(this._traceStart+this._traceCount)%this._traceLimit]=record;
+          this._traceCount++;
+        }else{
+          this._traceBuffer[this._traceStart]=record;
+          this._traceStart=(this._traceStart+1)%this._traceLimit;
+        }
+      }
       return record;
     }
 

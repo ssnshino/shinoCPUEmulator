@@ -17,6 +17,6 @@
     "test:phase2a1": "node tests/shino80_phase2a1_power_reset.test.cjs",
     "test:phase1e": "node tests/z80_phase1e_base_complete.test.cjs",
     "test:bios": "node tests/shino80_minimum_bios_monitor.test.cjs",
-    "test:keyboard": "node tests/shino80_keyboard_monitor.test.cjs && node tests/shino80_monitor_console_v2.test.cjs && node tests/shino80_execution_pace.test.cjs"
+    "test:keyboard": "node tests/shino80_keyboard_monitor.test.cjs && node tests/shino80_monitor_console_v2.test.cjs && node tests/shino80_execution_pace.test.cjs && node tests/shino80_trace_ring.test.cjs"
   }
 }

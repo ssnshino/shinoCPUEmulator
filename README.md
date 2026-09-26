@@ -14,6 +14,13 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+Newest: `perf/shino80-trace-observer-20260926` on `3f4f90d` / PR #20.
+Bus ring storage and visible-only observers; CPU/firmware unchanged. Local
+Chrome comparison reached ~4.00 MHz versus ~0.70–0.75 before; iPhone QA pending.
+Current plan/spec/worklog: `SHINO80_TRACE_OBSERVER_PERF_PLAN.md`,
+`SHINO80_TRACE_OBSERVER_PERF_v0.1.md`, `SHINO80_TRACE_OBSERVER_PERF_WORKLOG.md`.
+The previous candidate history follows; all merges require Human GO.
+
 Latest: `feature/shino80-realtime-pace-20260926`, stacked on MON v0.2
 `6707ace` / PR #19 (Human functional PASS). Default REALTIME replaces MAX;
 VISUAL and TURBO remain selectable. 4 MHz is a target, measured MHz is shown.
