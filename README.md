@@ -14,6 +14,15 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-cpm22-boot-v01-20260926`, parent `72f16bb` / PR #35.
+The standalone machine now boots license-audited CP/M 2.2 through MON `O`.
+An original 98-byte SHINO loader reads 44 system sectors through CBIOS into
+CCP 9400h and BDOS 9C00h, installs page-zero WBOOT/BDOS vectors and reaches an
+interactive `A>` prompt. `DIR` returns `NO FILE` on the empty E5-formatted A:;
+BDOS function 12 reports 0022h. Destructive cold/warm tests prove disk-backed
+recovery. Source, exact license, port delta, assembler commit and hashes are
+recorded under `third_party/cpm22/`. No BASIC, bundled commands, merge or deploy.
+
 LATEST: `feature/shino80-warm-boot-v02-20260926`, parent `4d5e81a` / PR #33.
 CBIOS WBOOT at FA03h now reloads A: track 0 sector 2 to 8000h through the same
 READ/INIR path used by programs, then jumps to the restored original payload.

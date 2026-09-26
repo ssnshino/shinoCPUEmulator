@@ -61,8 +61,8 @@ with sync_playwright() as p:
     assert page.locator('[data-address="0000"]').inner_text()=='C3'
     assert page.locator('[data-address="0001"]').inner_text()=='03'
     assert page.locator('[data-address="0002"]').inner_text()=='FA'
-    page.locator('#memoryAddress').fill('E260');page.locator('#memoryAddressForm').press('Enter');page.wait_for_timeout(80)
-    assert ''.join(page.locator(f'[data-address="E26{i}"]').inner_text() for i in range(4))=='44534B21'
+    page.locator('#memoryAddress').fill('9400');page.locator('#memoryAddressForm').press('Enter');page.wait_for_timeout(80)
+    assert ''.join(page.locator(f'[data-address="940{i}"]').inner_text() for i in range(4))=='C35C97C3'
     assert 'FULL RAM' in page.locator('#inspectorContent').inner_text()
 
     page.locator('.bottom-nav button[data-view="cpu"]').click();page.wait_for_timeout(80)
@@ -78,8 +78,8 @@ with sync_playwright() as p:
     assert '77 TRACKS × 26 SECTORS' in inspector
     assert '256,256 BYTES' in inspector
     assert '30h–36h' in inspector
-    assert 'S80B v1 SYSTEM' in inspector
-    assert 'A:0/7' in inspector
+    assert 'S80B v2 · CP/M 2.2' in inspector
+    assert 'A:2/16' in inspector
     assert 'MON O' in inspector
     assert 'IDLE' in inspector
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')

@@ -1,5 +1,11 @@
 # LAST RUN
 
+LATEST 2026-09-26: CP/M 2.2 boot v0.1 candidate on parent `72f16bb` / PR #35.
+Branch `feature/shino80-cpm22-boot-v01-20260926`. Imported licensed source and
+provenance, rebuilt 44K CCP/BDOS with the documented FA00h BIOS port, added
+S80B v2 tracks and an original RAM loader. Cold A>, DIR/NO FILE, BDOS version
+and destructive WBOOT tests pass. No merge/deploy. Previous runs follow.
+
 LATEST 2026-09-26: Warm Boot v0.2 candidate on System Disk `4d5e81a` / PR #33.
 Branch `feature/shino80-warm-boot-v02-20260926`. CBIOS WBOOT now restores the
 original 8000h payload from A: sector 2 and re-enters it; read failure reports
