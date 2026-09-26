@@ -14,6 +14,16 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-warm-boot-v02-20260926`, parent `4d5e81a` / PR #33.
+CBIOS WBOOT at FA03h now reloads A: track 0 sector 2 to 8000h through the same
+READ/INIR path used by programs, then jumps to the restored original payload.
+Tests destroy the resident payload, enter via page zero, prove one command plus
+128 DATA reads, renewed banner/DSK! and RAM-only fetches. Missing media prints
+`WBOOT DISK ERROR` through loaded CBIOS and HALTs safely. CBIOS is 635 bytes at
+FA00h–FC7Ah, within its 640-byte reservation. No CCP, BDOS, filesystem or CP/M
+image is present. See the matching plan/spec/worklog. No merge/deploy; older
+entries below are history.
+
 LATEST: `feature/shino80-system-disk-loader-v01-20260926`, parent `4116919` /
 PR #32. The distributed one-page machine now mounts an original S80B v1 System
 Disk. ROM MON `O` performs seven real PIO sector reads, validates the header,
@@ -204,6 +214,9 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 9. `plan/head/SHINO80_SYSTEM_DISK_LOADER_V01_PLAN.md`
 10. `docs/head/SHINO80_SYSTEM_DISK_LOADER_v0.1.md`
 11. `working-logs/head/SHINO80_SYSTEM_DISK_LOADER_V01_WORKLOG.md`
+12. `plan/head/SHINO80_WARM_BOOT_V02_PLAN.md`
+13. `docs/head/SHINO80_WARM_BOOT_v0.2.md`
+14. `working-logs/head/SHINO80_WARM_BOOT_V02_WORKLOG.md`
 
 ## Core concept
 

@@ -1,5 +1,12 @@
 # LAST RUN
 
+LATEST 2026-09-26: Warm Boot v0.2 candidate on System Disk `4d5e81a` / PR #33.
+Branch `feature/shino80-warm-boot-v02-20260926`. CBIOS WBOOT now restores the
+original 8000h payload from A: sector 2 and re-enters it; read failure reports
+through CBIOS and HALTs. Exact destructive-RAM, PIO count and ROM-isolation
+tests pass. Package/browser closeout evidence is in the matching worklog. No
+CP/M component, merge or deploy. Previous runs below are historical.
+
 LATEST 2026-09-26: System Disk / Loader v0.1 candidate on CBIOS `4116919` /
 PR #32. Branch `feature/shino80-system-disk-loader-v01-20260926`. Added the
 original S80B v1 image, runtime mount and MON O seven-sector PIO cold loader.

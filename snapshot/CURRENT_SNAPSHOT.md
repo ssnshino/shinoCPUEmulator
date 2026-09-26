@@ -1,6 +1,14 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: Warm Boot v0.2 candidate on System Disk `4d5e81a` / PR #33.
+Branch `feature/shino80-warm-boot-v02-20260926`. Page-zero JP FA03h now enters
+CBIOS WBOOT, reloads A: track 0 sector 2 to 8000h via READ/INIR and jumps to the
+restored original payload. Destructive-RAM and missing-media tests prove exact
+reload, one command/128 DATA reads, RAM-only execution and visible safe HALT.
+CBIOS is 635 bytes through FC7Ah. No CCP/BDOS/filesystem/CP/M. Read matching
+plan/spec/worklog. No merge/deploy. Older snapshots follow.
+
 LATEST 2026-09-26: System Disk / Loader v0.1 candidate on CBIOS `4116919` /
 PR #32. Branch `feature/shino80-system-disk-loader-v01-20260926`. Original S80B
 v1 media is mounted by the one-page runtime. MON O reads seven sectors through

@@ -22,7 +22,7 @@ assert.equal(CBIOS_ORG,0xFA00);
 assert.equal(CBIOS_ENTRY_NAMES.length,17);
 assert.equal(cbios.origin,CBIOS_ORG);
 assert(cbios.end<=0x10000);
-assert.equal(cbios.bytes.length,566);
+assert.equal(cbios.bytes.length,635);
 
 // The standard 17-entry table is contiguous JP instructions in exact order.
 for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){
@@ -152,4 +152,4 @@ function pattern(seed){return Uint8Array.from({length:128},(_,index)=>(seed+inde
   assert(!m.bus.trace.some(event=>event.meta?.memorySource==='BOOT_ROM'||event.meta?.memorySource==='EXTENSION_ROM'));
 }
 
-console.log('SHINO-80 CBIOS v0.1: 17 ENTRY ABI + CONSOLE + DISK + RAM BOOT PROOF PASS');
+console.log('SHINO-80 CBIOS v0.2: 17 ENTRY ABI + CONSOLE + DISK + WBOOT FOUNDATION PASS');

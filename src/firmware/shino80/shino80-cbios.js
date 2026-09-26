@@ -8,6 +8,9 @@
   const CBIOS_ORG=0xFA00;
   const CBIOS_ENTRY_SIZE=3;
   const CBIOS_DEFAULT_DMA=0x0080;
+  const CBIOS_SYSTEM_TRACK=0;
+  const CBIOS_SYSTEM_SECTOR=2;
+  const CBIOS_SYSTEM_ENTRY=0x8000;
   const TEXT_VRAM_BASE=0xC000;
   const TEXT_VRAM_END=0xC7D0;
   const TEXT_COLS=80;
@@ -73,8 +76,20 @@
     a.label('CBIOS_JUMP_TABLE');
     for(const name of CBIOS_ENTRY_NAMES){a.label(`CBIOS_API_${name}`);jp(`CBIOS_${name}`);}
 
-    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // v0.1 returns
-    a.label('CBIOS_WBOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9); // loader is future work
+    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9);
+    a.label('CBIOS_WBOOT');
+    call('CBIOS_INIT');
+    a.word(0x01,CBIOS_SYSTEM_TRACK);call('CBIOS_SETTRK');
+    a.word(0x01,CBIOS_SYSTEM_SECTOR);call('CBIOS_SETSEC');
+    a.word(0x01,CBIOS_SYSTEM_ENTRY);call('CBIOS_SETDMA');
+    call('CBIOS_READ');a.emit(0xB7);jpNZ('CBIOS_WBOOT_FAIL');a.word(0xC3,CBIOS_SYSTEM_ENTRY);
+
+    a.label('CBIOS_WBOOT_FAIL');a.absolute(0x21,'CBIOS_WBOOT_ERROR_TEXT');call('CBIOS_PRINT_STRING');a.emit(0xF3);
+    a.label('CBIOS_WBOOT_FAIL_HALT');a.emit(0x76);jp('CBIOS_WBOOT_FAIL_HALT');
+
+    a.label('CBIOS_PRINT_STRING');
+    a.emit(0x7E,0xB7,0xC8,0xE5,0x4F);call('CBIOS_CONOUT');a.emit(0xE1,0x23);jp('CBIOS_PRINT_STRING');
+    a.label('CBIOS_WBOOT_ERROR_TEXT');a.emit(...[...'WBOOT DISK ERROR\r\n'].map(char=>char.charCodeAt(0)),0);
 
     a.label('CBIOS_INIT');
     a.emit(0xAF);ldATo('CBIOS_SELECTED_DRIVE');ldATo('CBIOS_SELECTED_TRACK');ldATo('CBIOS_SELECTED_TRACK_HI');
@@ -171,12 +186,13 @@
       origin:CBIOS_ORG,
       end:assembled.end,
       labels:assembled.labels,
-      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dpb:DPB})
+      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
     };
   }
 
   return {
-    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,DPB,
+    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,
+    CBIOS_SYSTEM_TRACK,CBIOS_SYSTEM_SECTOR,CBIOS_SYSTEM_ENTRY,DPB,
     TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
     KEY_DATA_PORT,KEY_STATUS_PORT,
     BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
