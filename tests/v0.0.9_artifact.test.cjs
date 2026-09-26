@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm');
 const f='deploy/one_page_shino80_v0.0.9_z80_base_complete.html',h=fs.readFileSync(f,'utf8');
-for(const m of ['/*__CSS__*/','/*__BUS__*/','/*__KEYBOARD__*/','/*__FLAGS__*/','/*__DECODER__*/','/*__CPU__*/','/*__CGROM__*/','/*__SYSTEM_ROM__*/','/*__VIDEO__*/','/*__APP__*/'])if(h.includes(m))throw Error('unresolved '+m);
+for(const m of ['/*__CSS__*/','/*__MEMORY__*/','/*__BUS__*/','/*__KEYBOARD__*/','/*__FLAGS__*/','/*__DECODER__*/','/*__CPU__*/','/*__CGROM__*/','/*__SYSTEM_ROM__*/','/*__VIDEO__*/','/*__APP__*/'])if(h.includes(m))throw Error('unresolved '+m);
 for(const id of ['powerBtn','crtCanvas','crtViewport','displayDevice','keyboardCapture','statusPc','statusR','statusT','statusLast','statusVideo','runPauseBtn','stepBtn','moreMenu'])if(!h.includes(`id="${id}"`))throw Error('missing DOM id '+id);
 if(!h.includes('Z80 BASE COMPLETE v0.0.9'))throw Error('BASE COMPLETE banner missing');
 if(!h.includes('BASE 252/252 ONLINE'))throw Error('CPU inspector BASE status missing');
@@ -11,7 +11,7 @@ if(/<script[^>]+src=/i.test(h))throw Error('external script dependency');
 for(const match of h.matchAll(/<link\b[^>]*\bhref=["']?([^"' >]+)/gi))if(!match[1].startsWith('data:'))throw Error('external link dependency '+match[1]);
 if(/\bprompt\s*\(/.test(h))throw Error('browser prompt() must not be used');
 const scripts=[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
-if(scripts.length!==9)throw Error('inline script count '+scripts.length);
+if(scripts.length!==10)throw Error('inline script count '+scripts.length);
 scripts.forEach((m,i)=>new vm.Script(m[1],{filename:'inline-'+i}));
 if(!h.trimEnd().endsWith('</html>'))throw Error('truncated html');
 console.log('v0.0.9 artifact static PASS',Buffer.byteLength(h),'bytes');

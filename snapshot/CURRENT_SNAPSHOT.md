@@ -1,6 +1,17 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26T11:05:32+09:00: pageable firmware v0.4 candidate on
+`feature/shino80-pageable-firmware-v04-20260926`, parent `d3f223e`. Read the
+matching plan/spec/research/worklog. Physical RAM is 64 KiB; RESET exposes fixed
+Boot ROM 0000h–1FFFh plus Extension ROM bank 0 at 2000h–3FFFh. Low I/O port 00h
+controls LOW_RAM, SHADOW_WRITE and EXT_BANK; RESET restores 00h. BIOS/MON v0.3
+behavior is preserved and its compressed disassembler tables moved to extension
+ROM. Full package and offline Chrome desktop/mobile QA PASS. No CPU semantics,
+CG-ROM or display rendering changed. No BASIC/CP/M/FDD/loader, public deploy or
+merge. Commit/push/stacked PR are the remaining delivery steps. Older snapshots
+below are historical.
+
 LATEST 2026-09-26: feature/shino80-bios-monitor-v03-20260926, parent af6c933.
 Read SHINO80_BIOS_MONITOR_V03 plan/worklog and BIOS_MONITOR_v0.3 spec. ROM MON
 now supports D start [end], R and full-family U start [end], with bounded visible

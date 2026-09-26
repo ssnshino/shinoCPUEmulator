@@ -1,6 +1,7 @@
 'use strict';
 
 const assert=require('node:assert/strict');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {
   Shino80Keyboard,
@@ -44,8 +45,9 @@ const {
 const rom=buildSystemRom();
 function machine(){
   const keyboard=new Shino80Keyboard();
-  const bus=new Shino80Bus({traceLimit:50000,romRanges:[[0x0000,0x1FFF]],ioDevices:[keyboard]});
-  const cpu=new Z80Core(bus);bus.load(rom.bytes,0);cpu.reset();
+  const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
+  const bus=new Shino80Bus({traceLimit:50000,memoryDevice:memory,ioDevices:[keyboard]});
+  const cpu=new Z80Core(bus);cpu.reset();
   return {keyboard,bus,cpu};
 }
 function textAt(bus,row,len){
@@ -70,8 +72,8 @@ function runCommand(cpu){
 {
   const {keyboard,bus,cpu}=machine();
   const program=[0xD7,0x76]; // RST 10h / HALT
-  program.forEach((byte,index)=>bus.debugPoke(0x2000+index,byte));
-  cpu.state.pc=0x2000;cpu.state.sp=0xF000;
+  program.forEach((byte,index)=>bus.debugPoke(0x4000+index,byte));
+  cpu.state.pc=0x4000;cpu.state.sp=0xF000;
   cpu.state.b=0x12;cpu.state.c=0x34;cpu.state.d=0x56;cpu.state.e=0x78;cpu.state.h=0x9A;cpu.state.l=0xBC;
   for(let index=0;index<24;index++)cpu.step();
   assert.equal(cpu.state.halted,false);assert.equal(keyboard.depth,0);

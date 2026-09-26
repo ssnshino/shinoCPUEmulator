@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm');
 for(const f of [
+  'src/machine/shino80/shino80-memory.js',
   'src/machine/shino80/shino80-bus.js',
   'src/devices/shino80/shino80-keyboard.js',
   'src/cpu/z80/z80-flags.js',

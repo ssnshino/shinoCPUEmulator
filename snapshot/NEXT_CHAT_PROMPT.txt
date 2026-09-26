@@ -1,3 +1,14 @@
+CURRENT PAGEABLE FIRMWARE v0.4 OVERRIDE 2026-09-26:
+Resume feature/shino80-pageable-firmware-v04-20260926, parent d3f223e. Read
+README -> AGENTS -> current snapshot -> SHINO80_PAGEABLE_FIRMWARE_V04 plan,
+v0.4 spec, research and worklog. Candidate has 64 KiB physical RAM with Boot
+ROM 0000-1FFF and Extension ROM bank at 2000-3FFF after RESET. I/O 00h controls
+LOW_RAM, SHADOW_WRITE and EXT_BANK. BIOS/MON v0.3 is preserved; disassembler
+tables moved to extension bank0. Full package and offline desktop/mobile Chrome
+PASS. CPU/decoder/flags, CG-ROM and display CSS unchanged. No BASIC, CP/M, FDD,
+loader, public deploy or merge. Finish commit/push/stacked PR if still pending,
+then await Human review/merge GO. Everything below is historical.
+
 CURRENT BIOS/MON v0.3 OVERRIDE 2026-09-26:
 Resume feature/shino80-bios-monitor-v03-20260926, parent af6c933. Read README ->
 AGENTS -> current snapshot -> SHINO80_BIOS_MONITOR_V03 plan/spec/worklog.

@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const {Shino80Memory,MEMORY_CONTROL_LOW_RAM}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildSystemRom,TEXT_VRAM_BASE}=require('../src/firmware/shino80/shino80-system-rom.js');
@@ -17,9 +18,9 @@ assert.equal(rom.meta.testPageInstructions,771);
 assert.equal(rom.meta.clearPageInstructions,770);
 assert.equal(rom.meta.instructionsBeforeLoop,14036);
 
-const bus=new Shino80Bus({traceLimit:256,romRanges:[[0x0000,0x1FFF]]});
+const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
+const bus=new Shino80Bus({traceLimit:256,memoryDevice:memory});
 const cpu=new Z80Core(bus);
-bus.load(rom.bytes,0);
 
 // Deterministic power-loss model clears writable memory but preserves ROM.
 bus.clearWritableMemory(0xA5);
@@ -61,6 +62,10 @@ const saved=bus.debugPeek(TEXT_VRAM_BASE);
 cpu.reset();
 assert.equal(bus.debugPeek(TEXT_VRAM_BASE),saved);
 assert.equal(cpu.state.pc,0x0000);
+
+// Machine RESET resets the mapper as well as the CPU.
+bus.cpuIoWrite(0x0000,MEMORY_CONTROL_LOW_RAM);assert(memory.lowRamEnabled);
+bus.resetIoDevices();cpu.reset();assert.equal(memory.control,0);assert.equal(bus.debugPeek(0),rom.bytes[0]);
 
 // CG cell keeps blank scanlines above and below the glyph.
 for(const ch of ['S','A','H','0','*']){

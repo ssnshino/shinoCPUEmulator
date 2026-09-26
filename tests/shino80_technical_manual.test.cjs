@@ -39,7 +39,8 @@ assert.equal(byId['BASE-D9'].example.after.bAlt,2);assert.equal(byId['BASE-08'].
 assert.deepEqual(byId['BASE-00'].flags,['—','—','—','—','—','—']);
 assert.deepEqual(byId['BASE-A0'].flags,['結果','結果','1','偶数パリティ','0','0']);
 assert(byId['CB-46'].xy.includes('WZ'));assert(byId['DDCB-46'].xy.includes('実効アドレス'));
-assert.equal(data.machine.romSize,8192);assert.equal(data.machine.vramBase,0xC000);assert.equal(data.machine.vramCells,2000);
+assert.equal(data.machine.romSize,16384);assert.equal(data.machine.bootRomSize,8192);assert.equal(data.machine.extensionRomSize,8192);
+assert.equal(data.machine.memoryControlPort,0);assert.equal(data.machine.vramBase,0xC000);assert.equal(data.machine.vramCells,2000);
 assert.equal(data.machine.width,640);assert.equal(data.machine.height,400);
 assert.equal(data.machine.keyData,0x20);assert.equal(data.machine.keyStatus,0x21);assert.equal(data.machine.fifoCapacity,64);
 assert.equal(data.machine.labels.BIOS_API_GETLINE,0x10F);assert.equal(data.machine.cgBytes.length,4096);

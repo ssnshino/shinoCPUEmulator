@@ -24,10 +24,11 @@ for(const limit of [0,1,3,256,512]){
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildSystemRom}=require('../src/firmware/shino80/shino80-system-rom.js');
 const {Shino80Keyboard}=require('../src/devices/shino80/shino80-keyboard.js');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 function machine(legacy){
- const keyboard=new Shino80Keyboard(),bus=new Shino80Bus({traceLimit:512,romRanges:[[0,8191]],ioDevices:[keyboard]});
+ const keyboard=new Shino80Keyboard(),memory=new Shino80Memory(),bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard]});
  if(legacy){const records=[];bus.emit=function(event){const r={seq:++this.sequence,...event};records.push(r);if(records.length>512)records.splice(0,records.length-512);return r;};Object.defineProperty(bus,'trace',{get:()=>records});}
- bus.load(buildSystemRom().bytes,0);const cpu=new Z80Core(bus);cpu.reset();for(const c of 'D 0100\r')keyboard.enqueueByte(c.charCodeAt(0));return {cpu,bus,keyboard};
+ memory.loadFirmware(buildSystemRom().bytes);const cpu=new Z80Core(bus);cpu.reset();for(const c of 'D 0100\r')keyboard.enqueueByte(c.charCodeAt(0));return {cpu,bus,keyboard};
 }
 const a=machine(false),b=machine(true);
 for(let chunk=0;chunk<300;chunk++){

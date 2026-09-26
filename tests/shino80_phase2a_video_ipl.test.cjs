@@ -1,20 +1,22 @@
 'use strict';
 const assert=require('node:assert/strict');
+const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildSystemRom,TEXT_VRAM_BASE,TEXT_COLS}=require('../src/firmware/shino80/shino80-system-rom.js');
 const {CG_ROM_IMAGE,CG_ROM_BYTES,GLYPH_HEIGHT}=require('../src/firmware/shino80/shino80-cgrom.js');
 
 const rom=buildSystemRom();
-assert.equal(rom.bytes.length,0x2000);
+assert.equal(rom.bytes.length,0x4000);
 assert.equal(rom.bytes[0],0xC3);
 assert.equal(rom.bytes[1]|(rom.bytes[2]<<8),rom.labels.IPL_ENTRY);
-assert.equal(rom.meta.romSize,0x2000);
+assert.equal(rom.meta.romSize,0x4000);
 assert(rom.meta.instructionsBeforeLoop>0);
 
-const bus=new Shino80Bus({traceLimit:50000,romRanges:[[0x0000,0x1FFF]]});
+const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
+const bus=new Shino80Bus({traceLimit:50000,memoryDevice:memory});
 const cpu=new Z80Core(bus);
-bus.load(rom.bytes,0);cpu.reset();bus.clearTrace();
+cpu.reset();bus.clearTrace();
 cpu.runInstructions(rom.meta.instructionsBeforeLoop);
 assert.equal(cpu.state.pc,rom.labels.MONITOR_LOOP);
 assert.equal(cpu.state.sp,0xF000);
@@ -37,6 +39,7 @@ bus.cpuWrite(0,0x00,{purpose:'TEST_ROM_WRITE'});
 assert.equal(bus.debugPeek(0),rom0);
 assert.equal(bus.trace.at(-1).purpose,'ROM_WRITE_BLOCKED');
 assert.equal(bus.trace.at(-1).operation,'WRITE_BLOCKED');
+assert.equal(bus.cpuRead(0x2000),rom.bytes[0x2000]);assert.equal(bus.trace.at(-1).meta.memorySource,'EXTENSION_ROM');
 
 assert.equal(CG_ROM_BYTES,4096);
 assert.equal(CG_ROM_IMAGE.length,4096);

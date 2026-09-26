@@ -1,15 +1,16 @@
 (function(){
   'use strict';
+  const {Shino80Memory}=globalThis.SHINO_MEMORY;
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
   const keyboard=new Shino80Keyboard();
-  const bus=new Shino80Bus({traceLimit:512,romRanges:[[0x0000,0x1FFF]],ioDevices:[keyboard]});
-  const cpu=new Z80Core(bus);
   const systemRom=buildSystemRom();
-  bus.load(systemRom.bytes,0x0000);
+  const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
+  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard]});
+  const cpu=new Z80Core(bus);
   cpu.reset();
 
   const queryOne=s=>document.querySelector(s);
@@ -49,6 +50,7 @@
     {id:'video',icon:'VB',name:'TEXT VIDEO BOARD',desc:'80×25 / 640×400 DIGITAL MONO',state:'ONLINE'},
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
+    {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
     {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
@@ -123,7 +125,8 @@
     if(memoryView.follow==='cursor')memoryView.address=bus.debugPeek(0xE000)|(bus.debugPeek(0xE001)<<8);
     const start=memoryView.address&0xFF00,columns=matchMedia('(max-width:719px)').matches?8:16;
     const root=queryOne('#memoryGrid');root.style.setProperty('--memory-columns',columns);
-    queryOne('#memoryRange').textContent=`${hex(start,4)}h–${hex(start+255,4)}h · PAGE ${start/256+1}/256 · ${columns} bytes/row`;
+    const mapping=memory.describeAddress(start),mapLabel=mapping.memorySource==='EXTENSION_ROM'?`EXT ROM BANK ${mapping.extensionBank}`:mapping.memorySource.replaceAll('_',' ');
+    queryOne('#memoryRange').textContent=`${hex(start,4)}h–${hex(start+255,4)}h · ${mapLabel} · PAGE ${start/256+1}/256 · ${columns} bytes/row`;
     queryOne('#memoryPrev').disabled=start===0;queryOne('#memoryNext').disabled=start===0xFF00;
     if(document.activeElement!==queryOne('#memoryAddress'))queryOne('#memoryAddress').value=hex(memoryView.address,4);
     const marks={};
@@ -131,7 +134,7 @@
       if(event.actor!=='CPU'||event.space!=='MEMORY')continue;
       if(event.purpose==='OPCODE_FETCH')marks.fetch=event.address;
       else if(event.operation==='READ')marks.read=event.address;
-      else if(event.operation==='WRITE')marks.write=event.address;
+      else if(event.operation==='WRITE'||event.operation==='WRITE_SHADOW')marks.write=event.address;
     }
     const fragment=document.createDocumentFragment();
     for(let base=start;base<start+256;base+=columns){
@@ -157,7 +160,7 @@
     const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.length?li.bytes.map(b=>hex(b,2)).join(' ')+'h ':''}${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>DD / FD</span><b>252 + 252 terminal opcodes ONLINE</b></div><div class="inspector-kv"><span>DDCB / FDCB</span><b>256 + 256 encodings ONLINE</b></div><div class="inspector-kv"><span>Interrupts</span><b>NMI · INT IM0 / IM1 / IM2</b></div><div class="inspector-kv"><span>Accuracy</span><b>Full F / WZ / P / Q / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">Instruction-level CPU milestone: all families, full flags and interrupt dispatch. Oracle: 1,604,000 cases (ED: 80 encodings). Not pin/cycle-perfect; WAIT/BUSRQ and multi-byte device-supplied IM0 streams are not modeled.</div>`;}
-    if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Address space</span><b>64 KiB bench</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector uses DEBUG PEEK and does not create CPU MREQ/RD trace events.</div>`;
+    if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Physical RAM</span><b>64 KiB</b></div><div class="inspector-kv"><span>Lower mapping</span><b>${memory.lowRamEnabled?'FULL RAM':'BOOT + EXT ROM'}</b></div><div class="inspector-kv"><span>Extension bank</span><b>${memory.extensionBank}</b></div><div class="inspector-kv"><span>Control port</span><b>00h = ${hex(memory.control)}</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector shows the currently visible mapping with DEBUG PEEK and creates no CPU Bus events. RAM exists underneath the lower ROM overlay.</div>`;
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.traceCount}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){
       const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
@@ -166,6 +169,7 @@
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
+      else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -228,16 +232,16 @@
   function toggleRun(){if(!ui.powered)return;ui.running?stopRun():startRun();}
   function resetCpu(){
     if(!ui.powered)return;
-    stopRun();keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
+    stopRun();bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;ui.dirty=true;
   }
   function powerOn(){
     if(ui.powered)return;
-    stopRun();bus.clearWritableMemory(0);keyboard.reset();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
+    stopRun();bus.clearWritableMemory(0);bus.resetIoDevices();queryOne('#keyboardCapture').value='';cpu.reset();video.setPower(true);ui.powered=true;
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function powerOff(){
     if(!ui.powered)return;
-    stopRun();ui.powered=false;keyboard.reset();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
+    stopRun();ui.powered=false;bus.resetIoDevices();queryOne('#keyboardCapture').value='';queryOne('#keyboardCapture').blur();bus.clearWritableMemory(0);video.setPower(false);bus.clearTrace();
     ui.lastFetchAddress=0;ui.activeSignals=new Set();ui.pulseUntil=0;renderDevices();ui.dirty=true;
   }
   function togglePower(){ui.powered?powerOff():powerOn();}
@@ -373,13 +377,14 @@
   }
 
   function selfTest(){
-    const tb=new Shino80Bus({romRanges:[[0x0000,0x1FFF]]}),tc=new Z80Core(tb),rom=buildSystemRom();
-    tb.load(rom.bytes,0);tb.clearWritableMemory(0xA5);tc.reset();tb.clearTrace();
+    const rom=buildSystemRom(),tm=new Shino80Memory();tm.loadFirmware(rom.bytes);
+    const tb=new Shino80Bus({memoryDevice:tm}),tc=new Z80Core(tb);
+    tb.clearWritableMemory(0xA5);tb.resetIoDevices();tc.reset();tb.clearTrace();
     tc.runInstructions(rom.meta.instructionsBeforeLoop);
     const firstChar=tb.debugPeek(TEXT_VRAM_BASE),lastClear=tb.debugPeek(TEXT_VRAM_BASE+0x7FF);
     const romByte=tb.debugPeek(0);tb.cpuWrite(0,0x00,{purpose:'SELFTEST_ROM_WRITE'});
     return firstChar===0x53&&lastClear===0x00&&tc.state.pc===rom.labels.MONITOR_LOOP&&
-      tb.debugPeek(0)===romByte&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
+      tb.debugPeek(0)===romByte&&tb.debugPeek(0x2000)===rom.bytes[0x2000]&&tb.trace.some(e=>e.purpose==='ROM_WRITE_BLOCKED');
   }
   function observerLoop(){if(ui.dirty||performance.now()<ui.pulseUntil)render();requestAnimationFrame(observerLoop);}
 
