@@ -1,6 +1,7 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · CPU/firmware baseline `fa73816` (PR #26 candidate, not reviewed main).
+2026-09-26 · CPU baseline `fa73816`; BIOS/MON v0.3 candidate stacked through
+Technical Manual parent `af6c933` (not reviewed main).
 
 ## Deliverable / authority
 
@@ -26,7 +27,7 @@ does not automatically update explanatory prose or validate CPU correctness.
   demonstrations, not independent oracle results. Repeating instructions
   show one iteration; arbitrary prefix strings are not enumerated.
 - Clickable logical system diagram; text alternatives; diagram back link.
-- Memory/I/O map, current BIOS jump table and MON H/?/C/D xxxx.
+- Memory/I/O map, current BIOS jump table and MON H/?/C/D range/R/U.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
 
@@ -46,7 +47,10 @@ VRAM is part of RAM; video observes it via debugPeek, not emulated DMA. CG-ROM
 is renderer-local, not CPU-mapped. DIGITAL_MONO is a logical rendering contract,
 not physical DisplayPort. FDD/serial/printer/physical video interfaces are
 future/unimplemented; no I/O addresses invented. Reserved BIOS vectors are
-RET stubs, not drivers or valid interrupt handlers. No FPGA implementation.
+RET stubs, not drivers or valid interrupt handlers. R is a MON-entry diagnostic
+context, not a resumable GO context. U treats a fifth consecutive DD/FD prefix
+as `DB` with an explicit PREFIX LIMIT so malformed data always progresses.
+No FPGA implementation.
 
 CPU milestone remains instruction-level, not electrical/pin-cycle-perfect.
 WAIT/BUSRQ, hardware races and multi-byte device-fed IM0 are outside its scope.

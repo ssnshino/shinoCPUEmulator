@@ -44,7 +44,7 @@ function buildData(){
   instructions.push({id:family+'-'+hex(opcode),family,opcode,kind:d.kind,mnemonic:d.mnemonic,tokens,length:d.length,timing,classification:classify(d,family,opcode),...describe(d),example:example(tokens)});
  }
  const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/devices/shino80/shino80-keyboard.js'];
- return {version:'0.1',baseline:'fa73816',families,instructions,
+ return {version:'0.1',baseline:'af6c933 + BIOS/MON v0.3 candidate',revision:'feature/shino80-bios-monitor-v03-20260926',families,instructions,
   sources:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),
   machine:{romSize:rom.ROM_SIZE,vramBase:video.TEXT_VRAM_BASE,vramCells:video.CELL_COUNT,width:video.SCREEN_W,height:video.SCREEN_H,cols:video.COLS,rows:video.ROWS,
    keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,labels:rom.buildSystemRom().labels,

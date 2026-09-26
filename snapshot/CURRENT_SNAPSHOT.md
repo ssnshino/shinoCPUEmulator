@@ -1,8 +1,17 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: feature/shino80-bios-monitor-v03-20260926, parent af6c933.
+Read SHINO80_BIOS_MONITOR_V03 plan/worklog and BIOS_MONITOR_v0.3 spec. ROM MON
+now supports D start [end], R and full-family U start [end], with bounded visible
+limits. BIOS adds PARSE_HEX16 0118h and DISASM_ONE 011Bh. All1,780 standard
+forms, package regression and offline Chrome desktop/mobile PASS. CPU/Bus/
+CG-ROM/UI unchanged. ROM ends1FF6h, only nine trailing bytes; decide layout
+before further BIOS growth. Human review and explicit merge GO remain. No public
+deployment. Older snapshots below are historical.
+
 LATEST 2026-09-26: feature/shino80-technical-manual-20260926,
-parent fa73816 / PR #26. Separate standalone manual, no CPU/ROM changes.
+parent fa73816 / PR #27. Separate standalone manual, no CPU/ROM changes.
 Read SHINO80_TECHNICAL_MANUAL plan/spec/worklog. Open
 deploy/shino80_technical_manual_v0.1.html; all package stages and offline Chrome
 1440×1000 /390×844 interactions PASS. 1,780 encoding inventory, logical diagram,
