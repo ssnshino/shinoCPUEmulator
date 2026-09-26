@@ -1,6 +1,16 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26T11:58:28+09:00: Virtual Disk A v0.1 candidate on
+`feature/shino80-block-device-v01-20260926`, parent `a2a6430` / PR #30. Read
+the matching plan/spec/worklog. A: is 77×26×128 bytes (256,256-byte image),
+low-port PIO 30h–36h, with atomic sector writes, non-consuming observer peek,
+Bus trace and media-preserving RESET/POWER. Z80 OTIR/INIR round trip, all
+package stages and offline Chrome desktop/mobile app/manual QA PASS. No CBIOS,
+CP/M, BASIC, file persistence or mechanical FDC timing. CPU/ROM/CG-ROM/DM-80
+CSS unchanged. Commit/push/stacked PR remain; no merge/deploy. Next candidate:
+SHINO CBIOS adapter and original boot-sector proof. Older snapshots follow.
+
 LATEST 2026-09-26T11:34:31+09:00: RAM handoff v0.5 candidate on
 `feature/shino80-ram-handoff-v05-20260926`, parent `9fd087b` / PR #29. Read the
 matching plan/spec/license research/worklog. BIOS 011Eh copies an

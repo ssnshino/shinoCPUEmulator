@@ -9,7 +9,9 @@ chromium=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium')
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,executable_path=chromium,args=['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'])
     page=browser.new_page(viewport={'width':390,'height':844})
-    errors=[];page.on('pageerror',lambda e: errors.append(str(e)))
+    errors=[];requests=[]
+    page.on('pageerror',lambda e: errors.append(str(e)))
+    page.on('request',lambda request: requests.append(request.url))
     page.set_content(html,wait_until='load');page.wait_for_timeout(180)
 
     assert page.locator('#selfTest').inner_text()=='PHASE 2A.1 SELF TEST PASS'
@@ -57,6 +59,19 @@ with sync_playwright() as p:
     inspector=page.locator('#inspectorContent').inner_text()
     assert 'BASE 252/252 ONLINE' in inspector
 
+    page.locator('.bottom-nav button[data-view="devices"]').click();page.wait_for_timeout(80)
+    disk=page.locator('[data-device="disk-a"]')
+    assert 'VIRTUAL DISK A' in disk.inner_text()
+    assert 'ONLINE' in disk.inner_text()
+    disk.click();page.wait_for_timeout(80)
+    inspector=page.locator('#inspectorContent').inner_text()
+    assert '77 TRACKS × 26 SECTORS' in inspector
+    assert '256,256 BYTES' in inspector
+    assert '30h–36h' in inspector
+    assert 'IDLE' in inspector
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+
     assert not errors
+    assert not requests
     print('v0.0.9 Chromium Z80 BASE COMPLETE + machine regression PASS')
     browser.close()

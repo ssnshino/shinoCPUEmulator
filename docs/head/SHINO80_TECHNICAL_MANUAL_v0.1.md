@@ -1,7 +1,7 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4 and RAM handoff v0.5
-candidate, stacked on `9fd087b` (not reviewed main).
+2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4, RAM handoff v0.5 and
+Virtual Disk A v0.1 candidate, stacked on `a2a6430` (not reviewed main).
 
 ## Deliverable / authority
 
@@ -27,8 +27,8 @@ does not automatically update explanatory prose or validate CPU correctness.
   demonstrations, not independent oracle results. Repeating instructions
   show one iteration; arbitrary prefix strings are not enumerated.
 - Clickable logical system diagram; text alternatives; diagram back link.
-- Physical/visible memory map, port 00h overlay control, current BIOS jump table
-  and MON H/?/C/D range/R/U/B.
+- Physical/visible memory map, port 00h overlay control, Virtual Disk A ports
+  30h–36h, current BIOS jump table and MON H/?/C/D range/R/U/B.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
 
@@ -49,8 +49,9 @@ The machine has 64 KiB physical RAM. RESET overlays fixed Boot ROM at
 shadow writes and extension bank selection. VRAM is part of RAM; video observes
 it via debugPeek, not emulated DMA. CG-ROM
 is renderer-local, not CPU-mapped. DIGITAL_MONO is a logical rendering contract,
-not physical DisplayPort. FDD/serial/printer/physical video interfaces are
-future/unimplemented; no I/O addresses invented. Reserved BIOS vectors are
+not physical DisplayPort. Virtual Disk A is an implemented 128-byte PIO block
+device, not a mechanical FDD/FDC. Drive B, serial/printer/physical video are
+future/unimplemented; no I/O addresses invented for them. Reserved BIOS vectors are
 RET stubs, not drivers or valid interrupt handlers. R is a MON-entry diagnostic
 context, not a resumable GO context. U treats a fifth consecutive DD/FD prefix
 as `DB` with an explicit PREFIX LIMIT so malformed data always progresses.
@@ -69,7 +70,8 @@ See `SHINO_Z80_PHASE1J_ACCURACY_SPEC.md` for authoritative CPU limits.
 Modern dark documentation shell, readable Japanese sans + monospace data,
 desktop list/detail and stacked mobile layout. Actual CG bitmap/SVG diagram,
 not a generated illustration pretending to be wiring. The v0.4 update changes
-the machine mapper and matching inspector text, not CPU or display rendering.
+the machine mapper, block-device contract and matching inspector text, not CPU
+or display rendering.
 
 ImageGen concept attempt was blocked by authentication401; no raster reference
 or fidelity score exists. Existing SHINO visual language and browser screenshots

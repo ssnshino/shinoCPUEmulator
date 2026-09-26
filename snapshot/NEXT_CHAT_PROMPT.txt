@@ -1,3 +1,15 @@
+CURRENT VIRTUAL DISK A v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-block-device-v01-20260926, parent a2a6430 / PR #30.
+Read README -> AGENTS -> current snapshot -> SHINO80_BLOCK_DEVICE_V01 plan,
+VIRTUAL_BLOCK_DEVICE_v0.1 spec and matching worklog. A: is a 77x26x128-byte
+PIO medium at low ports 30h-36h. Exact sector tests, real Z80 OTIR/INIR, full
+package and offline Chrome desktop/mobile QA pass. CPU/ROM/CG-ROM/DM-80 CSS are
+unchanged. No CBIOS, CP/M, BASIC, file persistence or FDC timing. Finish one
+logical commit/push/stacked PR if pending; do not merge/deploy automatically.
+Next implementation candidate after Human review is a SHINO CBIOS adapter and
+original boot-sector proof using the device, before third-party software import.
+Everything below is historical.
+
 CURRENT RAM HANDOFF v0.5 OVERRIDE 2026-09-26:
 Resume feature/shino80-ram-handoff-v05-20260926, parent 9fd087b / PR #29.
 Read README -> AGENTS -> current snapshot -> SHINO80_RAM_HANDOFF_V05 plan,
