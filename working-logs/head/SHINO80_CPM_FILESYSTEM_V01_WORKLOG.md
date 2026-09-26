@@ -3,7 +3,7 @@
 Date: 2026-09-26
 Branch: `feature/shino80-cpm-filesystem-v01-20260926`
 Parent: `d0457dc47f08ee14e1b39f18d5d31064916c4d02`
-Status: implementation and local QA complete; stacked PR #37 open
+Status: merged to main; automated and iPhone Human QA complete
 
 ## Outcome
 
@@ -67,14 +67,20 @@ Human verification on the generated standalone HTML confirmed:
 - `TYPE WELCOME.TXT`: PASS
 - `S80INFO`: PASS
 - `HELLO`: PASS
-- Backspace: FAIL before remediation; appeared as tab-like spacing
-- text scrolling: FAIL before remediation; CBIOS wrapped to screen origin
-- `SAVE` / copied program: not yet Human-tested
+- Backspace: PASS after remediation
+- text scrolling: PASS after remediation
+- `SAVE 1 COPY.COM`: PASS
+- copied `COPY` execution: PASS
+- `ERA COPY.COM`: PASS
+- `DIR` after erase: PASS; COPY.COM absent
+- a second save as `COPY2.COM`: PASS
 
 The two failures were reproduced as guest CBIOS console defects. Automated
 post-fix proof covers direct 08h/7Fh cursor motion, 24-row VRAM shift and clear,
 real CCP line editing, plus browser `deleteContentBackward` → 08h FIFO mapping.
-Fresh iPhone confirmation remains the final Human check.
+Fresh iPhone/Edge confirmation completed on the generated standalone HTML.
+The Human screenshots show successful SAVE/COPY/ERA directory transitions and
+visible screen scrolling at the `A>` prompt.
 
 The packer unit portion also verifies invalid names/users, duplicate rejection,
 system-track identity, exact starter entries, allocation ownership and a
@@ -158,4 +164,4 @@ whose DSM is below 256.
 - Base: `feature/shino80-cursor-beep-v01-20260926` / PR #36
 - Mergeability at creation: MERGEABLE
 - iPhone Backspace/scroll remediation: included in the same logical PR commit
-- Automatic merge/deploy: not performed
+- PR #37 and its prerequisite stack were merged to main on 2026-09-26.

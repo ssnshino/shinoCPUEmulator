@@ -55,6 +55,8 @@ assert.equal(crypto.createHash('sha256').update(Buffer.from(data.machine.cgBytes
 const html=build();assert.equal(build(),html,'deterministic output');
 assert(html.includes('MoreのBEEP TEST'));assert(html.includes('I/O 40h'));
 assert(html.includes('A: starter filesystem v0.1'));assert(html.includes('WELCOME.TXT'));
+assert(html.includes('CP/Mコマンドリファレンス'));assert(html.includes('href="#cpm"'));
+assert(html.includes('SAVE 1 COPY.COM'));assert(html.includes('REN NEW.COM=OLD.COM'));assert(html.includes('USER 0'));
 assert(html.includes('<link rel="icon" href="data:,">'));
 assert(!/\/\* MANUAL_(CSS|DATA|JS) \*\//.test(html));
 assert(!/<(?:script[^>]*src|img[^>]*src)=/i.test(html),'standalone assets');
