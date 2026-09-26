@@ -239,7 +239,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
   </nav>
 
-  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>DISK A SYSTEM v1</span><span>UART —</span></footer>
+  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>DISK A CP/M 2.2</span><span>UART —</span></footer>
 </div>
 
 <div class="more-sheet" id="moreMenu" hidden aria-hidden="true">
@@ -1051,8 +1051,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('CBIOS_LISTST');a.emit(0x3E,0xFF,0xC9);
 
     a.label('CBIOS_SECTRAN');
-    a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0xC9); // HL=BC
-    a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0xC9);
+    a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0x23,0xC9); // HL=BC+1 for 1-based media
+    a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0x23,0xC9);
 
     a.label('CBIOS_DPB');
     a.dataWord(DPB.spt);a.emit(DPB.bsh,DPB.blm,DPB.exm);a.dataWord(DPB.dsm);a.dataWord(DPB.drm);
@@ -1093,85 +1093,122 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 });
 </script>
 <script>(function(root,factory){
-  const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
-  const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
-  const api=factory(block,cbios);
+  const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
-  root.SHINO_SYSTEM_DISK=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios){
+  root.SHINO_CPM22=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
 
-  const SYSTEM_DISK_MAGIC='S80B';
-  const SYSTEM_DISK_VERSION=1;
-  const SYSTEM_HEADER_SECTOR=1;
-  const SYSTEM_PAYLOAD_SECTOR=2;
-  const SYSTEM_CBIOS_SECTOR=3;
-  const SYSTEM_CBIOS_SECTORS=5;
-  const SYSTEM_ENTRY=0x8000;
-  const SYSTEM_SIGNATURE=0xE260;
-  const SYSTEM_MESSAGE='SHINO-80 SYSTEM DISK\r\nCBIOS + BLOCK I/O OK\r\n';
+  const CPM22_SOURCE_REPOSITORY='https://github.com/brouhaha/cpm22';
+  const CPM22_SOURCE_COMMIT='01018abbccce0bdf4874b0b2ed1a048c5fcc2987';
+  const CPM22_ASSEMBLER_REPOSITORY='https://github.com/Macroassembler-AS/asl-releases';
+  const CPM22_ASSEMBLER_COMMIT='c7155b4fd3d33110f0eb098dede4295a8c008772';
+  const CPM22_CCP_ORIGIN=0x9400;
+  const CPM22_BDOS_ORIGIN=0x9C00;
+  const CPM22_BDOS_ENTRY=CPM22_BDOS_ORIGIN+6;
+  const CPM22_CCP_SHA256='759a93d5642445d5985fc340954c217e831d364600f063c6648f8303a4c827af';
+  const CPM22_BDOS_SHA256='6496c9e8d3508b1d8132add59affb8d1237c7f7b5278fae2f93308cdddf2dcab';
+  const CCP_BASE64='w1yXw1iXfwAgICAgICAgICAgICAgICAgQ09QWVJJR0hUIChDKSAxOTc5LCBESUdJVEFMIFJFU0VBUkNIICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAiUAABfDgLDBQDFzYyUwck+Dc2SlD4Kw5KUPiDDkpTFzZiU4X63yCPlzYyU4cOslA4NwwUAXw4OwwUAzQUAMu6bPMkOD8PDlK8y7ZsRzZvDy5QOEMPDlA4Rw8OUDhLDw5QRzZvD35QOE8MFAM0FALfJDhTD9JQRzZvD+ZQOFcP0lA4Ww8OUDhfDBQAe/w4gwwUAzROVh4eHhyHvm7YyBADJOu+bMgQAyf5h2P570OZfyTqrm7fKlpU675u3PgDEvZQRrJvNy5TKlpU6u5s9MsybEaybzfmUwpaVEQeUIYAABoDNQpghups2ACM1EaybzdqUypaVOu+bt8S9lCEIlM2slM3Clcqnlc3dlcOCl83dlc0alQ4KEQaUzQUAzSmVIQeURiN4t8q6lX7NMJV3BcOrlXchCJQiiJTJDgvNBQC3yA4BzQUAt8kOGcMFABGAAA4awwUAIaubfrfINgCvzb2UEaybze+UOu+bw72UESiXIQCcBgYavsLPlxMjBcL9lcnNmJQqipR+/iDKIpa3yiKW5c2MlOEjww+WPj/NjJTNmJTN3ZXDgpcat8j+INoJlsj+Pcj+X8j+Lsj+Osj+O8j+PMj+PsjJGrfI/iDAE8NPloVv0CTJPgAhzZvNWZbl5a8y8JsqiJTrzU+W6yKKlOvhGrfKiZbeQEcTGv46ypCWGzrvm3fDlpZ4MvCbcBMGCM0wlsq5liP+KsKpljY/w6uWdxMFwpiWzTCWysCWE8OvliM2IAXCuZYGA/4uwumWE80wlsrpliP+KsLZljY/w9uWdxMFwsiWzTCWyvCWE8PfliM2IAXC6ZYGAyM2AAXC8pbrIoiU4QELACN+/j/CCZcEDcIBl3i3yURJUiBFUkEgVFlQRVNBVkVSRU4gVVNFUgAAAAAAACEQlw4Aef4G0BHOmwYEGr7CT5cTIwXCPJca/iDCVJd5ySMFwk+XDMMzl68yB5Qxq5vFeR8fHx/mD1/NFZXNuJQyq5vBeeYPMu+bzb2UOgeUt8KYlzGrm82YlM3QlcZBzYyUPj7NjJTNOZURgADN2JXN0JUy75vNXpbECZY68Ju3wqWazS6XIcGXXxYAGRl+I2Zv6XeYH5ldma2ZEJqOmqWaIfN2IgCUIQCU6QHfl8OnlFJFQUQgRVJST1IAAfCXw6eUTk8gRklMRQDNXpY68Ju3wgmWIc6bAQsAfv4gyjOYI9Yw/grSCZZXeObgwgmWeAcHB4DaCZaA2gmWgtoJlkcNwgiYyX7+IMIJliMNwjOYeMkGA34SIxMFwkKYySGAAIHNWZZ+ya8yzZs68Ju3yD0h75u+yMO9lDrwm7fIPSHvm77IOu+bw72UzV6WzVSYIc6bfv4gwo+YBgs2PyMFwoiYHgDVzemUzOqXyhuZOu6bDw8P5mBPPgrNS5gX2g+Z0Xsc1eYD9cLMmM2YlMXN0JXBxkHNkpQ+Os2SlMPUmM2ilD46zZKUzaKUBgF4zUuY5n/+IML5mPH1/gPC95g+Cc1LmOZ//iDKDpk+IM2SlAR4/gzSDpn+CcLZmM2ilMPZmPHNwpXCG5nN5JTDmJjRw4abzV6W/gvCQpkBUpnNp5TNOZUhB5Q1woKXI37+WcKClyMiiJTNVJgRzZvN75Q8zOqXw4abQUxMIChZL04pPwDNXpbCCZbNVJjN0JTKp5nNmJQh8Zs2/yHxm37+gNqHmeXN/pThwqCZr3c0IYAAzVmWfv4ayoabzYyUzcKVwoabw3SZPcqGm83Zl81mmMMJls34l/XNXpbCCZbNVJgRzZvVze+U0c0Jlcr7ma8y7ZvxbyYAKREAAXy1yvGZK+UhgAAZ5c3YlRHNm80EldHhwvuZw9SZEc2bzdqUPMIBmgEHms2nlM3VlcOGm05PIFNQQUNFAM1elsIJljrwm/XNVJjN6ZTCeZohzZsR3ZsGEM1CmCqIlOvNT5b+Pco/mv5fwnOa6yMiiJTNXpbCc5rxRyHwm363ylmauHDCc5pwrzLNm83plMptmhHNm80OlcOGm83ql8OGm81mmMMJlgGCms2nlMOGm0ZJTEUgRVhJU1RTAM34l/4Q0gmWXzrOm/4gygmWzRWVw4mbzfWVOs6b/iDCxJo68Ju3yombPTLvm80plc29lMOJmxHWmxr+IMIJltXNVJjRIYObzUCYzdCUymubIQAB5evN2JURzZvN+ZTCAZvhEYAAGREAlH2TfJrScZvD4ZrhPcJxm81mmM1eliHwm+V+Ms2bPhDNYJbhfjLdm68y7ZsRXAAhzZsGIc1CmCEIlH63yj6b/iDKPpsjwzCbBgARgQB+ErfKT5sEIxPDQ5t4MoAAzZiUzdWVzRqVzQABMaubzSmVzb2Uw4KXzWaYwwmWAXqbzaeUw4abQkFEIExPQUQAQ09NzWaYzV6WOs6b1iAh8Ju2wgmWw4KXAAAAAAAAAAAAAAAAAAAAAAAAJCQkICAgICBTVUIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  const BDOS_BASE64='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';
 
-  const lo=value=>Number(value)&0xFF;
-  const hi=value=>(Number(value)>>8)&0xFF;
-
-  function buildSystemPayload(){
-    const code=[
-      0x31,0x00,0xF7,             // LD SP,F700h
-      0x21,0x00,0xC0,0x36,0x00,  // LD HL,C000h / LD (HL),0
-      0x11,0x01,0xC0,             // LD DE,C001h
-      0x01,0xCF,0x07,0xED,0xB0,  // LD BC,1999 / LDIR
-      0xCD,lo(cbios.CBIOS_ORG),hi(cbios.CBIOS_ORG), // CALL CBIOS BOOT
-      0x21                         // LD HL,message (operand appended below)
-    ];
-    const messagePointer=code.length;
-    code.push(
-      0x00,0x00,
-      0x7E,0xB7,0x28,0x09,        // loop: LD A,(HL) / OR A / JR Z,done
-      0xE5,0x4F,0xCD,lo(cbios.CBIOS_ORG+4*3),hi(cbios.CBIOS_ORG+4*3),0xE1, // preserve HL / C=A / CONOUT
-      0x23,0x18,0xF3,             // INC HL / JR loop
-      0x21,0x44,0x53,0x22,lo(SYSTEM_SIGNATURE),hi(SYSTEM_SIGNATURE),
-      0x21,0x4B,0x21,0x22,lo(SYSTEM_SIGNATURE+2),hi(SYSTEM_SIGNATURE+2),
-      0x76                        // HALT
-    );
-    const messageAddress=SYSTEM_ENTRY+code.length;
-    code[messagePointer]=lo(messageAddress);code[messagePointer+1]=hi(messageAddress);
-    return Uint8Array.from([...code,...[...SYSTEM_MESSAGE].map(char=>char.charCodeAt(0)),0]);
+  function decodeBase64(value){
+    if(typeof Buffer!=='undefined')return Uint8Array.from(Buffer.from(value,'base64'));
+    const binary=atob(value),bytes=new Uint8Array(binary.length);
+    for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);
+    return bytes;
   }
 
-  function buildSystemDisk(){
-    const image=block.createBlankBlockImage(),payload=buildSystemPayload(),cbiosImage=cbios.buildCbios();
-    if(payload.length>block.BLOCK_SECTOR_SIZE)throw new RangeError('System payload must fit one sector');
-    if(cbiosImage.bytes.length>SYSTEM_CBIOS_SECTORS*block.BLOCK_SECTOR_SIZE)throw new RangeError('CBIOS exceeds reserved system sectors');
-    const header=new Uint8Array(block.BLOCK_SECTOR_SIZE);header.fill(block.BLOCK_BLANK_BYTE);
-    header.set([...SYSTEM_DISK_MAGIC].map(char=>char.charCodeAt(0)),0);
-    header[4]=SYSTEM_DISK_VERSION;
-    header[5]=SYSTEM_PAYLOAD_SECTOR;
-    header[6]=SYSTEM_CBIOS_SECTOR;
-    header[7]=SYSTEM_CBIOS_SECTORS;
-    header[8]=lo(SYSTEM_ENTRY);header[9]=hi(SYSTEM_ENTRY);
-    header[10]=lo(cbios.CBIOS_ORG);header[11]=hi(cbios.CBIOS_ORG);
-    header[12]=lo(payload.length);header[13]=hi(payload.length);
-    header[14]=lo(cbiosImage.bytes.length);header[15]=hi(cbiosImage.bytes.length);
-    header[16]=header.slice(0,16).reduce((sum,value)=>(sum+value)&0xFF,0);
-    image.set(header,(SYSTEM_HEADER_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
-    image.set(payload,(SYSTEM_PAYLOAD_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
-    image.set(cbiosImage.bytes,(SYSTEM_CBIOS_SECTOR-1)*block.BLOCK_SECTOR_SIZE);
-    return {
-      image,header,payload,cbios:cbiosImage,
-      meta:Object.freeze({
-        magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
-        headerSector:SYSTEM_HEADER_SECTOR,payloadSector:SYSTEM_PAYLOAD_SECTOR,
-        cbiosSector:SYSTEM_CBIOS_SECTOR,cbiosSectors:SYSTEM_CBIOS_SECTORS,
-        entry:SYSTEM_ENTRY,signature:SYSTEM_SIGNATURE,message:SYSTEM_MESSAGE
-      })
-    };
+  function buildCpm22(){
+    const ccp=decodeBase64(CCP_BASE64),bdos=decodeBase64(BDOS_BASE64);
+    if(ccp.length!==0x800||bdos.length!==0xE00)throw new Error('CP/M 2.2 44K image length mismatch');
+    return {ccp,bdos,meta:Object.freeze({
+      sourceRepository:CPM22_SOURCE_REPOSITORY,sourceCommit:CPM22_SOURCE_COMMIT,
+      assemblerRepository:CPM22_ASSEMBLER_REPOSITORY,assemblerCommit:CPM22_ASSEMBLER_COMMIT,
+      ccpOrigin:CPM22_CCP_ORIGIN,bdosOrigin:CPM22_BDOS_ORIGIN,bdosEntry:CPM22_BDOS_ENTRY,
+      ccpSha256:CPM22_CCP_SHA256,bdosSha256:CPM22_BDOS_SHA256
+    })};
   }
 
   return {
-    SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_SECTOR,
-    SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_ENTRY,SYSTEM_SIGNATURE,SYSTEM_MESSAGE,
-    buildSystemPayload,buildSystemDisk
+    CPM22_SOURCE_REPOSITORY,CPM22_SOURCE_COMMIT,CPM22_ASSEMBLER_REPOSITORY,CPM22_ASSEMBLER_COMMIT,
+    CPM22_CCP_ORIGIN,CPM22_BDOS_ORIGIN,CPM22_BDOS_ENTRY,CPM22_CCP_SHA256,CPM22_BDOS_SHA256,
+    buildCpm22
   };
+});
+</script>
+<script>(function(root,factory){
+  const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
+  const cpm22=(typeof module==='object'&&module.exports)?require('./shino80-cpm22.js'):root.SHINO_CPM22;
+  const api=factory(block,cbios,cpm22);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_SYSTEM_DISK=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22){
+  'use strict';
+  const SYSTEM_DISK_MAGIC='S80B',SYSTEM_DISK_VERSION=2;
+  const SYSTEM_HEADER_TRACK=0,SYSTEM_HEADER_SECTOR=1;
+  const SYSTEM_PAYLOAD_TRACK=0,SYSTEM_PAYLOAD_SECTOR=2;
+  const SYSTEM_CBIOS_TRACK=0,SYSTEM_CBIOS_SECTOR=3,SYSTEM_CBIOS_SECTORS=5;
+  const SYSTEM_CPM_TRACK=0,SYSTEM_CPM_SECTOR=8,SYSTEM_CPM_SECTORS=44;
+  const SYSTEM_ENTRY=0x8000;
+  const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
+  const mediaOffset=(track,sector)=>(track*block.BLOCK_SECTORS_PER_TRACK+(sector-1))*block.BLOCK_SECTOR_SIZE;
+
+  function buildSystemPayload(cbiosImage=cbios.buildCbios()){
+    const bytes=[],labels={},absFixups=[],relFixups=[];let pc=SYSTEM_ENTRY;
+    const emit=(...values)=>{for(const value of values){bytes.push(Number(value)&0xFF);pc++;}};
+    const label=name=>{labels[name]=pc;};
+    const ref=name=>{absFixups.push({offset:bytes.length,name});emit(0,0);};
+    const abs=(opcode,name)=>{emit(opcode);ref(name);};
+    const word=(opcode,value)=>emit(opcode,lo(value),hi(value));
+    const jr=(opcode,name)=>{relFixups.push({offset:bytes.length,name,after:pc+2});emit(opcode,0);};
+    const callAddress=address=>word(0xCD,address);
+
+    emit(0xF3);word(0x31,0xF700); // DI / private loader stack
+    emit(0x16,SYSTEM_CPM_TRACK,0x1E,SYSTEM_CPM_SECTOR); // D=track, E=sector
+    word(0x21,cpm22.CPM22_CCP_ORIGIN);emit(0x3E,SYSTEM_CPM_SECTORS,0x08); // HL=DMA, A'=remaining
+    label('LOAD_LOOP');
+    emit(0x4A,0x06,0x00);callAddress(cbios.CBIOS_ORG+10*3); // C=D / SETTRK
+    emit(0x4B,0x06,0x00);callAddress(cbios.CBIOS_ORG+11*3); // C=E / SETSEC
+    emit(0x44,0x4D);callAddress(cbios.CBIOS_ORG+12*3);callAddress(cbios.CBIOS_ORG+13*3); // BC=HL / SETDMA / READ
+    emit(0xB7);word(0xC2,cbiosImage.labels.CBIOS_WBOOT_FAIL);
+    emit(0x1C,0x7B,0xFE,block.BLOCK_SECTORS_PER_TRACK+1);jr(0x38,'COUNT'); // INC E / compare sector
+    emit(0x1E,1,0x14); // sector 1 / next track
+    label('COUNT');emit(0x08,0x3D);jr(0x28,'LOADED');emit(0x08);jr(0x18,'LOAD_LOOP');
+    label('LOADED');
+    word(0x21,0xC000);emit(0x36,0x00);word(0x11,0xC001);word(0x01,0x07CF);emit(0xED,0xB0);
+    emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,cbios.CBIOS_ORG+3);word(0x22,0x0001);
+    emit(0xAF);word(0x32,0x0003);emit(0x3E,0xC3);word(0x32,0x0005);
+    word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    for(const fixup of absFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);}
+    for(const fixup of relFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);const displacement=address-fixup.after;if(displacement < -128||displacement > 127)throw new RangeError(`Loader JR ${fixup.name} out of range`);bytes[fixup.offset+1]=displacement&0xFF;}
+    if(bytes.length>block.BLOCK_SECTOR_SIZE)throw new RangeError(`System payload exceeds one sector: ${bytes.length}`);
+    return Uint8Array.from(bytes);
+  }
+
+  function buildSystemDisk(){
+    const image=block.createBlankBlockImage(),cbiosImage=cbios.buildCbios(),cpmImage=cpm22.buildCpm22(),payload=buildSystemPayload(cbiosImage);
+    if(cbiosImage.bytes.length>SYSTEM_CBIOS_SECTORS*block.BLOCK_SECTOR_SIZE)throw new RangeError('CBIOS exceeds reserved system sectors');
+    const header=new Uint8Array(block.BLOCK_SECTOR_SIZE);header.fill(block.BLOCK_BLANK_BYTE);
+    header.set([...SYSTEM_DISK_MAGIC].map(char=>char.charCodeAt(0)),0);
+    header[4]=SYSTEM_DISK_VERSION;header[5]=SYSTEM_PAYLOAD_SECTOR;header[6]=SYSTEM_CBIOS_SECTOR;header[7]=SYSTEM_CBIOS_SECTORS;
+    header[8]=lo(SYSTEM_ENTRY);header[9]=hi(SYSTEM_ENTRY);header[10]=lo(cbios.CBIOS_ORG);header[11]=hi(cbios.CBIOS_ORG);
+    header[12]=lo(payload.length);header[13]=hi(payload.length);header[14]=lo(cbiosImage.bytes.length);header[15]=hi(cbiosImage.bytes.length);
+    header[16]=header.slice(0,16).reduce((sum,value)=>(sum+value)&0xFF,0);
+    image.set(header,mediaOffset(SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR));
+    image.set(payload,mediaOffset(SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR));
+    image.set(cbiosImage.bytes,mediaOffset(SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR));
+    image.set(cpmImage.ccp,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR));
+    image.set(cpmImage.bdos,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR)+cpmImage.ccp.length);
+    return {image,header,payload,cbios:cbiosImage,cpm:cpmImage,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
+      headerTrack:SYSTEM_HEADER_TRACK,headerSector:SYSTEM_HEADER_SECTOR,payloadTrack:SYSTEM_PAYLOAD_TRACK,payloadSector:SYSTEM_PAYLOAD_SECTOR,
+      cbiosTrack:SYSTEM_CBIOS_TRACK,cbiosSector:SYSTEM_CBIOS_SECTOR,cbiosSectors:SYSTEM_CBIOS_SECTORS,
+      cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY})};
+  }
+
+  return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
+    SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,
+    mediaOffset,buildSystemPayload,buildSystemDisk};
 });
 </script>
 <script>(function(root,factory){
@@ -3143,14 +3180,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
-    // Original system-disk cold path. Sector 1 validates a fixed v1 layout,
+    // Original system-disk cold path. Sector 1 validates a fixed v2 layout,
     // sector 2 supplies the RAM payload, and sectors 3-7 supply CBIOS at FA00h.
     // Every byte crosses the I/O Bus; only after all reads succeed is page zero
     // shadowed and firmware paged out.
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,123,2,92]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,5,0,0x80,0,0xFA,98,0,125,2,100]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){
@@ -3391,7 +3428,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM v1 · 77×26×128 / I/O 30h–36h',state:'ONLINE'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 77×26×128',state:'ONLINE'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
@@ -3512,7 +3549,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} SYSTEM</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O reads the original system image into RAM + CBIOS. Page zero JP FA03h provides disk-backed WBOOT. Media stays mounted across RESET and POWER; this is not CP/M yet.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O loads the SHINO loader and CBIOS; the RAM loader reads 44 CCP/BDOS sectors. JP 0000h performs a disk-backed warm boot. Media stays mounted across RESET and POWER.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;

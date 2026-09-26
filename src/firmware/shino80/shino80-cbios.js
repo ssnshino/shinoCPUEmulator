@@ -159,8 +159,8 @@
     a.label('CBIOS_LISTST');a.emit(0x3E,0xFF,0xC9);
 
     a.label('CBIOS_SECTRAN');
-    a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0xC9); // HL=BC
-    a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0xC9);
+    a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0x23,0xC9); // HL=BC+1 for 1-based media
+    a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0x23,0xC9);
 
     a.label('CBIOS_DPB');
     a.dataWord(DPB.spt);a.emit(DPB.bsh,DPB.blm,DPB.exm);a.dataWord(DPB.dsm);a.dataWord(DPB.drm);

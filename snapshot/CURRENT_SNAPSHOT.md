@@ -1,6 +1,13 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: CP/M 2.2 boot v0.1 candidate on Warm Boot `72f16bb` / PR #35.
+Branch `feature/shino80-cpm22-boot-v01-20260926`. S80B v2 carries licensed 44K
+CCP 9400h and SHINO-ported BDOS 9C00h. MON O loads an original loader + CBIOS;
+the loader reads 44 sectors over PIO, installs page-zero vectors and reaches
+interactive A>. DIR/NO FILE, BDOS 0022h and destructive WBOOT pass. Read the
+matching plan/spec/provenance/worklog. No BASIC, merge or deploy.
+
 LATEST 2026-09-26: Warm Boot v0.2 candidate on System Disk `4d5e81a` / PR #33.
 Branch `feature/shino80-warm-boot-v02-20260926`. Page-zero JP FA03h now enters
 CBIOS WBOOT, reloads A: track 0 sector 2 to 8000h via READ/INIR and jumps to the

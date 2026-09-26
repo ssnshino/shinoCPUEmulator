@@ -22,7 +22,7 @@ assert.equal(CBIOS_ORG,0xFA00);
 assert.equal(CBIOS_ENTRY_NAMES.length,17);
 assert.equal(cbios.origin,CBIOS_ORG);
 assert(cbios.end<=0x10000);
-assert.equal(cbios.bytes.length,635);
+assert.equal(cbios.bytes.length,637);
 
 // The standard 17-entry table is contiguous JP instructions in exact order.
 for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){
@@ -102,8 +102,8 @@ function pattern(seed){return Uint8Array.from({length:128},(_,index)=>(seed+inde
     ...call(api('LISTST')),...word(0x32,0xE218),...call(api('READER')),...word(0x32,0xE219),0x76
   ]);
   assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_SELECTED_TRACK),0);
-  assert.equal(m.bus.debugPeek(0xE214)|(m.bus.debugPeek(0xE215)<<8),3);
-  assert.equal(m.bus.debugPeek(0xE216)|(m.bus.debugPeek(0xE217)<<8),7);
+  assert.equal(m.bus.debugPeek(0xE214)|(m.bus.debugPeek(0xE215)<<8),4);
+  assert.equal(m.bus.debugPeek(0xE216)|(m.bus.debugPeek(0xE217)<<8),8);
   assert.equal(m.bus.debugPeek(0xE218),0xFF);assert.equal(m.bus.debugPeek(0xE219),0x1A);
 }
 

@@ -10,6 +10,7 @@ const video=require('../src/machine/shino80/shino80-video.js'),keyboard=require(
 const block=require('../src/devices/shino80/shino80-block-device.js');
 const cbios=require('../src/firmware/shino80/shino80-cbios.js');
 const systemDisk=require('../src/firmware/shino80/shino80-system-disk.js');
+const cpm22=require('../src/firmware/shino80/shino80-cpm22.js');
 const hex=v=>v.toString(16).toUpperCase().padStart(2,'0');
 const families=['BASE','CB','ED','DD','FD','DDCB','FDCB'];
 function classify(d,f,op){
@@ -49,8 +50,8 @@ function buildData(){
  }
  const cbiosImage=cbios.buildCbios();
  const diskImage=systemDisk.buildSystemDisk();
- const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/firmware/shino80/shino80-cbios.js','src/firmware/shino80/shino80-system-disk.js','src/devices/shino80/shino80-keyboard.js','src/devices/shino80/shino80-block-device.js'];
- return {version:'0.1',baseline:'BIOS/MON v0.3 + pageable firmware v0.4 + RAM handoff v0.5 + block device/system disk v0.1 + CBIOS warm boot v0.2 candidates',revision:'feature/shino80-warm-boot-v02-20260926',families,instructions,
+ const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/firmware/shino80/shino80-cbios.js','src/firmware/shino80/shino80-cpm22.js','src/firmware/shino80/shino80-system-disk.js','src/devices/shino80/shino80-keyboard.js','src/devices/shino80/shino80-block-device.js'];
+ return {version:'0.1',baseline:'BIOS/MON v0.3 + S80B v2 + CBIOS/WBOOT v0.2 + CP/M 2.2 boot v0.1 candidates',revision:'feature/shino80-cpm22-boot-v01-20260926',families,instructions,
   sources:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),
   machine:{romSize:rom.ROM_SIZE,bootRomSize:memory.BOOT_ROM_SIZE,extensionRomSize:memory.EXTENSION_ROM_SIZE,memoryControlPort:memory.MEMORY_CONTROL_PORT,vramBase:video.TEXT_VRAM_BASE,vramCells:video.CELL_COUNT,width:video.SCREEN_W,height:video.SCREEN_H,cols:video.COLS,rows:video.ROWS,
    keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,
@@ -58,6 +59,7 @@ function buildData(){
    blockTracks:block.BLOCK_TRACKS,blockSectors:block.BLOCK_SECTORS_PER_TRACK,blockSectorSize:block.BLOCK_SECTOR_SIZE,blockImageSize:block.BLOCK_IMAGE_SIZE,labels:rom.buildSystemRom().labels,
    cbiosOrigin:cbiosImage.origin,cbiosEnd:cbiosImage.end,cbiosBytes:cbiosImage.bytes.length,cbiosEntries:cbios.CBIOS_ENTRY_NAMES.map(name=>({name,address:cbiosImage.labels['CBIOS_API_'+name]})),cbiosDpb:cbios.DPB,
    systemDiskMagic:systemDisk.SYSTEM_DISK_MAGIC,systemDiskVersion:systemDisk.SYSTEM_DISK_VERSION,systemDiskEntry:systemDisk.SYSTEM_ENTRY,systemDiskPayloadBytes:diskImage.payload.length,systemDiskHeader:Array.from(diskImage.header.slice(0,17)),
+   cpmCcpOrigin:cpm22.CPM22_CCP_ORIGIN,cpmBdosOrigin:cpm22.CPM22_BDOS_ORIGIN,cpmBdosEntry:cpm22.CPM22_BDOS_ENTRY,cpmCcpHash:cpm22.CPM22_CCP_SHA256,cpmBdosHash:cpm22.CPM22_BDOS_SHA256,
    ramHandoffTrampoline:rom.RAM_HANDOFF_TRAMPOLINE,ramHandoffDemoEntry:rom.RAM_HANDOFF_DEMO_ENTRY,ramHandoffSignature:rom.RAM_HANDOFF_SIGNATURE,
    cgBytes:Array.from(cg.CG_ROM_IMAGE),cgHash:cg.ROM_SHA256,cgCRC:cg.ROM_CRC32}};
 }

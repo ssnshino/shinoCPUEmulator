@@ -1,3 +1,11 @@
+CURRENT CP/M 2.2 BOOT v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-cpm22-boot-v01-20260926, parent 72f16bb / PR #35. Read README ->
+AGENTS -> current snapshot -> SHINO80_CPM22_BOOT_V01 plan/spec/worklog and
+third_party/cpm22 provenance. S80B v2 boots licensed CP/M 2.2 CCP 9400h / BDOS
+9C00h through CBIOS FA00h and reaches A>. DIR/NO FILE, BDOS 0022h and destructive
+WBOOT pass. Finish full QA/delivery if pending; do not merge/deploy automatically.
+Everything below is historical.
+
 CURRENT WARM BOOT v0.2 OVERRIDE 2026-09-26:
 Resume feature/shino80-warm-boot-v02-20260926, parent 4d5e81a / PR #33. Read
 README -> AGENTS -> current snapshot -> SHINO80_WARM_BOOT_V02 plan, spec and

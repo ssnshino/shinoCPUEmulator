@@ -597,14 +597,14 @@
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
-    // Original system-disk cold path. Sector 1 validates a fixed v1 layout,
+    // Original system-disk cold path. Sector 1 validates a fixed v2 layout,
     // sector 2 supplies the RAM payload, and sectors 3-7 supply CBIOS at FA00h.
     // Every byte crosses the I/O Bus; only after all reads succeed is page zero
     // shadowed and firmware paged out.
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,1,2,3,5,0,0x80,0,0xFA,93,0,123,2,92]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,5,0,0x80,0,0xFA,98,0,125,2,100]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00]]){

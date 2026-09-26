@@ -9,9 +9,9 @@ const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildCbios}=require('../src/firmware/shino80/shino80-cbios.js');
 const {
   buildSystemDisk,SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_SECTOR,
-  SYSTEM_PAYLOAD_SECTOR,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_ENTRY,
-  SYSTEM_SIGNATURE,SYSTEM_MESSAGE
+  SYSTEM_PAYLOAD_SECTOR,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_ENTRY
 }=require('../src/firmware/shino80/shino80-system-disk.js');
+const {CPM22_CCP_ORIGIN,CPM22_BDOS_ORIGIN}=require('../src/firmware/shino80/shino80-cpm22.js');
 const {buildSystemRom,TEXT_VRAM_BASE,TEXT_COLS,RAM_HANDOFF_TRAMPOLINE}=require('../src/firmware/shino80/shino80-system-rom.js');
 
 const systemDisk=buildSystemDisk(),cbios=buildCbios(),rom=buildSystemRom();
@@ -31,7 +31,7 @@ assert.deepEqual(systemDisk.image.slice(offset(SYSTEM_PAYLOAD_SECTOR),offset(SYS
 assert.deepEqual(systemDisk.image.slice(offset(SYSTEM_CBIOS_SECTOR),offset(SYSTEM_CBIOS_SECTOR)+cbios.bytes.length),cbios.bytes);
 assert(systemDisk.image.slice(offset(SYSTEM_CBIOS_SECTOR)+cbios.bytes.length,offset(SYSTEM_CBIOS_SECTOR)+SYSTEM_CBIOS_SECTORS*128).every(byte=>byte===BLOCK_BLANK_BYTE));
 
-function machine(image=systemDisk.image,traceLimit=60000){
+function machine(image=systemDisk.image,traceLimit=150000){
   const keyboard=new Shino80Keyboard({capacity:256}),disk=new Shino80BlockDevice({image});
   const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
   const bus=new Shino80Bus({traceLimit,memoryDevice:memory,ioDevices:[keyboard,disk]});
@@ -55,8 +55,8 @@ for(const headerOffset of [0,16]){
   assert(Array.from({length:25},(_,row)=>screen(m,row)).join('').includes('DISK BOOT ERROR'));
 }
 
-// MON O performs seven real sector reads, installs page zero only after all
-// reads succeed, pages ROM out and lets the loaded payload print via CBIOS.
+// MON O performs seven ROM reads, pages ROM out, then the loaded original
+// payload reads the 44 CP/M sectors through CBIOS and reaches the CCP prompt.
 {
   const m=machine();bootMonitor(m);m.bus.clearTrace();command(m,'O');
   until(m.cpu,()=>m.cpu.state.pc===SYSTEM_ENTRY);
@@ -65,14 +65,13 @@ for(const headerOffset of [0,16]){
   assert.deepEqual(m.memory.ram.slice(cbios.origin,cbios.origin+cbios.bytes.length),cbios.bytes);
   assert.deepEqual(m.memory.ram.slice(SYSTEM_ENTRY,SYSTEM_ENTRY+systemDisk.payload.length),systemDisk.payload);
 
-  until(m.cpu,()=>m.cpu.state.halted);
-  assert.equal(String.fromCharCode(...m.memory.ram.slice(SYSTEM_SIGNATURE,SYSTEM_SIGNATURE+4)),'DSK!');
-  const [line1,line2]=SYSTEM_MESSAGE.trim().split('\r\n');
-  assert.equal(screen(m,0,line1.length),line1);assert.equal(screen(m,1,line2.length),line2);
+  until(m.cpu,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&Array.from({length:25},(_,row)=>screen(m,row)).join('').includes('A>'),1500000);
+  assert.equal(m.memory.ram[CPM22_CCP_ORIGIN],systemDisk.cpm.ccp[0]);
+  assert.equal(m.memory.ram[CPM22_BDOS_ORIGIN],systemDisk.cpm.bdos[0]);
 
   const diskEvents=m.bus.trace.filter(event=>event.space==='IO'&&event.meta.device===m.disk.id);
-  assert.equal(diskEvents.filter(event=>event.operation==='WRITE'&&(event.address&255)===0x31&&event.data===1).length,7);
-  assert.equal(diskEvents.filter(event=>event.operation==='READ'&&(event.address&255)===0x35).length,7*128);
+  assert(diskEvents.filter(event=>event.operation==='WRITE'&&(event.address&255)===0x31&&event.data===1).length>=51);
+  assert(diskEvents.filter(event=>event.operation==='READ'&&(event.address&255)===0x35).length>=51*128);
   const pageout=m.bus.trace.findIndex(event=>event.space==='IO'&&(event.address&255)===0&&event.data===1);
   assert(pageout>=0);
   const after=m.bus.trace.slice(pageout+1),fetches=after.filter(event=>event.purpose==='OPCODE_FETCH');
@@ -85,4 +84,4 @@ for(const headerOffset of [0,16]){
   assert.equal(m.disk.mounted,true);assert.equal(String.fromCharCode(...m.disk.exportImage().slice(0,4)),SYSTEM_DISK_MAGIC);
 }
 
-console.log('SHINO-80 SYSTEM DISK / MON O LOADER v0.1: MULTI-SECTOR ALL-RAM BOOT PASS');
+console.log('SHINO-80 SYSTEM DISK / MON O LOADER v0.2: CP/M MULTI-SECTOR ALL-RAM BOOT PASS');
