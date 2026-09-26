@@ -1,7 +1,7 @@
 # SHINO-80 SOURCE / DEPLOY LAYOUT STANDARD v0.1
 
 Created: 2026-09-24T16:50:00+09:00
-Status: **CANDIDATE STANDARD**
+Status: **CURRENT / ADOPTED STANDARD**
 
 ## Principle
 
@@ -108,7 +108,7 @@ Debug views observe state/trace through explicit boundaries.
 
 ## Build rule
 
-`npm run build`:
+`pnpm run build`:
 
 1. reads source under `src/`
 2. embeds CSS/JS into the one-page template

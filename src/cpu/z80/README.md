@@ -1,6 +1,7 @@
-# src/cpu/z80
+# SHINO Z80 CPU core
 
-Current candidate: **PHASE 1I — all instruction families (D7 comparison policy)**
+Status: instruction-level milestone complete at implementation baseline
+`e75d8c0506a7b1bb711b54c352c8b04580cdddaf`.
 
 ```text
 z80/
@@ -9,48 +10,34 @@ z80/
 └ z80-flags.js
 ```
 
-## Current coverage
+## Coverage
 
-- BASE first-byte decode: 256 / 256
-- executable non-prefix BASE opcodes: 252 / 252
-- prefix entry points recognized: CB / DD / ED / FD
-- executable CB second-byte encodings: 256 / 256 (includes SLL)
-- ED: 78 active encodings and 178 classified unused NOPs
-- external oracle: BASE 252,000 + CB 256,000 + ED 80,000 PASS at this candidate
-- ED external inventory includes 2 unused NOPs; other unused slots have units only
-- DD/FD: 252 non-prefix terminal slots each, 504,000 external cases PASS
-- DDCB/FDCB: 256 encodings each, 512,000 external cases PASS
-- Current total external baseline: 1,604,000 PASS; interrupts/precision excluded
+- BASE: 252 non-prefix opcodes
+- CB: 256 encodings
+- ED: 78 active encodings plus classified unused slots
+- DD / FD: 252 terminal slots per family
+- DDCB / FDCB: 256 encodings per family
+- NMI and INT IM 0/1/2
+- EI delay and HALT return
+- documented and implemented undocumented flag behavior
+- WZ / P / Q state
+- total T-states at the instruction model boundary
+- pinned external full-state oracle: `1,604,000 / 1,604,000 PASS`
 
 ## Responsibilities
 
-### z80-decoder.js
-- complete BASE opcode recognition
-- instruction descriptors
-- prefix-family entry recognition
+- `z80-decoder.js`: opcode-family recognition and instruction descriptors
+- `z80-flags.js`: arithmetic/logic and flag helpers
+- `z80-core.js`: architectural state, execution, interrupts, timing and Bus
+  transactions
 
-### z80-flags.js
-- documented BASE arithmetic/logic flags
-- INC/DEC
-- general ALU
-- 16-bit ADD HL flags
-- accumulator rotates
-- DAA
+## Accuracy boundary
 
-Undocumented X/Y remains a later accuracy target.
+This is an instruction-level NMOS-oriented model, not electrical or
+pin-cycle-perfect hardware. WAIT, BUSRQ, analogue contention, peripheral
+daisy-chain behavior and multi-byte device-fed IM0 streams require a future
+accuracy phase.
 
-### z80-core.js
-- architectural state
-- execution
-- memory / I/O bus transactions
-- stack
-- control flow
-- HALT functional cycling
-- DI/EI functional state
-
-## Next
-
-Next PHASE 1J: interrupt dispatch and precision closeout, with its own plan.
-Interrupt dispatch, undocumented X/Y and pin-level precision remain later work.
-
-Do not create a generic multi-CPU abstraction while finishing Z80.
+Do not introduce a generic multi-CPU abstraction while changing this core.
+Any semantic change requires a new PLAN, focused regression and updated oracle
+evidence.
