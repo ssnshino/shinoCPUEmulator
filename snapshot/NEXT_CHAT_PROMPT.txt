@@ -1,3 +1,16 @@
+CURRENT CP/M FILESYSTEM v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-cpm-filesystem-v01-20260926 / PR #37, parent d0457dc on Cursor /
+BEEP PR #36. Read README -> AGENTS -> current snapshot ->
+SHINO80_CPM_FILESYSTEM_V01 plan, matching v0.1 spec/worklog. A: now has a real
+writable CP/M 2.2 directory/extent filesystem with original WELCOME.TXT,
+HELLO.COM and S80INFO.COM. Runtime QA proves DIR/TYPE/program execution, SAVE,
+WBOOT persistence, COPY execution and ERA; package and installed Chrome
+desktop/mobile app/manual QA pass. iPhone Human QA confirmed DIR, TYPE, HELLO
+and S80INFO, then exposed Backspace and screen-scroll defects. Both CBIOS fixes
+and automated regression are in PR #37. Provide a fresh standalone HTML for
+iPhone Backspace/scroll and SAVE/COPY Human QA. Do not merge or deploy
+automatically. Everything below is historical.
+
 CURRENT CURSOR / BEEP v0.1 OVERRIDE 2026-09-26:
 Resume feature/shino80-cursor-beep-v01-20260926, PR #36, parent 4084d0e on CP/M PR #35.
 Read README -> AGENTS -> current snapshot -> SHINO80_CURSOR_BEEP_V01 plan,

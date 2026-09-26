@@ -94,6 +94,9 @@ with sync_playwright() as p:
     assert '256,256 BYTES' in inspector
     assert '30h–36h' in inspector
     assert 'S80B v2 · CP/M 2.2' in inspector
+    assert 'WELCOME.TXT' in inspector
+    assert 'HELLO.COM' in inspector
+    assert 'S80INFO.COM' in inspector
     assert 'A:2/16' in inspector
     assert 'MON O' in inspector
     assert 'IDLE' in inspector
@@ -101,5 +104,5 @@ with sync_playwright() as p:
 
     assert not errors
     assert not requests
-    print('v0.0.9 Chromium CP/M + cursor + beeper machine regression PASS')
+    print('v0.0.9 Chromium CP/M filesystem + cursor + beeper machine regression PASS')
     browser.close()

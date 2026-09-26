@@ -108,6 +108,7 @@
 
     a.label('CBIOS_CONOUT');
     a.emit(0x79,0xFE,0x07);jpZ('CBIOS_CONOUT_BELL');a.emit(0xFE,0x0D);jpZ('CBIOS_CONOUT_CR');a.emit(0xFE,0x0A);jpZ('CBIOS_CONOUT_LF');
+    a.emit(0xFE,0x08);jpZ('CBIOS_CONOUT_BS');a.emit(0xFE,0x7F);jpZ('CBIOS_CONOUT_BS');
     ldHLFrom('CBIOS_CURSOR');a.emit(0x77,0x23);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');
     ldAFrom('CBIOS_COLUMN');a.emit(0x3C,0xFE,TEXT_COLS);jpC('CBIOS_CONOUT_STORE_COLUMN');a.emit(0xAF);
     a.label('CBIOS_CONOUT_STORE_COLUMN');ldATo('CBIOS_COLUMN');a.emit(0xC9);
@@ -121,10 +122,22 @@
     a.label('CBIOS_CONOUT_LF');
     ldHLFrom('CBIOS_CURSOR');a.word(0x11,TEXT_COLS);a.emit(0x19);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');a.emit(0xC9);
 
+    a.label('CBIOS_CONOUT_BS');
+    ldHLFrom('CBIOS_CURSOR');a.emit(0x7C,0xFE,hi(TEXT_VRAM_BASE));jpNZ('CBIOS_CONOUT_BS_MOVE');
+    a.emit(0x7D,0xB7,0xC8);
+    a.label('CBIOS_CONOUT_BS_MOVE');a.emit(0x2B);ldHLTo('CBIOS_CURSOR');
+    ldAFrom('CBIOS_COLUMN');a.emit(0xB7);jpNZ('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3E,TEXT_COLS);
+    a.label('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3D);ldATo('CBIOS_COLUMN');a.emit(0xC9);
+
     a.label('CBIOS_NORMALIZE_CURSOR');
     a.word(0x11,TEXT_VRAM_END);a.emit(0xB7,0xED,0x52);jpC('CBIOS_CURSOR_BELOW_END');
-    a.word(0x21,TEXT_VRAM_BASE);a.emit(0xC9);
+    call('CBIOS_SCROLL');a.emit(0xC9);
     a.label('CBIOS_CURSOR_BELOW_END');a.emit(0x19,0xC9); // restore HL after comparison
+
+    a.label('CBIOS_SCROLL');
+    a.word(0x21,TEXT_VRAM_BASE+TEXT_COLS);a.word(0x11,TEXT_VRAM_BASE);a.word(0x01,(TEXT_VRAM_END-TEXT_VRAM_BASE)-TEXT_COLS);a.emit(0xED,0xB0);
+    a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xAF,0x77);a.word(0x11,TEXT_VRAM_END-TEXT_COLS+1);a.word(0x01,TEXT_COLS-1);a.emit(0xED,0xB0);
+    a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xC9);
 
     a.label('CBIOS_LIST');a.emit(0xC9);
     a.label('CBIOS_PUNCH');a.emit(0xC9);
