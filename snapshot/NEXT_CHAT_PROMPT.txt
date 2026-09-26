@@ -1,3 +1,16 @@
+CURRENT SHINO CBIOS v0.1 OVERRIDE 2026-09-26:
+Resume feature/shino80-cbios-v01-20260926, parent 128f031 / PR #31. Read README
+-> AGENTS -> current snapshot -> SHINO80_CBIOS_V01 plan, CBIOS_v0.1 spec and
+matching worklog. The original 566-byte FA00h image has all 17 standard slots,
+RAM-only Keyboard/VRAM console, exact DPH/DPB and Virtual Disk A INIR/OTIR.
+Exact ABI/disk tests, sector-1 all-RAM execution proof, full package and offline
+Chrome manual QA pass. BOOT/WBOOT only initialize and return; no CCP, BDOS,
+filesystem/system image or CP/M boot exists. Runtime app/CPU/ROM/device/display
+unchanged. Finish one logical commit/push/stacked PR if pending; do not merge
+or deploy automatically. Next candidate: explicit cold/warm multi-sector
+loader with an original system image, then the documented CP/M license gate.
+Everything below is historical.
+
 CURRENT VIRTUAL DISK A v0.1 OVERRIDE 2026-09-26:
 Resume feature/shino80-block-device-v01-20260926, parent a2a6430 / PR #30.
 Read README -> AGENTS -> current snapshot -> SHINO80_BLOCK_DEVICE_V01 plan,

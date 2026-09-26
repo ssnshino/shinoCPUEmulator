@@ -21,7 +21,8 @@ src/
 ├ firmware/
 │  └ shino80/
 │     ├ shino80-cgrom.js
-│     └ shino80-system-rom.js
+│     ├ shino80-system-rom.js
+│     └ shino80-cbios.js
 ├ machine/
 │  └ shino80/
 │     ├ shino80-bus.js
