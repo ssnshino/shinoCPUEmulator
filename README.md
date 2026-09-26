@@ -14,6 +14,12 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+Latest CPU candidate: `feature/shino80-z80-cb-20260926` on `eea8dfc` / PR #21.
+PHASE 1F: CB 256/256 execute; external CB 256,000 + BASE 252,000 PASS, failure 0
+under documented-state policy. See PHASE1F_CB plan/spec/worklog in head dirs.
+MON expansion is paused. Next is PHASE 1G ED; DD/FD, indexed CB, interrupt and
+undocumented precision work remain open. Earlier UI candidates follow.
+
 Newest: `perf/shino80-trace-observer-20260926` on `3f4f90d` / PR #20.
 Bus ring storage and visible-only observers; CPU/firmware unchanged. Local
 Chrome comparison reached ~4.00 MHz versus ~0.70–0.75 before; iPhone QA pending.

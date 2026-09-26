@@ -33,6 +33,12 @@ Status: candidate complete
 
 ### PHASE 1F — CB COMPLETE
 
+2026-09-26: implemented/verified candidate on feature/shino80-z80-cb-20260926.
+CB 256,000/256,000 and BASE recheck 252,000/252,000 PASS; see
+SHINO_Z80_PHASE1F_CB_PLAN.md and SHINO_Z80_PHASE1F_CB_WORKLOG.md.
+Review/merge pending. Completion applies to documented-state comparison;
+PHASE 1J precision/interrupt scope is not implied complete.
+
 Implement all 256 CB second-byte encodings:
 
 - RLC / RRC / RL / RR

@@ -11,11 +11,11 @@
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
-    add16HL,rotateAccumulator,daa8
+    add16HL,rotateAccumulator,daa8,rotateShift8,bitTest8
   }=flagsApi;
 
   const hex=(value,width)=>((Number(value)>>>0).toString(16).toUpperCase().padStart(width,'0'));
@@ -58,15 +58,15 @@
       return s.r;
     }
 
-    fetchOpcode(){
+    fetchOpcode(offsetT=0){
       const s=this.state,address=s.pc&0xFFFF;
       const opcode=this.bus.cpuRead(address,{
-        tState:s.tStates,purpose:'OPCODE_FETCH',signals:['M1','MREQ','RD'],
+        tState:s.tStates+offsetT,purpose:'OPCODE_FETCH',signals:['M1','MREQ','RD'],
         meta:{precision:'M_CYCLE_ABSTRACT'}
       });
       s.pc=(s.pc+1)&0xFFFF;
       this.incrementR();
-      this.bus.emitRefresh({tState:s.tStates+2,i:s.i,r:s.r});
+      this.bus.emitRefresh({tState:s.tStates+offsetT+2,i:s.i,r:s.r});
       return {address,opcode};
     }
 
@@ -547,15 +547,33 @@
       }
     }
 
+    executeCB(desc,ctx){
+      const s=this.state,memory=desc.targetCode===6,address=this.getHL();
+      const value=memory?this.readData(address,ctx,8):s[REG8_KEYS[desc.targetCode]];
+      let result=value;
+      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation);
+      else{
+        if(desc.kind==='CB_ROTATE'){
+          const shifted=rotateShift8(s.f,value,desc.rotate);result=shifted.result;s.f=shifted.f;
+        }else if(desc.kind==='CB_RES')result=value&~(1<<desc.operation);
+        else result=value|(1<<desc.operation);
+        if(memory)this.writeData(address,result,ctx,12);
+        else s[REG8_KEYS[desc.targetCode]]=result;
+      }
+      return desc.mnemonic;
+    }
+
     step(){
       const s=this.state;
       if(s.halted)return this.haltCycle();
 
-      const startTState=s.tStates,{address,opcode}=this.fetchOpcode(),desc=decodeBase(opcode);
+      const startTState=s.tStates,{address,opcode}=this.fetchOpcode();
+      let desc=decodeBase(opcode);
       if(!desc)throw new Error(`UNIMPLEMENTED OPCODE ${hex(opcode,2)}h at ${hex(address,4)}h`);
 
       const ctx={address,opcode,startTState,bytes:[opcode]};
-      const execution=this.executeDescriptor(desc,ctx);
+      if(opcode===0xCB){const second=this.fetchOpcode(4).opcode;ctx.bytes.push(second);desc=decodeCB(second);}
+      const execution=opcode===0xCB?this.executeCB(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
       const actualTStates=detail.tStates??desc.tStates;
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);

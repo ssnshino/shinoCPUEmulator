@@ -120,7 +120,29 @@
     return {result,f};
   }
 
+  function rotateShift8(oldF,value,kind){
+    const v=Number(value)&255,c=oldF&1;let result,carry;
+    switch(kind){
+      case 'RLC':carry=v>>>7;result=((v<<1)|carry)&255;break;
+      case 'RRC':carry=v&1;result=(v>>>1)|(carry<<7);break;
+      case 'RL':carry=v>>>7;result=((v<<1)|c)&255;break;
+      case 'RR':carry=v&1;result=(v>>>1)|(c<<7);break;
+      case 'SLA':carry=v>>>7;result=(v<<1)&255;break;
+      case 'SRA':carry=v&1;result=(v>>>1)|(v&128);break;
+      case 'SLL':carry=v>>>7;result=((v<<1)|1)&255;break;
+      case 'SRL':carry=v&1;result=v>>>1;break;
+      default:throw new Error('UNKNOWN CB ROTATE '+kind);
+    }
+    return {result,f:logicFlags(oldF,result,false)|carry};
+  }
+  function bitTest8(oldF,value,bit){
+    const set=(value&(1<<bit))!==0;
+    return preserveYX(oldF)|(oldF&FLAG_MASK.C)|FLAG_MASK.H|
+      (set?0:FLAG_MASK.Z|FLAG_MASK.PV)|(bit===7&&set?FLAG_MASK.S:0);
+  }
+
   return {
+    rotateShift8,bitTest8,
     FLAG_BITS,FLAG_MASK,flagState,parityEven,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
     add16HL,rotateAccumulator,daa8

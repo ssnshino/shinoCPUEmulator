@@ -1,3 +1,9 @@
+CPU OVERRIDE 2026-09-26:
+Resume feature/shino80-z80-cb-20260926 on eea8dfc / PR #21. Read PHASE1F_CB
+plan/spec/worklog and oracle QA JSONs. CB 256/256 implemented, 256,000 external
+cases PASS; BASE 252,000 recheck PASS under D7 policy. Next PHASE 1G ED, not
+MON expansion. Full Z80 is NOT complete. No automatic merges. Older history:
+
 NEWEST OVERRIDE 2026-09-26:
 Resume perf/shino80-trace-observer-20260926 on 3f4f90d / PR #20.
 Read TRACE_OBSERVER_PERF plan/spec/worklog. Bus ring and visible-only observers,

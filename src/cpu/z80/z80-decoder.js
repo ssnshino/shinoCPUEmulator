@@ -141,7 +141,16 @@
     }
   }
 
+  function decodeCB(opcode){
+    const op=Number(opcode)&0xFF,group=op>>6,operation=(op>>3)&7,targetCode=op&7;
+    const rotate=['RLC','RRC','RL','RR','SLA','SRA','SLL','SRL'][operation];
+    const kind=['CB_ROTATE','CB_BIT','CB_RES','CB_SET'][group];
+    const mnemonic=group===0?`${rotate} ${REG8_NAMES[targetCode]}`:`${['','BIT','RES','SET'][group]} ${operation},${REG8_NAMES[targetCode]}`;
+    return {kind,family:'CB',operation,rotate,targetCode,mnemonic,length:2,tStates:targetCode===6?(group===1?12:15):8};
+  }
+
   return {
+    decodeCB,
     decodeBase,
     REG8_NAMES,REG8_KEYS,
     REG16_DD_NAMES,REG16_QQ_NAMES,

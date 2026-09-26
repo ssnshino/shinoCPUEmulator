@@ -1,5 +1,9 @@
 # LAST RUN
 
+Latest: PHASE 1F CB candidate 2026-09-26, feature/shino80-z80-cb-20260926.
+See working-logs/head/SHINO_Z80_PHASE1F_CB_WORKLOG.md. External CB and BASE
+recheck PASS; MON expansion paused; next ED. No main merge performed.
+
 Newest: 2026-09-26 trace/observer optimization. See
 working-logs/head/SHINO80_TRACE_OBSERVER_PERF_WORKLOG.md. Current branch
 perf/shino80-trace-observer-20260926 on 3f4f90d / PR #20. iPhone QA pending.
