@@ -28,6 +28,7 @@
       this.ctx=canvas.getContext('2d',{alpha:false});
       this.ctx.imageSmoothingEnabled=false;
       this.lastCells=new Uint8Array(CELL_COUNT);
+      this.lastCursorIndex=-1;this.lastCursorVisible=false;
       this.powered=false;
       this.clearScreen();
     }
@@ -35,6 +36,7 @@
       this.ctx.fillStyle='#06100A';
       this.ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
       this.lastCells.fill(0);
+      this.lastCursorIndex=-1;this.lastCursorVisible=false;
     }
     setPower(on){
       this.powered=!!on;
@@ -53,16 +55,28 @@
         for(let x=0;x<GW;x++)if(bits&(0x80>>x))this.ctx.fillRect(x0+x,y0+y,1,1);
       }
     }
-    render(){
+    drawCursor(index){
+      const col=index%COLS,row=Math.floor(index/COLS);
+      this.ctx.fillStyle='#B7FFCA';
+      this.ctx.fillRect(col*GW,row*GH+GH-2,GW,2);
+    }
+    render({cursorAddress=null,cursorVisible=false}={}){
       if(!this.powered)return 0;
+      const address=Number(cursorAddress);
+      const cursorIndex=Number.isInteger(address)&&address>=this.vramBase&&address<this.vramBase+CELL_COUNT?address-this.vramBase:-1;
+      const visible=!!cursorVisible&&cursorIndex>=0;
+      const cursorChanged=cursorIndex!==this.lastCursorIndex||visible!==this.lastCursorVisible;
       let changed=0;
       for(let i=0;i<CELL_COUNT;i++){
         const code=this.bus.debugPeek(this.vramBase+i);
-        if(code===this.lastCells[i])continue;
+        const redrawCursorCell=cursorChanged&&(i===this.lastCursorIndex||i===cursorIndex);
+        if(code===this.lastCells[i]&&!redrawCursorCell)continue;
         this.lastCells[i]=code;
         this.drawCell(i,code);
+        if(i===cursorIndex&&visible)this.drawCursor(i);
         changed++;
       }
+      this.lastCursorIndex=cursorIndex;this.lastCursorVisible=visible;
       return changed;
     }
     readRow(row){

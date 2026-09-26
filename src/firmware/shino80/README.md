@@ -21,9 +21,13 @@ The minimum BIOS currently provides:
 
 Monitor v0.3 accepts `H` / `?`, `C`, bounded `D start [end]`, diagnostic `R`,
 seven-family `U start [end]`, v0.5 `B` RAM-handoff proof and `O` System Disk
-boot. `O` validates sector 1, loads the original payload to 8000h and CBIOS to
-FA00h from sectors 2–7, then enters all-RAM mode. Serial, printer, application
+boot. `O` validates sector 1, loads the original payload from sector 2 to 8000h
+and CBIOS from sectors 3–8 to FA00h, then enters all-RAM mode. Serial, printer, application
 GO/BREAK and interrupt/NMI service bodies remain reserved or unimplemented.
+
+ROM BIOS PUTCHAR and RAM CBIOS CONOUT route ASCII BEL 07h to the original
+one-bit beeper at I/O 40h. The DM-80 cursor is a non-destructive presentation
+overlay over the existing ROM/CBIOS cursor pointer; it never changes VRAM.
 
 CBIOS v0.2 WBOOT at FA03h reloads A: track 0 sector 2 to 8000h through its
 ordinary READ path and jumps to the restored payload. Failure is reported by

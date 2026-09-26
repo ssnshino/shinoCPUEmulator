@@ -1,5 +1,14 @@
 # LAST RUN
 
+LATEST 2026-09-26: Cursor / BEEP v0.1 PR #36 on CP/M PR #35 head `4084d0e`.
+Added the DM-80 cursor overlay, I/O 40h beeper, ROM/CBIOS BEL routing, protected
+Web Audio presentation, Device inspector, touch BEEP TEST and public REFERENCE
+navigation. CBIOS growth to
+645 bytes moved the 44 CP/M sectors to sector 9 without crossing the two system
+tracks. Full package and installed Chrome desktop/mobile QA pass with two cursor
+frames, beeper count 1, no console/network/overflow findings. Audible Human QA,
+commit/push/PR remain; no merge/deploy. Previous runs follow.
+
 LATEST 2026-09-26: CP/M 2.2 boot v0.1 candidate on parent `72f16bb` / PR #35.
 Branch `feature/shino80-cpm22-boot-v01-20260926`. Imported licensed source and
 provenance, rebuilt 44K CCP/BDOS with the documented FA00h BIOS port, added

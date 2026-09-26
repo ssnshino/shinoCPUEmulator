@@ -19,7 +19,7 @@ entering an interactive `A>` prompt.
 | 9400h–9BFFh | CP/M 2.2 CCP |
 | 9C00h–A9FFh | CP/M 2.2 BDOS |
 | C000h–C7CFh | SHINO text VRAM |
-| FA00h–FC7Ch | SHINO CBIOS, 637 bytes |
+| FA00h–FC84h | SHINO CBIOS, 645 bytes |
 
 The CCP/BDOS origins are the 44K configuration. The single CP/M port change is
 BDOS's BIOS base: upstream computes AA00h as the next module; SHINO-80 binds it
@@ -31,10 +31,9 @@ Tracks 0 and 1 are reserved by DPB `OFF=2`.
 
 - track 0 sector 1: S80B v2 header
 - track 0 sector 2: original 98-byte SHINO loader at 8000h
-- track 0 sectors 3–7: SHINO CBIOS
-- track 0 sectors 8–23: CCP, 16 sectors
-- track 0 sectors 24–26 and track 1 sectors 1–25: BDOS, 28 sectors
-- track 1 sector 26: reserved
+- track 0 sectors 3–8: SHINO CBIOS
+- track 0 sectors 9–24: CCP, 16 sectors
+- track 0 sectors 25–26 and track 1 sectors 1–26: BDOS, 28 sectors
 - tracks 2–76: CP/M directory/data area, initially E5h
 
 CBIOS SECTRAN converts CP/M's zero-based logical sector to the block device's

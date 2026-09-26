@@ -17,6 +17,8 @@ with sync_playwright() as p:
     assert page.locator('#selfTest').inner_text()=='PHASE 2A.1 SELF TEST PASS'
     assert page.locator('#machineState').inner_text()=='POWER OFF'
     assert page.locator('#runPauseBtn').is_disabled()
+    assert page.locator('#referenceLink').get_attribute('href')=='https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-reference.html'
+    assert page.locator('#referenceLink').get_attribute('target')=='_blank'
     assert page.locator('.monitor-model').inner_text()=='DM-80'
     assert page.locator('.monitor-maker').inner_text()=='SHINOMIYA'
     assert page.locator('#crtViewport').get_attribute('data-render-mode')=='AA'
@@ -50,11 +52,17 @@ with sync_playwright() as p:
     page.keyboard.press('Enter')
     page.wait_for_function("previous => document.querySelector('#crtCanvas').toDataURL() !== previous",arg=before,timeout=4000)
     page.wait_for_timeout(1200)
+    cursor_frames=set()
+    for _ in range(6):
+        cursor_frames.add(page.locator('#crtCanvas').evaluate('canvas => canvas.toDataURL()'))
+        page.wait_for_timeout(180)
+    assert len(cursor_frames)>=2
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 
     page.locator('#keyboardCapture').evaluate('element => element.blur()')
     page.locator('#runPauseBtn').click();page.wait_for_timeout(100)
     assert not page.locator('#app').evaluate("app => app.classList.contains('keyboard-mode')")
+    page.locator('#moreBtn').click();page.locator('[data-more-action="beep"]').click();page.wait_for_timeout(100)
 
     page.locator('.bottom-nav button[data-view="memory"]').click();page.wait_for_timeout(80)
     page.locator('#memoryAddress').fill('0000');page.locator('#memoryAddressForm').press('Enter');page.wait_for_timeout(80)
@@ -70,6 +78,13 @@ with sync_playwright() as p:
     assert 'BASE 252/252 ONLINE' in inspector
 
     page.locator('.bottom-nav button[data-view="devices"]').click();page.wait_for_timeout(80)
+    beeper=page.locator('[data-device="beeper"]')
+    assert 'ONE-BIT BEEPER' in beeper.inner_text()
+    beeper.click();page.wait_for_timeout(80)
+    inspector=page.locator('#inspectorContent').inner_text()
+    assert 'I/O 40h' in inspector
+    assert 'Count1' in inspector.replace('\n','').replace(' ','')
+
     disk=page.locator('[data-device="disk-a"]')
     assert 'VIRTUAL DISK A' in disk.inner_text()
     assert 'ONLINE' in disk.inner_text()
@@ -86,5 +101,5 @@ with sync_playwright() as p:
 
     assert not errors
     assert not requests
-    print('v0.0.9 Chromium Z80 BASE COMPLETE + machine regression PASS')
+    print('v0.0.9 Chromium CP/M + cursor + beeper machine regression PASS')
     browser.close()

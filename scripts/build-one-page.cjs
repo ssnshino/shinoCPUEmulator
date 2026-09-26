@@ -9,6 +9,7 @@ const source={
   memory:'src/machine/shino80/shino80-memory.js',
   bus:'src/machine/shino80/shino80-bus.js',
   keyboard:'src/devices/shino80/shino80-keyboard.js',
+  beeper:'src/devices/shino80/shino80-beeper.js',
   blockDevice:'src/devices/shino80/shino80-block-device.js',
   cbios:'src/firmware/shino80/shino80-cbios.js',
   cpm22:'src/firmware/shino80/shino80-cpm22.js',
@@ -27,6 +28,7 @@ let html=read(source.template)
   .replace('/*__MEMORY__*/',read(source.memory))
   .replace('/*__BUS__*/',read(source.bus))
   .replace('/*__KEYBOARD__*/',read(source.keyboard))
+  .replace('/*__BEEPER__*/',read(source.beeper))
   .replace('/*__BLOCK_DEVICE__*/',read(source.blockDevice))
   .replace('/*__CBIOS__*/',read(source.cbios))
   .replace('/*__CPM22__*/',read(source.cpm22))
