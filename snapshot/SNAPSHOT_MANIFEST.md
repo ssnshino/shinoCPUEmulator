@@ -14,7 +14,21 @@ Read only this set for an ordinary restart:
 6. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
 8. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
-9. `working-logs/head/SHINO80_RELEASE_CLOSEOUT_20260926.md`
+9. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
+10. `working-logs/head/SHINO80_RELEASE_CLOSEOUT_20260926.md`
+
+## Current design direction
+
+There is no active implementation PLAN at this handoff.
+
+The next Human-selected design focus is FDD/DISK usability for removable
+software media and a future self-hosted development workflow. The current
+design note is:
+
+- `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
+
+Do not treat that note as an implementation specification. Create a new PLAN in
+`plan/head/` before runtime changes.
 
 ## Generated artifacts
 
