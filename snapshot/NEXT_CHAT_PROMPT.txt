@@ -1,27 +1,73 @@
 SHINO-80を再開してください。
 
-最初にREADME.mdを読み、そこに書かれた順でAGENTS.md、
+合言葉:
+「ごっごっごっごっ♪」
+
+最初にREADME.mdを読み、READMEに書かれた順でAGENTS.md、
 snapshot/CURRENT_SNAPSHOT.md、snapshot/LAST_RUN.md、
-snapshot/SNAPSHOT_MANIFEST.mdを確認してください。
+snapshot/NEXT_CHAT_PROMPT.txt、snapshot/SNAPSHOT_MANIFEST.mdを確認してください。
 
-その後、GitHubをfetchして次をlive確認してください。
+その後GitHubをfetchしてlive確認してください。
 
-- current branch / HEAD / upstream
-- dirty state
+- current main / HEAD
 - open PR
-- docs/restart-cockpit-20260926 のPRが未mergeか、すでにmainへ入ったか
+- docs/shino80-fdd-disk-notes-20260926 のPRが未mergeか、すでにmainへ入ったか
+- active implementation PLANが存在するか
 
-最後の実装基準は shinoCPUEmulator main e75d8c0506a7b1bb711b54c352c8b04580cdddaf
-（PR #38）です。CPU instruction-level milestone、BIOS/MON v0.3、pageable
-64 KiB RAM、DM-80、Virtual Disk A、SHINO CBIOS/WBOOT、licensed CP/M 2.2、
-writable starter filesystemまで統合済みです。外部oracleは
-1,604,000 / 1,604,000 PASS、Failure 0です。
+このhandoff開始時のreviewed mainは
+22a197e301fe57fa0947a19e3e061fdc7004231d です。
+最後のimplementation-bearing commitは
+e75d8c0506a7b1bb711b54c352c8b04580cdddaf です。
 
-公開copyは shinomiya-daihanten-content master 743b6038b4a40b8db32463e22ba864855776e152
-からAction 36224728565でデプロイ済みです。
+次の設計入口:
+docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md
 
-新しい実装を始める場合は、READMEの候補から一つだけ選び、plan/headへ
-新PLANを作ってください。完了済みhistoryをCURRENTとして復活させたり、
-CPU/firmware/deploy HTMLを無関係な作業で変更したりしないでください。
+Humanが次に重視しているのはDISKの使い勝手です。
+理由は、SHINO-80上でtext editor、assembler、compiler等の少し大きな
+softwareを入れ替えて使い、最終的にSHINO-80自身で
+EDIT -> ASSEMBLE/COMPILE -> RUNできる環境へ進みたいからです。
 
-合言葉: ごっごっごっごっ♪
+現在合意している方向:
+
+- FDD/DRIVEは装置、DISK/MEDIAは交換媒体として分離する
+- DRIVE A:でINSERT / EJECTできる方向
+- POWER ON時、bootable diskが刺さっていればautomatic boot
+- mediaなし / non-bootableならROM MONへfallback
+- MON Oはmanual bootとして残す
+- browser persistenceとdisk-image import/exportはguest hardwareの外側
+- B: driveは将来のSYSTEM/TOOLS diskとUSER/WORK disk分離候補
+- mechanical FDD timing、B:、assembler/compiler/editor選定、
+  individual host-file transferはまだ別の将来課題
+
+重要:
+まだruntime implementationは開始していません。
+plan/headにはactive implementation PLANを置かない状態でhandoffしています。
+
+次に実装へ進む場合は、まず現行Virtual Disk A、CBIOS、WBOOT、
+S80B system disk、starter filesystem、one-page artifactの境界を確認し、
+新しいPLANをplan/headへ作ってください。
+
+PLANでは少なくとも以下を決めてください。
+
+- removable media UIの範囲
+- POWER ON autoboot contract
+- bootable media validation
+- INSERT / EJECT safety boundary
+- persistence方式
+- disk image形式とimport/export
+- corrupted image / versioning / migration
+- RESET / POWER / WBOOTとの関係
+- mobile Safari / Edge
+- standalone file://制約
+- existing CP/M/disk regression
+- generated one-page HTMLへの反映
+- Human確認項目
+
+CPU coreを無関係に変更しないでください。
+firmware/CBIOS変更が必要ならPLANへ理由を書いてください。
+deploy HTMLを手編集しないでください。
+1 environment / 1 writer / 1 purpose branch。
+PLAN FIRST。
+原則1 logical commit。
+PR作成まで。
+Humanの明示指示なしにmergeしないでください。

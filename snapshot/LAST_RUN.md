@@ -1,44 +1,69 @@
-# LAST RUN — 2026-09-26 documentation cockpit closeout
+# LAST RUN — 2026-09-26 FDD / DISK design handoff
 
 ## Goal
 
-Make `README.md` the sufficient first entry for another AI/session and remove
-completed candidate chronology from the normal restart path.
+Close the day with a repository-backed design note and restart snapshot for the
+next SHINO-80 disk-media phase, without starting implementation.
 
-## Baseline verified before editing
+## Live baseline checked
 
-- local `main` matched `origin/main` at `e75d8c0506a7b1bb711b54c352c8b04580cdddaf`
-- working tree was clean
-- open pull requests: none
-- content publication was already deployed from content master `743b603`
-- content Action `36224728565`: SUCCESS, exact SHA, local/public SHINO routes PASS
+- source repository: `ssnshino/shinoCPUEmulator`
+- reviewed main:
+  `22a197e301fe57fa0947a19e3e061fdc7004231d`
+- PR #39: merged
+- open PRs before this handoff branch: none
+- last implementation-bearing main:
+  `e75d8c0506a7b1bb711b54c352c8b04580cdddaf`
+- content repository master:
+  `69868569a15b207ea8d657c25a697f1b155b1673`
+- content PR #12: merged
+- publication Action `36227667207`: SUCCESS
 
-## Documentation changes
+The local Mac working tree is outside this connector environment; its clean
+state was supplied by the Human/previous handoff and was not independently
+re-read from the local filesystem here.
 
-- replaced the accumulated root status timeline with a concise restart cockpit
-- reduced CURRENT/LAST/NEXT to current facts and explicit resume instructions
-- introduced one consolidated current-system specification
-- moved completed plans, phase worklogs, superseded phase specs and dated
-  snapshots out of the default scan into history
-- updated module/deploy READMEs and Technical Manual release metadata
-- retained historical wording unchanged inside history files
-- documented the known Codex Node/pnpm PATH and changed the aggregate package
-  script to pnpm chaining so `pnpm test` works without an npm executable
+## Design discussion recorded
+
+Added:
+
+- `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
+
+The note records:
+
+- FDD/drive versus removable DISK/media separation
+- the real motivation: loading/swapping larger tools such as editor, assembler
+  and compiler
+- desired POWER ON autoboot when a bootable A: medium is inserted
+- MON fallback when media is missing or non-bootable
+- retention of manual `MON O`
+- Device Inspector INSERT/EJECT direction
+- host-side persistence/image import/export boundary
+- future A: tools / B: work-disk model
+- later individual CP/M file exchange as host tooling
+- PLAN FIRST before any implementation
 
 ## Runtime scope
 
-No CPU, decoder, flag, firmware, disk, CG-ROM, display or application behavior
-was intentionally changed. The generated Technical Manual may change only to
-reflect corrected release/provenance metadata.
+No CPU, decoder, Bus, memory, firmware, CBIOS, disk-device implementation,
+CG-ROM, display, app runtime or generated standalone artifact is intentionally
+changed by this handoff.
 
-## Known local runtime
-
-Codex desktop uses the bundled Node and pnpm paths recorded in `README.md`.
-The normal shell may not expose `node` or `npm`; this is known and must not be
-rediscovered on every run. Use `pnpm test`, not a hand-written per-script loop.
+No implementation PLAN is activated by these notes.
 
 ## Delivery
 
-Work is prepared on purpose branch `docs/restart-cockpit-20260926`. Check live
-Git/PR state before deciding whether delivery is still pending or already
-merged. Human merge authority remains in force.
+Purpose branch:
+
+`docs/shino80-fdd-disk-notes-20260926`
+
+The documentation/snapshot change is intended as one logical commit and one PR
+to `main`.
+
+Human merge authority remains in force. Do not merge automatically.
+
+## Next session
+
+Start from the root README and live Git state. Read the FDD/DISK design note,
+then create a fresh PLAN for a bounded first media-system phase before touching
+runtime code.
