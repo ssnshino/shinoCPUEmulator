@@ -9,6 +9,7 @@ const source={
   memory:'src/machine/shino80/shino80-memory.js',
   bus:'src/machine/shino80/shino80-bus.js',
   keyboard:'src/devices/shino80/shino80-keyboard.js',
+  blockDevice:'src/devices/shino80/shino80-block-device.js',
   flags:'src/cpu/z80/z80-flags.js',
   decoder:'src/cpu/z80/z80-decoder.js',
   cpu:'src/cpu/z80/z80-core.js',
@@ -23,6 +24,7 @@ let html=read(source.template)
   .replace('/*__MEMORY__*/',read(source.memory))
   .replace('/*__BUS__*/',read(source.bus))
   .replace('/*__KEYBOARD__*/',read(source.keyboard))
+  .replace('/*__BLOCK_DEVICE__*/',read(source.blockDevice))
   .replace('/*__FLAGS__*/',read(source.flags))
   .replace('/*__DECODER__*/',read(source.decoder))
   .replace('/*__CPU__*/',read(source.cpu))

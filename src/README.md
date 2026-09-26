@@ -16,7 +16,8 @@ src/
 │     └ z80-core.js
 ├ devices/
 │  └ shino80/
-│     └ shino80-keyboard.js
+│     ├ shino80-keyboard.js
+│     └ shino80-block-device.js
 ├ firmware/
 │  └ shino80/
 │     ├ shino80-cgrom.js

@@ -219,7 +219,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       </section>
 
       <section class="view" data-view-panel="devices" aria-label="Devices">
-        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">VIDEO + KEYBOARD ONLINE</span></div><div class="devices" id="deviceList"></div></div>
+        <div class="machine-card device-card"><div class="card-head"><h2>DEVICE DOCK</h2><span class="eyebrow">VIDEO + KEYBOARD + DISK A ONLINE</span></div><div class="devices" id="deviceList"></div></div>
       </section>
     </main>
 
@@ -239,7 +239,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <button data-view="devices" aria-selected="false"><span class="ico">I/O</span><span class="lab">I/O</span></button>
   </nav>
 
-  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>FDD —</span><span>UART —</span></footer>
+  <footer class="statusbar"><span id="statusRun" class="ok">POWER OFF</span><span>CPU Z80</span><span>4.000 MHz</span><span>BUILD Z80 BASE v0.0.9</span><span id="statusVideo">VIDEO 640×400 DIGITAL MONO</span><span>PC <b id="statusPc">0000</b></span><span>R <b id="statusR">00</b></span><span>T <b id="statusT">0</b></span><span>LAST <b id="statusLast">RESET</b></span><span>DISK A 250.25 KiB</span><span>UART —</span></footer>
 </div>
 
 <div class="more-sheet" id="moreMenu" hidden aria-hidden="true">
@@ -681,6 +681,212 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     Shino80Keyboard,
     KEY_DATA_PORT,KEY_STATUS_PORT,KEY_STATUS_READY,KEY_STATUS_OVERRUN,
     DEFAULT_FIFO_CAPACITY
+  };
+});
+</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_BLOCK_DEVICE=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const BLOCK_STATUS_PORT=0x30;
+  const BLOCK_COMMAND_PORT=0x31;
+  const BLOCK_DRIVE_PORT=0x32;
+  const BLOCK_TRACK_PORT=0x33;
+  const BLOCK_SECTOR_PORT=0x34;
+  const BLOCK_DATA_PORT=0x35;
+  const BLOCK_ERROR_PORT=0x36;
+
+  const BLOCK_COMMAND_READ=0x01;
+  const BLOCK_COMMAND_WRITE=0x02;
+  const BLOCK_COMMAND_RESET=0x7F;
+
+  const BLOCK_STATUS_READY=0x01;
+  const BLOCK_STATUS_BUSY=0x02;
+  const BLOCK_STATUS_DRQ=0x04;
+  const BLOCK_STATUS_WRITE_PROTECT=0x40;
+  const BLOCK_STATUS_ERROR=0x80;
+
+  const BLOCK_ERROR_NONE=0;
+  const BLOCK_ERROR_NO_MEDIA=1;
+  const BLOCK_ERROR_BAD_DRIVE=2;
+  const BLOCK_ERROR_BAD_TRACK=3;
+  const BLOCK_ERROR_BAD_SECTOR=4;
+  const BLOCK_ERROR_WRITE_PROTECTED=5;
+  const BLOCK_ERROR_PROTOCOL=6;
+
+  const BLOCK_TRACKS=77;
+  const BLOCK_SECTORS_PER_TRACK=26;
+  const BLOCK_SECTOR_SIZE=128;
+  const BLOCK_IMAGE_SIZE=BLOCK_TRACKS*BLOCK_SECTORS_PER_TRACK*BLOCK_SECTOR_SIZE;
+  const BLOCK_BLANK_BYTE=0xE5;
+
+  function createBlankBlockImage(fill=BLOCK_BLANK_BYTE){
+    const image=new Uint8Array(BLOCK_IMAGE_SIZE);
+    image.fill(Number(fill)&0xFF);
+    return image;
+  }
+
+  class Shino80BlockDevice {
+    constructor({image=null,writeProtected=false}={}){
+      this.id='SHINO80_BLOCK_DEVICE_A';
+      this.medium=null;
+      this.writeProtected=false;
+      this.drive=0;
+      this.track=0;
+      this.sector=1;
+      this.command=0;
+      this.error=BLOCK_ERROR_NONE;
+      this.transferMode=null;
+      this.transferIndex=0;
+      this.transferBuffer=null;
+      if(image!==null)this.mountImage(image,{writeProtected});
+    }
+
+    lowPort(port){return Number(port)&0xFF;}
+    handlesPort(port){const low=this.lowPort(port);return low>=BLOCK_STATUS_PORT&&low<=BLOCK_ERROR_PORT;}
+
+    mountImage(image,{writeProtected=false}={}){
+      if(!(image instanceof Uint8Array))throw new TypeError('Block image must be a Uint8Array');
+      if(image.length!==BLOCK_IMAGE_SIZE)throw new RangeError(`Block image must be exactly ${BLOCK_IMAGE_SIZE} bytes`);
+      this.medium=new Uint8Array(image);
+      this.writeProtected=Boolean(writeProtected);
+      this.reset();
+      return this;
+    }
+
+    eject(){
+      const image=this.medium?new Uint8Array(this.medium):null;
+      this.medium=null;
+      this.writeProtected=false;
+      this.reset();
+      return image;
+    }
+
+    exportImage(){return this.medium?new Uint8Array(this.medium):null;}
+    get mounted(){return this.medium!==null;}
+    get transferRemaining(){return this.transferMode?BLOCK_SECTOR_SIZE-this.transferIndex:0;}
+
+    status(){
+      return (this.mounted?BLOCK_STATUS_READY:0)|
+        (this.transferMode?BLOCK_STATUS_DRQ:0)|
+        (this.mounted&&this.writeProtected?BLOCK_STATUS_WRITE_PROTECT:0)|
+        (this.error!==BLOCK_ERROR_NONE?BLOCK_STATUS_ERROR:0);
+    }
+
+    sectorOffset(){return (this.track*BLOCK_SECTORS_PER_TRACK+(this.sector-1))*BLOCK_SECTOR_SIZE;}
+
+    clearTransfer(){
+      this.transferMode=null;
+      this.transferIndex=0;
+      this.transferBuffer=null;
+    }
+
+    fail(code){this.clearTransfer();this.error=code;}
+
+    validateSelection({write=false}={}){
+      if(this.drive!==0)return BLOCK_ERROR_BAD_DRIVE;
+      if(!this.mounted)return BLOCK_ERROR_NO_MEDIA;
+      if(this.track<0||this.track>=BLOCK_TRACKS)return BLOCK_ERROR_BAD_TRACK;
+      if(this.sector<1||this.sector>BLOCK_SECTORS_PER_TRACK)return BLOCK_ERROR_BAD_SECTOR;
+      if(write&&this.writeProtected)return BLOCK_ERROR_WRITE_PROTECTED;
+      return BLOCK_ERROR_NONE;
+    }
+
+    issueCommand(value){
+      const command=Number(value)&0xFF;
+      this.command=command;
+      this.clearTransfer();
+      this.error=BLOCK_ERROR_NONE;
+      if(command===BLOCK_COMMAND_RESET)return;
+      if(command!==BLOCK_COMMAND_READ&&command!==BLOCK_COMMAND_WRITE){this.fail(BLOCK_ERROR_PROTOCOL);return;}
+      const error=this.validateSelection({write:command===BLOCK_COMMAND_WRITE});
+      if(error!==BLOCK_ERROR_NONE){this.fail(error);return;}
+      this.transferMode=command===BLOCK_COMMAND_READ?'read':'write';
+      this.transferBuffer=new Uint8Array(BLOCK_SECTOR_SIZE);
+      if(this.transferMode==='read'){
+        const offset=this.sectorOffset();
+        this.transferBuffer.set(this.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
+      }
+    }
+
+    readData({consume=true}={}){
+      if(this.transferMode!=='read'||!this.transferBuffer){
+        if(consume)this.fail(BLOCK_ERROR_PROTOCOL);
+        return 0xFF;
+      }
+      const value=this.transferBuffer[this.transferIndex];
+      if(consume){
+        this.transferIndex++;
+        if(this.transferIndex===BLOCK_SECTOR_SIZE)this.clearTransfer();
+      }
+      return value;
+    }
+
+    writeData(value){
+      if(this.transferMode!=='write'||!this.transferBuffer){this.fail(BLOCK_ERROR_PROTOCOL);return;}
+      this.transferBuffer[this.transferIndex++]=Number(value)&0xFF;
+      if(this.transferIndex===BLOCK_SECTOR_SIZE){
+        this.medium.set(this.transferBuffer,this.sectorOffset());
+        this.clearTransfer();
+      }
+    }
+
+    readPort(port){
+      const low=this.lowPort(port);
+      if(low===BLOCK_STATUS_PORT)return this.status();
+      if(low===BLOCK_COMMAND_PORT)return this.command;
+      if(low===BLOCK_DRIVE_PORT)return this.drive;
+      if(low===BLOCK_TRACK_PORT)return this.track;
+      if(low===BLOCK_SECTOR_PORT)return this.sector;
+      if(low===BLOCK_DATA_PORT)return this.readData();
+      if(low===BLOCK_ERROR_PORT)return this.error;
+      return 0xFF;
+    }
+
+    writePort(port,value){
+      const low=this.lowPort(port),data=Number(value)&0xFF;
+      if(low===BLOCK_COMMAND_PORT){this.issueCommand(data);return;}
+      if(low===BLOCK_DRIVE_PORT){this.clearTransfer();this.drive=data;return;}
+      if(low===BLOCK_TRACK_PORT){this.clearTransfer();this.track=data;return;}
+      if(low===BLOCK_SECTOR_PORT){this.clearTransfer();this.sector=data;return;}
+      if(low===BLOCK_DATA_PORT){this.writeData(data);return;}
+      if(low===BLOCK_ERROR_PORT&&data===0)this.error=BLOCK_ERROR_NONE;
+    }
+
+    debugPeekPort(port){
+      const low=this.lowPort(port);
+      if(low===BLOCK_DATA_PORT)return this.readData({consume:false});
+      return this.readPort(low);
+    }
+
+    debugPokePort(port,value){
+      const low=this.lowPort(port),data=Number(value)&0xFF;
+      if(low===BLOCK_DRIVE_PORT)this.drive=data;
+      else if(low===BLOCK_TRACK_PORT)this.track=data;
+      else if(low===BLOCK_SECTOR_PORT)this.sector=data;
+      else if(low===BLOCK_ERROR_PORT)this.error=data;
+    }
+
+    reset(){
+      this.drive=0;
+      this.track=0;
+      this.sector=1;
+      this.command=0;
+      this.error=BLOCK_ERROR_NONE;
+      this.clearTransfer();
+    }
+  }
+
+  return {
+    Shino80BlockDevice,createBlankBlockImage,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
+    BLOCK_COMMAND_READ,BLOCK_COMMAND_WRITE,BLOCK_COMMAND_RESET,
+    BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
+    BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
+    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE
   };
 });
 </script>
@@ -2811,13 +3017,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const {Shino80Memory}=globalThis.SHINO_MEMORY;
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
+  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
   const {buildSystemRom}=globalThis.SHINO_SYSTEM_ROM;
   const keyboard=new Shino80Keyboard();
+  const diskA=new Shino80BlockDevice({image:createBlankBlockImage()});
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
-  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard]});
+  const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA]});
   const cpu=new Z80Core(bus);
   cpu.reset();
 
@@ -2859,13 +3067,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'display',icon:'DM',name:'DM-80',desc:'SHINOMIYA Green Monochrome Digital Display',state:'ONLINE'},
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'fdd-a',icon:'A:',name:'FDD A',desc:'Floppy Disk Drive',state:'RESERVED'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'77×26×128 / I/O 30h–36h',state:'ONLINE'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
     {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
   ];
+  const powerSensitiveDevices=new Set(['video','display','keyboard','disk-a']);
+  function deviceState(device){return powerSensitiveDevices.has(device.id)&&!ui.powered?'OFF':device.state;}
 
   function makeLeds(container,width,color='green'){
     container.innerHTML='';
@@ -2886,7 +3096,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
 
   function renderDevices(){
-    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
+    const root=queryOne('#deviceList');root.innerHTML='';devices.forEach(d=>{const state=deviceState(d);const row=document.createElement('div');row.className='device-row'+(ui.selectedDevice===d.id?' selected':'');row.dataset.device=d.id;row.innerHTML=`<div class="device-icon">${d.icon}</div><div><div class="device-name">${d.name}</div><div class="device-desc">${d.desc}</div></div><div class="device-state ${state.toLowerCase()}">${state}</div>`;row.addEventListener('click',()=>{ui.selectedDevice=d.id;renderDevices();renderInspector();});root.appendChild(row);});
   }
 
   function setView(view){
@@ -2972,12 +3182,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     if(ui.view==='bus')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Events retained</span><b>${bus.traceCount}</b></div><div class="inspector-kv"><span>Precision</span><b>M_CYCLE_ABSTRACT</b></div></div><div class="inspector-section inspector-note">Pin-perfect T-state waveforms are not implemented in v0.0.2.</div>`;
     if(ui.view==='devices'){
       const d=devices.find(x=>x.id===ui.selectedDevice)||devices[0],signal=video.signal;
-      const state=(d.id==='video'||d.id==='display'||d.id==='keyboard')&&!ui.powered?'OFF':d.state;
+      const state=deviceState(d);
       html+=`<div class="inspector-section"><div class="inspector-kv"><span>Selected</span><b>${d.name}</b></div><div class="inspector-kv"><span>Status</span><b>${state}</b></div></div>`;
       if(d.id==='video')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Output</span><b>${signal.interface.replace('_',' ')}</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div><div class="inspector-kv"><span>Text mode</span><b>${signal.textColumns}×${signal.textRows}</b></div></div><div class="inspector-section inspector-note">VIDEO BOARD owns the logical raster and signal format.</div>`;
       else if(d.id==='display')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Model</span><b>DM-80</b></div><div class="inspector-kv"><span>Maker</span><b>SHINOMIYA</b></div><div class="inspector-kv"><span>Input</span><b>DIGITAL MONO</b></div><div class="inspector-kv"><span>Raster</span><b>${signal.width}×${signal.height}</b></div></div><div class="inspector-section inspector-note">Monitor controls reserved: BRIGHTNESS / CONTRAST / H-POS / V-POS / H-SIZE / V-SIZE.</div>`;
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">128-byte PIO block device for the future SHINO CBIOS. Media stays mounted across RESET and POWER; seek/rotation timing and host-file persistence are not modeled yet.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;

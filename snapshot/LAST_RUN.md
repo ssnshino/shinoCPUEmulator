@@ -1,5 +1,14 @@
 # LAST RUN
 
+LATEST 2026-09-26: Virtual Disk A v0.1 candidate on RAM handoff `a2a6430`.
+Branch `feature/shino80-block-device-v01-20260926`. Added 77×26×128-byte A:
+media at I/O 30h–36h with exact PIO sector transfer, atomic partial-write
+behavior, error/status protocol, observer-safe peek and Bus visibility. Z80
+OTIR/INIR round trip plus all package stages and offline Chrome 1440×1000 /
+390×844 app/manual QA PASS; console/network/overflow findings zero. No CBIOS,
+CP/M, BASIC, persistence or FDC timing. Commit/push/PR remain; no merge/deploy.
+Previous runs below are historical.
+
 LATEST 2026-09-26: RAM handoff v0.5 candidate on pageable firmware `9fd087b`.
 Branch `feature/shino80-ram-handoff-v05-20260926`. Added BIOS 011Eh, F800h RAM
 trampoline and MON B end-to-end boot proof. Exact tests prove shadow page-zero,

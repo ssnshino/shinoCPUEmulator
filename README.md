@@ -14,6 +14,17 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-block-device-v01-20260926`, parent `a2a6430` / PR #30.
+Virtual Disk A v0.1 adds a 77 × 26 × 128-byte, 256,256-byte writable medium
+behind low I/O ports 30h–36h. Sector READ/WRITE are observable 128-byte PIO
+transfers through the existing Bus; partial writes are atomic/cancellable,
+debug peek is non-consuming, and RESET/POWER preserve mounted media. The Device
+Dock, standalone build and Technical Manual expose the geometry and live state.
+A real Z80 OTIR/INIR round trip, all package stages and offline Chrome
+1440×1000/390×844 QA pass. No CBIOS, CP/M, host-file persistence or mechanical
+FDC timing is included. See the matching plan/spec/worklog. No merge or public
+deploy; older entries below are history.
+
 LATEST: `feature/shino80-ram-handoff-v05-20260926`, parent `9fd087b` / PR #29.
 RAM handoff v0.5 adds BIOS entry 011Eh and Monitor `B`: firmware prepares a
 shadow page-zero vector, copies a three-byte trampoline to F800h, pages ROM out,
@@ -166,11 +177,11 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_BIOS_MONITOR_V03_PLAN.md`
-7. `docs/head/SHINO80_BIOS_MONITOR_v0.3.md`
-8. `working-logs/head/SHINO80_BIOS_MONITOR_V03_WORKLOG.md`
-9. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
-10. `working-logs/head/SHINO80_TECHNICAL_MANUAL_WORKLOG.md`
+6. `plan/head/SHINO80_BLOCK_DEVICE_V01_PLAN.md`
+7. `docs/head/SHINO80_VIRTUAL_BLOCK_DEVICE_v0.1.md`
+8. `working-logs/head/SHINO80_BLOCK_DEVICE_V01_WORKLOG.md`
+9. `plan/head/SHINO80_RAM_HANDOFF_V05_PLAN.md`
+10. `docs/head/SHINO80_RAM_HANDOFF_v0.5.md`
 
 ## Core concept
 

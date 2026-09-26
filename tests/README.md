@@ -22,9 +22,14 @@ PHASE 1E exhaustively checks:
 - shino80_phase2a1_power_reset.test.cjs
 - shino80_minimum_bios_monitor.test.cjs
 - shino80_keyboard_monitor.test.cjs
+- shino80_block_device_v01.test.cjs
 
 Keyboard / Monitor regression checks the controller FIFO, debugger-safe peek,
 full-address I/O trace, BIOS GETCHAR ABI, and ROM commands `H` / `?` / `C` / CR.
+
+Virtual Block Device regression checks 77×26×128 geometry, errors, atomic
+sector writes, reset/media lifetime, observer-safe peek, Bus trace and an
+end-to-end Z80 OTIR/INIR sector round trip.
 
 ## Current artifact QA
 

@@ -4,6 +4,7 @@ for(const f of [
   'src/machine/shino80/shino80-memory.js',
   'src/machine/shino80/shino80-bus.js',
   'src/devices/shino80/shino80-keyboard.js',
+  'src/devices/shino80/shino80-block-device.js',
   'src/cpu/z80/z80-flags.js',
   'src/cpu/z80/z80-decoder.js',
   'src/cpu/z80/z80-core.js',

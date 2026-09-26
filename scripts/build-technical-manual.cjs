@@ -7,6 +7,7 @@ const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const rom=require('../src/firmware/shino80/shino80-system-rom.js'),cg=require('../src/firmware/shino80/shino80-cgrom.js');
 const memory=require('../src/machine/shino80/shino80-memory.js');
 const video=require('../src/machine/shino80/shino80-video.js'),keyboard=require('../src/devices/shino80/shino80-keyboard.js');
+const block=require('../src/devices/shino80/shino80-block-device.js');
 const hex=v=>v.toString(16).toUpperCase().padStart(2,'0');
 const families=['BASE','CB','ED','DD','FD','DDCB','FDCB'];
 function classify(d,f,op){
@@ -44,11 +45,13 @@ function buildData(){
   const tokens=pattern(d,family,opcode),timing=d.kind==='ED_BLOCK'&&d.repeat?'継続 21 / 終了 16':d.tStates!==undefined?String(d.tStates):`成立 ${d.tStatesTaken} / 不成立 ${d.tStatesNotTaken}`;
   instructions.push({id:family+'-'+hex(opcode),family,opcode,kind:d.kind,mnemonic:d.mnemonic,tokens,length:d.length,timing,classification:classify(d,family,opcode),...describe(d),example:example(tokens)});
  }
- const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/devices/shino80/shino80-keyboard.js'];
- return {version:'0.1',baseline:'BIOS/MON v0.3 + pageable firmware v0.4 + RAM handoff v0.5 candidate',revision:'feature/shino80-ram-handoff-v05-20260926',families,instructions,
+ const files=['src/cpu/z80/z80-core.js','src/cpu/z80/z80-decoder.js','src/cpu/z80/z80-flags.js','src/machine/shino80/shino80-bus.js','src/machine/shino80/shino80-memory.js','src/machine/shino80/shino80-video.js','src/firmware/shino80/shino80-system-rom.js','src/firmware/shino80/shino80-cgrom.js','src/devices/shino80/shino80-keyboard.js','src/devices/shino80/shino80-block-device.js'];
+ return {version:'0.1',baseline:'BIOS/MON v0.3 + pageable firmware v0.4 + RAM handoff v0.5 + block device v0.1 candidate',revision:'feature/shino80-block-device-v01-20260926',families,instructions,
   sources:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),
   machine:{romSize:rom.ROM_SIZE,bootRomSize:memory.BOOT_ROM_SIZE,extensionRomSize:memory.EXTENSION_ROM_SIZE,memoryControlPort:memory.MEMORY_CONTROL_PORT,vramBase:video.TEXT_VRAM_BASE,vramCells:video.CELL_COUNT,width:video.SCREEN_W,height:video.SCREEN_H,cols:video.COLS,rows:video.ROWS,
-   keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,labels:rom.buildSystemRom().labels,
+   keyData:keyboard.KEY_DATA_PORT,keyStatus:keyboard.KEY_STATUS_PORT,fifoCapacity:keyboard.DEFAULT_FIFO_CAPACITY,
+   blockStatus:block.BLOCK_STATUS_PORT,blockCommand:block.BLOCK_COMMAND_PORT,blockDrive:block.BLOCK_DRIVE_PORT,blockTrack:block.BLOCK_TRACK_PORT,blockSector:block.BLOCK_SECTOR_PORT,blockData:block.BLOCK_DATA_PORT,blockError:block.BLOCK_ERROR_PORT,
+   blockTracks:block.BLOCK_TRACKS,blockSectors:block.BLOCK_SECTORS_PER_TRACK,blockSectorSize:block.BLOCK_SECTOR_SIZE,blockImageSize:block.BLOCK_IMAGE_SIZE,labels:rom.buildSystemRom().labels,
    ramHandoffTrampoline:rom.RAM_HANDOFF_TRAMPOLINE,ramHandoffDemoEntry:rom.RAM_HANDOFF_DEMO_ENTRY,ramHandoffSignature:rom.RAM_HANDOFF_SIGNATURE,
    cgBytes:Array.from(cg.CG_ROM_IMAGE),cgHash:cg.ROM_SHA256,cgCRC:cg.ROM_CRC32}};
 }
