@@ -74,7 +74,21 @@
       </section>
 
       <section class="view" data-view-panel="memory" aria-label="Memory">
-        <div class="machine-card memory-card"><div class="card-head"><h2>MEMORY INSPECTOR</h2><span class="eyebrow">DEBUG PEEK — no fake CPU bus traffic</span></div><div class="memory-toolbar">0000h–00FFh · 16 bytes / row · current fetch highlighted</div><div class="memory-grid" id="memoryGrid"></div></div>
+        <div class="machine-card memory-card">
+          <div class="card-head"><h2>MEMORY INSPECTOR</h2><span class="eyebrow">64 KiB · READ ONLY</span></div>
+          <form class="memory-toolbar" id="memoryAddressForm">
+            <label>HEX ADDRESS <input id="memoryAddress" value="0000" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Memory hex address"></label>
+            <button type="submit">GO</button>
+            <button type="button" id="memoryPrev" aria-label="Previous memory page">←</button>
+            <button type="button" id="memoryNext" aria-label="Next memory page">→</button>
+            <label>JUMP <select id="memoryJump"><option value="">Select region</option><option value="0000">ROM / vectors</option><option value="0100">BIOS</option><option value="0200">IPL / MON</option><option value="2000">RAM</option><option value="C000">VRAM</option><option value="E000">BIOS work</option><option value="EFFF">Initial stack top</option><option value="FF00">Last page</option></select></label>
+            <label>FOLLOW <select id="memoryFollow"><option value="">OFF</option><option value="pc">PC</option><option value="sp">SP</option><option value="hl">HL</option><option value="cursor">Video cursor</option></select></label>
+          </form>
+          <div id="memoryRange" class="memory-caption"></div>
+          <div id="memoryMessage" class="memory-caption" role="status"></div>
+          <div class="memory-caption">FETCH · READ · WRITE markers show latest retained CPU accesses. Outline = selected address.</div>
+          <div class="memory-grid" id="memoryGrid"></div>
+        </div>
       </section>
 
       <section class="view" data-view-panel="bus" aria-label="Bus">
