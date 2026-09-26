@@ -92,7 +92,7 @@ for(const [bytes,fragment,next] of [
 {
   const m=machine();for(let i=0;i<0x210;i++)m.bus.debugPoke(0x4000+i,0);command(m,'U 4000 4200');assert(screen(m).includes('RANGE LIMITED'));
 }
-for(const bad of ['D 2000 200','D 2000-2003','D 2000 200G','R 1','U','U 123','U 2000-2010','U 2000 20G0']){
+for(const bad of ['D 2000 200','D 2000-2003','D 2000 200G','R 1','U','U 123','U 2000-2010','U 2000 20G0','B 1']){
   const m=machine();command(m,bad);assert(screen(m).includes('? USE'),bad);
 }
 console.log(`SHINO-80 BIOS/MON v0.3: PARSE + ${encodings} disassembly encodings + D/R/U commands PASS`);

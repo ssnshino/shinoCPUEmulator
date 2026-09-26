@@ -1,3 +1,15 @@
+CURRENT RAM HANDOFF v0.5 OVERRIDE 2026-09-26:
+Resume feature/shino80-ram-handoff-v05-20260926, parent 9fd087b / PR #29.
+Read README -> AGENTS -> current snapshot -> SHINO80_RAM_HANDOFF_V05 plan,
+v0.5 spec, CP/M/BASIC license research and worklog. BIOS 011Eh uses F800h RAM
+trampoline to switch to LOW_RAM without another ROM fetch. MON B constructs
+page zero, runs original 8000h RAM payload, displays success and HALTs; RESET
+returns to MON. Full package and offline desktop/mobile Chrome PASS. No FDD,
+CBIOS, CP/M or BASIC imported. Next phase after Human review: virtual block
+device contract/geometry, then CBIOS, then license-audited software. CPU core,
+CG-ROM and display CSS unchanged. Finish commit/push/stacked PR if pending; do
+not merge or deploy automatically. Everything below is historical.
+
 CURRENT PAGEABLE FIRMWARE v0.4 OVERRIDE 2026-09-26:
 Resume feature/shino80-pageable-firmware-v04-20260926, parent d3f223e. Read
 README -> AGENTS -> current snapshot -> SHINO80_PAGEABLE_FIRMWARE_V04 plan,

@@ -14,6 +14,18 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-ram-handoff-v05-20260926`, parent `9fd087b` / PR #29.
+RAM handoff v0.5 adds BIOS entry 011Eh and Monitor `B`: firmware prepares a
+shadow page-zero vector, copies a three-byte trampoline to F800h, pages ROM out,
+continues from an original payload at 8000h, writes directly to VRAM and HALTs.
+Bus tests prove the first post-pageout opcode fetch is RAM and no later ROM read
+occurs; RESET restores bank-0 firmware and MON. This is the boot ABI foundation
+for the adopted virtual disk → SHINO CBIOS → license-audited CP/M → Z80 BBC
+BASIC roadmap. No disk or third-party code is included yet. See the matching
+v0.5 plan/spec/license research/worklog. Full package and offline Chrome
+desktop/mobile QA pass; commit/PR delivery remains pending. No merge or public
+deploy. Older entries below are history.
+
 LATEST: `feature/shino80-pageable-firmware-v04-20260926`, parent `d3f223e`.
 SHINO-80 now has 64 KiB physical RAM with a RESET-visible 16 KiB firmware
 overlay: fixed Boot/Recovery ROM at 0000h–1FFFh and selectable Extension ROM at
