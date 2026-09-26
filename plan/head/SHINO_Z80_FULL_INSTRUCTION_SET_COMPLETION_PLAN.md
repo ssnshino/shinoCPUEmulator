@@ -50,6 +50,12 @@ Implement all 256 CB second-byte encodings:
 
 ### PHASE 1G — ED COMPLETE
 
+2026-09-26: implemented/verified candidate on feature/shino80-z80-ed-20260926,
+parent 42d04f7 / PR #22. ED 80,000 + BASE/CB 508,000 external cases PASS.
+78 active encodings, 178 unused NOP slots; only 80 ED slots have external
+fixtures (includes ED77/7F). See PHASE1G_ED plan/spec/worklog. Review pending.
+Next PHASE 1H. Interrupt dispatch and full precision remain PHASE 1J.
+
 Implement defined ED-family instructions:
 
 - IN r,(C) / OUT (C),r

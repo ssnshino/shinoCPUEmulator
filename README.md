@@ -14,6 +14,12 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+Current CPU candidate: `feature/shino80-z80-ed-20260926`, parent `42d04f7` /
+PR #22. PHASE 1G ED: 78 active encodings plus 178 unused NOP slots. External
+ED 80,000 + BASE 252,000 + CB 256,000 PASS, failure 0 under D7 policy.
+See PHASE1G_ED plan/spec/worklog. Next PHASE 1H DD/FD; MON expansion paused.
+No automatic merges. Earlier candidate records below are historical.
+
 Latest CPU candidate: `feature/shino80-z80-cb-20260926` on `eea8dfc` / PR #21.
 PHASE 1F: CB 256/256 execute; external CB 256,000 + BASE 252,000 PASS, failure 0
 under documented-state policy. See PHASE1F_CB plan/spec/worklog in head dirs.

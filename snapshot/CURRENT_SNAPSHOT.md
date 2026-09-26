@@ -1,6 +1,12 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+CURRENT 2026-09-26: feature/shino80-z80-ed-20260926 on 42d04f7 / PR #22.
+PHASE 1G ED candidate: 78 active + 178 unused NOP slots. External ED 80,000,
+BASE 252,000, CB 256,000 PASS. Read PHASE1G_ED plan/spec/worklog and QA JSONs.
+Next PHASE 1H DD/FD; MON paused; no merge. Full Z80 still incomplete.
+All earlier overrides below are historical, not the current resume target.
+
 Latest override 2026-09-26: feature/shino80-z80-cb-20260926 on eea8dfc / PR #21.
 CB 256/256 implemented; external CB 256,000 and BASE 252,000 PASS (D7 policy).
 Read PHASE1F_CB plan/spec/worklog. MON expansion paused; next PHASE 1G ED.

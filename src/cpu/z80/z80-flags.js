@@ -141,7 +141,30 @@
       (set?0:FLAG_MASK.Z|FLAG_MASK.PV)|(bit===7&&set?FLAG_MASK.S:0);
   }
 
+  function carryArithmetic16(oldF,a,b,subtract){
+    const av=a&65535,bv=b&65535,c=oldF&1,total=subtract?av-bv-c:av+bv+c,result=total&65535;
+    let f=preserveYX(oldF)|(result&0x8000?0x80:0)|(result===0?0x40:0)|(subtract?2:0);
+    if((av^bv^result)&0x1000)f|=0x10;
+    if((subtract?(av^bv)&(av^result):~(av^bv)&(av^result))&0x8000)f|=4;
+    if(total<0||total>65535)f|=1;
+    return {result,f};
+  }
+
+  function blockIoFlags(oldF,b,value,sum,repeating){
+    let f=sz(oldF,b)|(value&128?2:0)|(sum>255?0x11:0);
+    let parity=parityEven((sum&7)^b);
+    // Extra repeat cycles alter H/PV: David Banks hardware findings.
+    if(repeating){
+      const carry=sum>255,negative=!!(value&128);
+      const adjusted=carry?b+(negative?-1:1):b;
+      parity=parity===parityEven(adjusted&7);
+      if(carry)f=(f&~0x10)|((b&15)===(negative?0:15)?0x10:0);
+    }
+    return f|(parity?4:0);
+  }
+
   return {
+    carryArithmetic16,blockIoFlags,logicFlags,
     rotateShift8,bitTest8,
     FLAG_BITS,FLAG_MASK,flagState,parityEven,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,

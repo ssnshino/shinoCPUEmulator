@@ -149,7 +149,36 @@
     return {kind,family:'CB',operation,rotate,targetCode,mnemonic,length:2,tStates:targetCode===6?(group===1?12:15):8};
   }
 
+  function decodeED(opcode){
+    const op=Number(opcode)&255,regCode=(op>>3)&7,pairCode=(op>>4)&3;
+    const d={family:'ED',opcode:op,length:2,tStates:8,kind:'ED_NOP',mnemonic:'NOP (ED unused)',classification:'unused'};
+    const set=(kind,mnemonic,tStates,length=2)=>Object.assign(d,{kind,mnemonic,tStates,length,classification:'defined'});
+    if(op>=0x40&&op<=0x7F){
+      d.regCode=regCode;d.pairCode=pairCode;
+      switch(op&7){
+        case 0:set('ED_IN',regCode===6?'IN (C)':`IN ${REG8_NAMES[regCode]},(C)`,12);break;
+        case 1:set('ED_OUT',`OUT (C),${regCode===6?'0':REG8_NAMES[regCode]}`,12);break;
+        case 2:d.subtract=!(op&8);set('ED_ARITH16',`${d.subtract?'SBC':'ADC'} HL,${REG16_DD_NAMES[pairCode]}`,15);break;
+        case 3:d.load=!!(op&8);set('ED_LD16',d.load?`LD ${REG16_DD_NAMES[pairCode]},(nn)`:`LD (nn),${REG16_DD_NAMES[pairCode]}`,20,4);break;
+        case 4:set('ED_NEG','NEG',8);if(op!==0x44)d.classification='alias';break;
+        case 5:set('ED_RETURN',op===0x4D?'RETI':'RETN',14);if(op!==0x45&&op!==0x4D)d.classification='alias';break;
+        case 6:d.mode=[0,0,1,2,0,0,1,2][regCode];set('ED_IM',`IM ${d.mode}`,8);if(![0x46,0x56,0x5E].includes(op))d.classification='alias';break;
+        case 7:
+          if(op<0x60){d.special=['I','R'][regCode&1];d.loadA=!!(op&0x10);set('ED_SPECIAL',d.loadA?`LD A,${d.special}`:`LD ${d.special},A`,9);}
+          else if(op<0x70){d.left=!!(op&8);set('ED_NIBBLE',d.left?'RLD':'RRD',18);}
+          break;
+      }
+      if(op===0x70||op===0x71)d.classification='undocumented';
+    }else if((op&0xE4)===0xA0){
+      d.operation=op&3;d.direction=(op&8)?-1:1;d.repeat=!!(op&0x10);
+      const names=d.repeat?(d.direction===1?['LDIR','CPIR','INIR','OTIR']:['LDDR','CPDR','INDR','OTDR']):(d.direction===1?['LDI','CPI','INI','OUTI']:['LDD','CPD','IND','OUTD']);
+      set('ED_BLOCK',names[d.operation],16);
+    }
+    return d;
+  }
+
   return {
+    decodeED,
     decodeCB,
     decodeBase,
     REG8_NAMES,REG8_KEYS,
