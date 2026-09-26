@@ -21,12 +21,12 @@ assert.equal(SYSTEM_CPM_SECTORS,44);assert(systemDisk.payload.length<=BLOCK_SECT
 const cpmOffset=mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR);
 assert.deepEqual(systemDisk.image.slice(cpmOffset,cpmOffset+cpm.ccp.length),cpm.ccp);
 assert.deepEqual(systemDisk.image.slice(cpmOffset+cpm.ccp.length,cpmOffset+cpm.ccp.length+cpm.bdos.length),cpm.bdos);
-assert(systemDisk.image.slice(2*BLOCK_SECTORS_PER_TRACK*BLOCK_SECTOR_SIZE).every(byte=>byte===BLOCK_BLANK_BYTE));
+assert.deepEqual(systemDisk.files.map(file=>file.name),['WELCOME.TXT','HELLO.COM','S80INFO.COM']);
 
 function machine(image=systemDisk.image){
   const keyboard=new Shino80Keyboard({capacity:256}),disk=new Shino80BlockDevice({image});
   const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
-  const bus=new Shino80Bus({traceLimit:150000,memoryDevice:memory,ioDevices:[keyboard,disk]});
+  const bus=new Shino80Bus({traceLimit:300000,memoryDevice:memory,ioDevices:[keyboard,disk]});
   const cpu=new Z80Core(bus);cpu.reset();return {keyboard,disk,memory,bus,cpu};
 }
 function until(m,predicate,limit=1500000){let count=0;while(!predicate()&&count++<limit)m.cpu.step();assert(count<limit,`CP/M timeout PC=${m.cpu.state.pc.toString(16)}`);return count;}
@@ -34,7 +34,7 @@ function input(m,text){for(const char of text)m.keyboard.enqueueByte(char.charCo
 function screen(m){return String.fromCharCode(...m.memory.ram.slice(TEXT_VRAM_BASE,TEXT_VRAM_BASE+2000)).replaceAll('\0',' ');}
 function boot(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);input(m,'O\r');until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));}
 
-// Cold boot traverses ROM loader + 44 real CBIOS reads and enters an empty A:.
+// Cold boot traverses ROM loader + 44 real CBIOS reads and enters populated A:.
 {
   const m=machine();boot(m);
   assert.equal(m.memory.control,MEMORY_CONTROL_LOW_RAM);
@@ -43,8 +43,8 @@ function boot(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);input(m,
   assert.deepEqual(m.memory.ram.slice(CPM22_BDOS_ORIGIN,CPM22_BDOS_ORIGIN+64),cpm.bdos.slice(0,64));
   assert.deepEqual(m.memory.ram.slice(CBIOS_ORG,CBIOS_ORG+64),cbios.bytes.slice(0,64));
   assert.match(screen(m),/^\s*A>/);
-  input(m,'DIR\r');m.cpu.step();until(m,()=>screen(m).includes('NO FILE')&&(screen(m).match(/A>/g)||[]).length>=2);
-  assert.match(screen(m),/A>DIR\s+NO FILE\s+A>/);
+  input(m,'DIR\r');m.cpu.step();until(m,()=>screen(m).includes('WELCOME')&&(screen(m).match(/A>/g)||[]).length>=2);
+  assert.match(screen(m),/WELCOME\s+TXT/);assert.match(screen(m),/HELLO\s+COM/);assert.match(screen(m),/S80INFO\s+COM/);
   const commands=m.bus.trace.filter(event=>event.space==='IO'&&event.operation==='WRITE'&&(event.address&255)===0x31&&event.data===1);
   assert(commands.length>=51); // header/payload/CBIOS + CCP/BDOS + directory access
   assert(!m.bus.trace.some(event=>event.meta?.memorySource==='BOOT_ROM'&&event.purpose==='OPCODE_FETCH'&&event.address>=SYSTEM_ENTRY));

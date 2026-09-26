@@ -1,6 +1,18 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26: CP/M Filesystem & Starter Disk v0.1 PR #37 on Cursor /
+BEEP parent `d0457dc`. Branch `feature/shino80-cpm-filesystem-v01-20260926`.
+A: contains original WELCOME.TXT, HELLO.COM and S80INFO.COM in a real writable
+CP/M 2.2 directory/extent layout. Runtime tests prove DIR/TYPE/COM execution,
+SAVE through CBIOS WRITE, WBOOT persistence, execution and ERA. Full package,
+deterministic artifacts and installed Chrome 1440×1000/390×844 app/manual QA
+pass. iPhone Human QA confirmed DIR/TYPE/HELLO/S80INFO and found CBIOS
+Backspace/scroll defects; both are fixed locally with automated proof. Fresh
+iPhone Backspace/scroll and SAVE/COPY Human QA remain. Read the matching
+plan/spec/worklog. PR #37 contains the remediation; no historical command
+binaries, host persistence, merge or deploy. Older snapshots follow.
+
 LATEST 2026-09-26: Cursor / BEEP v0.1 PR #36 on CP/M PR #35 head `4084d0e`.
 Branch `feature/shino80-cursor-beep-v01-20260926`. DM-80 renders a CPU-time
 blinking, non-destructive underline from the ROM/CBIOS cursor pointer. BIOS and

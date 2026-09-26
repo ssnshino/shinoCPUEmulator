@@ -10,7 +10,7 @@ const {
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {MEMORY_CONTROL_LOW_RAM}=require('../src/machine/shino80/shino80-memory.js');
 const {
-  buildCbios,CBIOS_ORG,CBIOS_ENTRY_NAMES,CBIOS_ENTRY_SIZE,CBIOS_DEFAULT_DMA,DPB,TEXT_VRAM_BASE
+  buildCbios,CBIOS_ORG,CBIOS_ENTRY_NAMES,CBIOS_ENTRY_SIZE,CBIOS_DEFAULT_DMA,DPB,TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS
 }=require('../src/firmware/shino80/shino80-cbios.js');
 
 const cbios=buildCbios(),lo=value=>value&255,hi=value=>(value>>8)&255;
@@ -22,7 +22,7 @@ assert.equal(CBIOS_ORG,0xFA00);
 assert.equal(CBIOS_ENTRY_NAMES.length,17);
 assert.equal(cbios.origin,CBIOS_ORG);
 assert(cbios.end<=0x10000);
-assert.equal(cbios.bytes.length,645);
+assert.equal(cbios.bytes.length,713);
 
 // The standard 17-entry table is contiguous JP instructions in exact order.
 for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){
@@ -72,6 +72,28 @@ function pattern(seed){return Uint8Array.from({length:128},(_,index)=>(seed+inde
   assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_SELECTED_SECTOR),1);
   assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_DMA),lo(CBIOS_DEFAULT_DMA));
   assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_DMA+1),hi(CBIOS_DEFAULT_DMA));
+}
+
+// CONOUT implements terminal Backspace semantics used by BDOS line editing.
+{
+  const m=machine();
+  run(m,[...call(api('BOOT')),0x0E,0x41,...call(api('CONOUT')),0x0E,0x08,...call(api('CONOUT')),0x0E,0x20,...call(api('CONOUT')),0x0E,0x08,...call(api('CONOUT')),0x0E,0x42,...call(api('CONOUT')),0x76]);
+  assert.equal(m.bus.debugPeek(TEXT_VRAM_BASE),0x42);assert.equal(m.bus.debugPeek(TEXT_VRAM_BASE+1),0);
+  assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_CURSOR),1);assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_CURSOR+1),0xC0);
+  assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_COLUMN),1);
+}
+
+// Advancing past the last cell scrolls rows 1-24 upward and clears row 24.
+{
+  const m=machine();
+  m.bus.debugPoke(TEXT_VRAM_BASE,0x41);m.bus.debugPoke(TEXT_VRAM_BASE+TEXT_COLS,0x42);
+  m.bus.debugPoke(cbios.labels.CBIOS_CURSOR,lo(TEXT_VRAM_END-1));m.bus.debugPoke(cbios.labels.CBIOS_CURSOR+1,hi(TEXT_VRAM_END-1));
+  m.bus.debugPoke(cbios.labels.CBIOS_COLUMN,TEXT_COLS-1);
+  run(m,[0x0E,0x58,...call(api('CONOUT')),0x76]);
+  assert.equal(m.bus.debugPeek(TEXT_VRAM_BASE),0x42);assert.equal(m.bus.debugPeek(TEXT_VRAM_END-TEXT_COLS-1),0x58);
+  assert(m.memory.ram.slice(TEXT_VRAM_END-TEXT_COLS,TEXT_VRAM_END).every(byte=>byte===0));
+  assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_CURSOR),lo(TEXT_VRAM_END-TEXT_COLS));assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_CURSOR+1),hi(TEXT_VRAM_END-TEXT_COLS));
+  assert.equal(m.bus.debugPeek(cbios.labels.CBIOS_COLUMN),0);
 }
 
 // CONST is nonblocking; CONIN blocks on the real Keyboard FIFO and masks parity.

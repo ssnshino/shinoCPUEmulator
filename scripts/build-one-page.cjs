@@ -13,6 +13,8 @@ const source={
   blockDevice:'src/devices/shino80/shino80-block-device.js',
   cbios:'src/firmware/shino80/shino80-cbios.js',
   cpm22:'src/firmware/shino80/shino80-cpm22.js',
+  cpmFilesystem:'src/firmware/shino80/shino80-cpm-filesystem.js',
+  cpmStarterFiles:'src/firmware/shino80/shino80-cpm-starter-files.js',
   systemDisk:'src/firmware/shino80/shino80-system-disk.js',
   flags:'src/cpu/z80/z80-flags.js',
   decoder:'src/cpu/z80/z80-decoder.js',
@@ -32,6 +34,8 @@ let html=read(source.template)
   .replace('/*__BLOCK_DEVICE__*/',read(source.blockDevice))
   .replace('/*__CBIOS__*/',read(source.cbios))
   .replace('/*__CPM22__*/',read(source.cpm22))
+  .replace('/*__CPM_FILESYSTEM__*/',read(source.cpmFilesystem))
+  .replace('/*__CPM_STARTER_FILES__*/',read(source.cpmStarterFiles))
   .replace('/*__SYSTEM_DISK__*/',read(source.systemDisk))
   .replace('/*__FLAGS__*/',read(source.flags))
   .replace('/*__DECODER__*/',read(source.decoder))

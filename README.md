@@ -14,6 +14,18 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-cpm-filesystem-v01-20260926` / PR #37, parent
+`d0457dc`, stacked on cursor/beeper PR #36. A: is now a deterministic writable CP/M 2.2
+filesystem with original `WELCOME.TXT`, `HELLO.COM` and `S80INFO.COM` starter
+files. Real Z80/BDOS/CBIOS tests prove DIR, TYPE, both COM programs, CCP SAVE,
+WBOOT persistence, execution and ERA. iPhone Human QA confirmed the four
+starter commands and exposed CBIOS Backspace/scroll defects; both are fixed by
+08h/7Fh cursor handling and real 80×25 upward scrolling. The Device inspector
+and standalone Technical Manual expose the files and exact DPB layout. Full
+package and installed Chrome desktop/mobile QA pass. Fresh iPhone recheck and
+SAVE Human QA remain. No historical transient command, host persistence, merge
+or deploy.
+
 LATEST: `feature/shino80-cursor-beep-v01-20260926`, parent `4084d0e` / PR #36,
 stacked on PR #35. DM-80 now draws a non-destructive blinking underline at the live
 ROM BIOS or RAM CBIOS cursor pointer. A Bus-visible one-bit beeper at I/O 40h

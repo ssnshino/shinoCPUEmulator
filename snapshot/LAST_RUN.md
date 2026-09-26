@@ -1,5 +1,16 @@
 # LAST RUN
 
+LATEST 2026-09-26T14:55:37+09:00: CP/M Filesystem & Starter Disk v0.1 PR #37 on
+parent `d0457dc`. Added a DPB-derived CP/M packer and three original starter
+files; mounted them in S80B v2 and exposed them in the app/manual. Real
+Z80/BDOS/CBIOS QA proves DIR, TYPE, HELLO, S80INFO, SAVE, WBOOT persistence,
+COPY execution and ERA. Full package and installed Chrome desktop/mobile
+app/manual QA pass with console/network/overflow zero. iPhone Human QA then
+confirmed the four starter commands and found Backspace plus screen-scroll
+defects. RAM CBIOS now handles 08h/7Fh and performs a real 24-row scroll; full
+package and browser remediation QA pass. PR #37 is updated; fresh iPhone QA
+remains. No merge/deploy. Previous runs follow.
+
 LATEST 2026-09-26: Cursor / BEEP v0.1 PR #36 on CP/M PR #35 head `4084d0e`.
 Added the DM-80 cursor overlay, I/O 40h beeper, ROM/CBIOS BEL routing, protected
 Web Audio presentation, Device inspector, touch BEEP TEST and public REFERENCE

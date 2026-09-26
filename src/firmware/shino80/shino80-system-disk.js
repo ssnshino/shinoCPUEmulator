@@ -2,10 +2,12 @@
   const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
   const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
   const cpm22=(typeof module==='object'&&module.exports)?require('./shino80-cpm22.js'):root.SHINO_CPM22;
-  const api=factory(block,cbios,cpm22);
+  const filesystem=(typeof module==='object'&&module.exports)?require('./shino80-cpm-filesystem.js'):root.SHINO_CPM_FILESYSTEM;
+  const starter=(typeof module==='object'&&module.exports)?require('./shino80-cpm-starter-files.js'):root.SHINO_CPM_STARTER_FILES;
+  const api=factory(block,cbios,cpm22,filesystem,starter);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_SYSTEM_DISK=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22){
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22,filesystem,starter){
   'use strict';
   const SYSTEM_DISK_MAGIC='S80B',SYSTEM_DISK_VERSION=2;
   const SYSTEM_HEADER_TRACK=0,SYSTEM_HEADER_SECTOR=1;
@@ -62,10 +64,11 @@
     image.set(cbiosImage.bytes,mediaOffset(SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR));
     image.set(cpmImage.ccp,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR));
     image.set(cpmImage.bdos,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR)+cpmImage.ccp.length);
-    return {image,header,payload,cbios:cbiosImage,cpm:cpmImage,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
+    const volume=filesystem.buildFilesystem(image,starter.buildStarterFiles());
+    return {image:volume.image,header,payload,cbios:cbiosImage,cpm:cpmImage,files:volume.files,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
       headerTrack:SYSTEM_HEADER_TRACK,headerSector:SYSTEM_HEADER_SECTOR,payloadTrack:SYSTEM_PAYLOAD_TRACK,payloadSector:SYSTEM_PAYLOAD_SECTOR,
       cbiosTrack:SYSTEM_CBIOS_TRACK,cbiosSector:SYSTEM_CBIOS_SECTOR,cbiosSectors:SYSTEM_CBIOS_SECTORS,
-      cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY})};
+      cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
   }
 
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,

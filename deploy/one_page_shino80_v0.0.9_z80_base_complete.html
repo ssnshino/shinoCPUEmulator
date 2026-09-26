@@ -1030,6 +1030,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
     a.label('CBIOS_CONOUT');
     a.emit(0x79,0xFE,0x07);jpZ('CBIOS_CONOUT_BELL');a.emit(0xFE,0x0D);jpZ('CBIOS_CONOUT_CR');a.emit(0xFE,0x0A);jpZ('CBIOS_CONOUT_LF');
+    a.emit(0xFE,0x08);jpZ('CBIOS_CONOUT_BS');a.emit(0xFE,0x7F);jpZ('CBIOS_CONOUT_BS');
     ldHLFrom('CBIOS_CURSOR');a.emit(0x77,0x23);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');
     ldAFrom('CBIOS_COLUMN');a.emit(0x3C,0xFE,TEXT_COLS);jpC('CBIOS_CONOUT_STORE_COLUMN');a.emit(0xAF);
     a.label('CBIOS_CONOUT_STORE_COLUMN');ldATo('CBIOS_COLUMN');a.emit(0xC9);
@@ -1043,10 +1044,22 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('CBIOS_CONOUT_LF');
     ldHLFrom('CBIOS_CURSOR');a.word(0x11,TEXT_COLS);a.emit(0x19);call('CBIOS_NORMALIZE_CURSOR');ldHLTo('CBIOS_CURSOR');a.emit(0xC9);
 
+    a.label('CBIOS_CONOUT_BS');
+    ldHLFrom('CBIOS_CURSOR');a.emit(0x7C,0xFE,hi(TEXT_VRAM_BASE));jpNZ('CBIOS_CONOUT_BS_MOVE');
+    a.emit(0x7D,0xB7,0xC8);
+    a.label('CBIOS_CONOUT_BS_MOVE');a.emit(0x2B);ldHLTo('CBIOS_CURSOR');
+    ldAFrom('CBIOS_COLUMN');a.emit(0xB7);jpNZ('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3E,TEXT_COLS);
+    a.label('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3D);ldATo('CBIOS_COLUMN');a.emit(0xC9);
+
     a.label('CBIOS_NORMALIZE_CURSOR');
     a.word(0x11,TEXT_VRAM_END);a.emit(0xB7,0xED,0x52);jpC('CBIOS_CURSOR_BELOW_END');
-    a.word(0x21,TEXT_VRAM_BASE);a.emit(0xC9);
+    call('CBIOS_SCROLL');a.emit(0xC9);
     a.label('CBIOS_CURSOR_BELOW_END');a.emit(0x19,0xC9); // restore HL after comparison
+
+    a.label('CBIOS_SCROLL');
+    a.word(0x21,TEXT_VRAM_BASE+TEXT_COLS);a.word(0x11,TEXT_VRAM_BASE);a.word(0x01,(TEXT_VRAM_END-TEXT_VRAM_BASE)-TEXT_COLS);a.emit(0xED,0xB0);
+    a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xAF,0x77);a.word(0x11,TEXT_VRAM_END-TEXT_COLS+1);a.word(0x01,TEXT_COLS-1);a.emit(0xED,0xB0);
+    a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xC9);
 
     a.label('CBIOS_LIST');a.emit(0xC9);
     a.label('CBIOS_PUNCH');a.emit(0xC9);
@@ -1172,11 +1185,164 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 <script>(function(root,factory){
   const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
   const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
+  const api=factory(block,cbios);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_CPM_FILESYSTEM=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios){
+  'use strict';
+
+  const CPM_DIRECTORY_ENTRY_SIZE=32;
+  const CPM_RECORD_SIZE=128;
+  const CPM_EXTENT_RECORDS=128;
+  const CPM_TEXT_EOF=0x1A;
+  const CPM_USER_DEFAULT=0;
+  const dpb=cbios.DPB;
+  const CPM_BLOCK_SIZE=CPM_RECORD_SIZE*(1<<dpb.bsh);
+  const CPM_DIRECTORY_ENTRIES=dpb.drm+1;
+  const CPM_DIRECTORY_BYTES=CPM_DIRECTORY_ENTRIES*CPM_DIRECTORY_ENTRY_SIZE;
+  const CPM_DIRECTORY_BLOCKS=Math.ceil(CPM_DIRECTORY_BYTES/CPM_BLOCK_SIZE);
+  const CPM_FIRST_DATA_BLOCK=CPM_DIRECTORY_BLOCKS;
+  const CPM_TOTAL_BLOCKS=dpb.dsm+1;
+  const CPM_FILESYSTEM_OFFSET=dpb.off*dpb.spt*block.BLOCK_SECTOR_SIZE;
+  const allowedPart=/^[A-Z0-9$#@!%&'()\-^_{}~]+$/;
+
+  function normalizeName(value){
+    const source=String(value??'').trim().toUpperCase();
+    const pieces=source.split('.');
+    if(pieces.length>2||!pieces[0]||pieces[0].length>8||(pieces[1]||'').length>3)throw new RangeError(`Invalid CP/M 8.3 name: ${value}`);
+    const name=pieces[0],extension=pieces[1]||'';
+    if(!allowedPart.test(name)||(extension&&!allowedPart.test(extension)))throw new RangeError(`Invalid CP/M filename characters: ${value}`);
+    return {name,extension,full:extension?`${name}.${extension}`:name};
+  }
+
+  function bytesOf(value){
+    if(value instanceof Uint8Array)return new Uint8Array(value);
+    if(Array.isArray(value))return Uint8Array.from(value);
+    if(typeof value==='string')return Uint8Array.from([...value].map(char=>{
+      const code=char.charCodeAt(0);if(code>0x7F)throw new RangeError('CP/M starter text must be 7-bit ASCII');return code;
+    }));
+    throw new TypeError('CP/M file bytes must be Uint8Array, array or ASCII string');
+  }
+
+  function dataOffset(allocationBlock){
+    const number=Number(allocationBlock);
+    if(!Number.isInteger(number)||number<0||number>=CPM_TOTAL_BLOCKS)throw new RangeError(`Invalid CP/M allocation block ${allocationBlock}`);
+    return CPM_FILESYSTEM_OFFSET+number*CPM_BLOCK_SIZE;
+  }
+
+  function writeName(entry,normalized){
+    entry.fill(0x20,1,12);
+    for(let index=0;index<normalized.name.length;index++)entry[1+index]=normalized.name.charCodeAt(index);
+    for(let index=0;index<normalized.extension.length;index++)entry[9+index]=normalized.extension.charCodeAt(index);
+  }
+
+  function buildFilesystem(image,files){
+    if(!(image instanceof Uint8Array)||image.length!==block.BLOCK_IMAGE_SIZE)throw new RangeError(`CP/M image must be ${block.BLOCK_IMAGE_SIZE} bytes`);
+    if(!Array.isArray(files))throw new TypeError('CP/M files must be an array');
+    const output=new Uint8Array(image);output.fill(block.BLOCK_BLANK_BYTE,CPM_FILESYSTEM_OFFSET);
+    let directoryIndex=0,nextBlock=CPM_FIRST_DATA_BLOCK;
+    const installed=[],seen=new Set();
+    for(const source of files){
+      const normalized=normalizeName(source.name);
+      if(seen.has(normalized.full))throw new RangeError(`Duplicate CP/M filename ${normalized.full}`);seen.add(normalized.full);
+      const bytes=bytesOf(source.bytes),padding=source.padding===undefined?CPM_TEXT_EOF:Number(source.padding)&0xFF;
+      const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),extentCount=Math.max(1,Math.ceil(records/CPM_EXTENT_RECORDS));
+      const fileBlocks=[];
+      for(let extentNumber=0;extentNumber<extentCount;extentNumber++){
+        if(directoryIndex>=CPM_DIRECTORY_ENTRIES)throw new RangeError('CP/M directory is full');
+        const firstRecord=extentNumber*CPM_EXTENT_RECORDS;
+        const extentRecords=Math.min(CPM_EXTENT_RECORDS,Math.max(0,records-firstRecord));
+        const blockCount=Math.ceil(extentRecords/(CPM_BLOCK_SIZE/CPM_RECORD_SIZE));
+        if(nextBlock+blockCount>CPM_TOTAL_BLOCKS)throw new RangeError(`CP/M disk is full while adding ${normalized.full}`);
+        const entry=new Uint8Array(CPM_DIRECTORY_ENTRY_SIZE),user=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
+        if(!Number.isInteger(user)||user<0||user>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);entry[0]=user;
+        writeName(entry,normalized);entry[12]=extentNumber&0x1F;entry[13]=0;entry[14]=(extentNumber>>5)&0x3F;entry[15]=extentRecords;
+        for(let index=0;index<blockCount;index++){
+          const allocationBlock=nextBlock++;entry[16+index]=allocationBlock;fileBlocks.push(allocationBlock);
+          const target=dataOffset(allocationBlock);output.fill(padding,target,target+CPM_BLOCK_SIZE);
+          const sourceOffset=(firstRecord*CPM_RECORD_SIZE)+(index*CPM_BLOCK_SIZE);
+          output.set(bytes.slice(sourceOffset,sourceOffset+CPM_BLOCK_SIZE),target);
+        }
+        output.set(entry,CPM_FILESYSTEM_OFFSET+directoryIndex*CPM_DIRECTORY_ENTRY_SIZE);directoryIndex++;
+      }
+      installed.push(Object.freeze({name:normalized.full,user:source.user??CPM_USER_DEFAULT,size:bytes.length,records,blocks:Object.freeze(fileBlocks),extents:extentCount}));
+    }
+    return {image:output,files:Object.freeze(installed),directoryEntries:directoryIndex,nextFreeBlock:nextBlock};
+  }
+
+  function readDirectory(image){
+    if(!(image instanceof Uint8Array)||image.length!==block.BLOCK_IMAGE_SIZE)throw new RangeError(`CP/M image must be ${block.BLOCK_IMAGE_SIZE} bytes`);
+    const entries=[];
+    for(let index=0;index<CPM_DIRECTORY_ENTRIES;index++){
+      const offset=CPM_FILESYSTEM_OFFSET+index*CPM_DIRECTORY_ENTRY_SIZE,user=image[offset];if(user===block.BLOCK_BLANK_BYTE)continue;
+      const clean=(start,length)=>String.fromCharCode(...image.slice(offset+start,offset+start+length).map(value=>value&0x7F)).trimEnd();
+      const name=clean(1,8),extension=clean(9,3),blocks=[];
+      for(let pointer=0;pointer<16;pointer++){const value=image[offset+16+pointer];if(value)blocks.push(value);}
+      entries.push(Object.freeze({index,user,name:extension?`${name}.${extension}`:name,extent:(image[offset+14]<<5)|(image[offset+12]&0x1F),records:image[offset+15],blocks:Object.freeze(blocks)}));
+    }
+    return Object.freeze(entries);
+  }
+
+  return {
+    CPM_DIRECTORY_ENTRY_SIZE,CPM_RECORD_SIZE,CPM_EXTENT_RECORDS,CPM_TEXT_EOF,CPM_USER_DEFAULT,
+    CPM_BLOCK_SIZE,CPM_DIRECTORY_ENTRIES,CPM_DIRECTORY_BYTES,CPM_DIRECTORY_BLOCKS,CPM_FIRST_DATA_BLOCK,CPM_TOTAL_BLOCKS,CPM_FILESYSTEM_OFFSET,
+    normalizeName,dataOffset,buildFilesystem,readDirectory
+  };
+});
+</script>
+<script>(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_CPM_STARTER_FILES=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const CPM_COM_ORIGIN=0x0100;
+  const ascii=text=>Uint8Array.from([...text].map(char=>{
+    const code=char.charCodeAt(0);if(code>0x7F)throw new RangeError('Starter files must be 7-bit ASCII');return code;
+  }));
+  const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
+
+  function buildPrintCom(message){
+    const text=ascii(message),messageAddress=CPM_COM_ORIGIN+9;
+    return Uint8Array.from([0x11,lo(messageAddress),hi(messageAddress),0x0E,0x09,0xCD,0x05,0x00,0xC9,...text,0x24]);
+  }
+
+  function buildStarterFiles(){
+    const welcome=ascii([
+      'SHINO-80 CP/M 2.2 STARTER DISK\r\n',
+      '\r\n',
+      'BUILT-IN CCP COMMANDS:\r\n',
+      '  DIR  TYPE  ERA  REN  SAVE  USER\r\n',
+      '\r\n',
+      'TRY:\r\n',
+      '  HELLO\r\n',
+      '  S80INFO\r\n',
+      '  TYPE WELCOME.TXT\r\n',
+      '\r\n',
+      'THIS DISK, BIOS AND STARTER FILES ARE ORIGINAL SHINO-80 WORK.\r\n',
+      String.fromCharCode(0x1A)
+    ].join(''));
+    return Object.freeze([
+      Object.freeze({name:'WELCOME.TXT',bytes:welcome,padding:0x1A}),
+      Object.freeze({name:'HELLO.COM',bytes:buildPrintCom('HELLO FROM SHINO-80!\r\n'),padding:0x1A}),
+      Object.freeze({name:'S80INFO.COM',bytes:buildPrintCom('SHINO-80 / CP/M 2.2\r\n44K TPA / 243K A: / CBIOS FA00H\r\n'),padding:0x1A})
+    ]);
+  }
+
+  return {CPM_COM_ORIGIN,ascii,buildPrintCom,buildStarterFiles};
+});
+</script>
+<script>(function(root,factory){
+  const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
   const cpm22=(typeof module==='object'&&module.exports)?require('./shino80-cpm22.js'):root.SHINO_CPM22;
-  const api=factory(block,cbios,cpm22);
+  const filesystem=(typeof module==='object'&&module.exports)?require('./shino80-cpm-filesystem.js'):root.SHINO_CPM_FILESYSTEM;
+  const starter=(typeof module==='object'&&module.exports)?require('./shino80-cpm-starter-files.js'):root.SHINO_CPM_STARTER_FILES;
+  const api=factory(block,cbios,cpm22,filesystem,starter);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_SYSTEM_DISK=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22){
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22,filesystem,starter){
   'use strict';
   const SYSTEM_DISK_MAGIC='S80B',SYSTEM_DISK_VERSION=2;
   const SYSTEM_HEADER_TRACK=0,SYSTEM_HEADER_SECTOR=1;
@@ -1233,10 +1399,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     image.set(cbiosImage.bytes,mediaOffset(SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR));
     image.set(cpmImage.ccp,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR));
     image.set(cpmImage.bdos,mediaOffset(SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR)+cpmImage.ccp.length);
-    return {image,header,payload,cbios:cbiosImage,cpm:cpmImage,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
+    const volume=filesystem.buildFilesystem(image,starter.buildStarterFiles());
+    return {image:volume.image,header,payload,cbios:cbiosImage,cpm:cpmImage,files:volume.files,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_VERSION,
       headerTrack:SYSTEM_HEADER_TRACK,headerSector:SYSTEM_HEADER_SECTOR,payloadTrack:SYSTEM_PAYLOAD_TRACK,payloadSector:SYSTEM_PAYLOAD_SECTOR,
       cbiosTrack:SYSTEM_CBIOS_TRACK,cbiosSector:SYSTEM_CBIOS_SECTOR,cbiosSectors:SYSTEM_CBIOS_SECTORS,
-      cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY})};
+      cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
   }
 
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
@@ -3225,7 +3392,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,98,0,133,2,109]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,98,0,201,2,177]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
@@ -3485,7 +3652,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 77×26×128',state:'ONLINE'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 3 STARTER FILES',state:'ONLINE'},
     {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
@@ -3607,7 +3774,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O loads the SHINO loader and CBIOS; the RAM loader reads 44 CCP/BDOS sectors. JP 0000h performs a disk-backed warm boot. Media stays mounted across RESET and POWER.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O boots CP/M. Try DIR, TYPE WELCOME.TXT, HELLO and S80INFO. JP 0000h performs a disk-backed warm boot; writes and media stay mounted across RESET and POWER.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
