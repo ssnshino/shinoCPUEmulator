@@ -1,6 +1,17 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+LATEST 2026-09-26T12:09:50+09:00: SHINO CBIOS v0.1 candidate on
+`feature/shino80-cbios-v01-20260926`, parent `128f031` / PR #31. Read matching
+plan/spec/worklog. Original 566-byte FA00h CBIOS has the standard 17-entry
+order, RAM-only Keyboard/VRAM console, DPH/DPB and Virtual Disk A INIR/OTIR
+sector I/O. Exact ABI tests and original sector-1 all-RAM execution proof PASS;
+all 21 package stages and offline Chrome manual desktop/mobile QA PASS.
+BOOT/WBOOT only initialize/return: no CCP, BDOS, filesystem, system image or
+CP/M boot. Runtime app/CPU/ROM/device/display unchanged. Commit/push/stacked PR
+remain; no merge/deploy. Next: explicit cold/warm multi-sector loader using an
+original image, then license gate. Older snapshots follow.
+
 LATEST 2026-09-26T11:58:28+09:00: Virtual Disk A v0.1 candidate on
 `feature/shino80-block-device-v01-20260926`, parent `a2a6430` / PR #30. Read
 the matching plan/spec/worklog. A: is 77×26×128 bytes (256,256-byte image),

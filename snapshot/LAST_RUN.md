@@ -1,5 +1,14 @@
 # LAST RUN
 
+LATEST 2026-09-26: SHINO CBIOS v0.1 candidate on Virtual Disk A `128f031`.
+Branch `feature/shino80-cbios-v01-20260926`. Added an original 566-byte FA00h
+CBIOS with all 17 standard slots, RAM-only console, exact DPH/DPB and 128-byte
+INIR/OTIR disk path. Tests prove first/last sector, errors and original sector-1
+payload execution at 8000h with no ROM access. All 21 package stages and
+offline Chrome manual 1440×1000/390×844 PASS, console/network/overflow zero.
+BOOT/WBOOT are non-booting initialization stubs; no CP/M components imported.
+Commit/push/PR remain; no merge/deploy. Previous runs below are historical.
+
 LATEST 2026-09-26: Virtual Disk A v0.1 candidate on RAM handoff `a2a6430`.
 Branch `feature/shino80-block-device-v01-20260926`. Added 77×26×128-byte A:
 media at I/O 30h–36h with exact PIO sector transfer, atomic partial-write

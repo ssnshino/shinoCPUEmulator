@@ -1,7 +1,8 @@
 # SHINO-80 Technical Manual v0.1
 
-2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4, RAM handoff v0.5 and
-Virtual Disk A v0.1 candidate, stacked on `a2a6430` (not reviewed main).
+2026-09-26 · BIOS/MON v0.3, pageable firmware v0.4, RAM handoff v0.5,
+Virtual Disk A v0.1 and CBIOS v0.1 candidates, stacked on `128f031`
+(not reviewed main).
 
 ## Deliverable / authority
 
@@ -29,6 +30,8 @@ does not automatically update explanatory prose or validate CPU correctness.
 - Clickable logical system diagram; text alternatives; diagram back link.
 - Physical/visible memory map, port 00h overlay control, Virtual Disk A ports
   30h–36h, current BIOS jump table and MON H/?/C/D range/R/U/B.
+- RAM-resident CBIOS v0.1 layout, standard 17-entry order, DPB and explicit
+  non-bootable boundary.
 - Actual 4096-byte CG-ROM atlas: 256 glyphs × 16 rows, bit7 leftmost.
 - Source hashes, official/research links and accuracy boundaries.
 

@@ -14,6 +14,17 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-cbios-v01-20260926`, parent `128f031` / PR #31.
+Original RAM-resident SHINO CBIOS v0.1 is 566 bytes at FA00h–FC35h and exposes
+the standard CP/M 2.2 17-entry jump-vector order. Keyboard/VRAM console,
+Virtual Disk A DPH/DPB and 128-byte INIR/OTIR READ/WRITE run without ROM calls.
+Tests prove exact tables, console and disk ABI, errors, and an original sector-1
+payload loaded to 8000h and executed in all-RAM mode with no ROM access. All 21
+package stages and offline Chrome manual QA pass. BOOT/WBOOT still initialize
+and return: CCP/BDOS, page-zero BDOS vector, filesystem/system image and CP/M
+boot are explicitly not implemented. See matching plan/spec/worklog. No merge
+or public deploy; older entries below are history.
+
 LATEST: `feature/shino80-block-device-v01-20260926`, parent `a2a6430` / PR #30.
 Virtual Disk A v0.1 adds a 77 × 26 × 128-byte, 256,256-byte writable medium
 behind low I/O ports 30h–36h. Sector READ/WRITE are observable 128-byte PIO
@@ -177,11 +188,11 @@ Future CPU / Memory / Bus / FDD / UART / Printer / Sound panels must not become 
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_BLOCK_DEVICE_V01_PLAN.md`
-7. `docs/head/SHINO80_VIRTUAL_BLOCK_DEVICE_v0.1.md`
-8. `working-logs/head/SHINO80_BLOCK_DEVICE_V01_WORKLOG.md`
-9. `plan/head/SHINO80_RAM_HANDOFF_V05_PLAN.md`
-10. `docs/head/SHINO80_RAM_HANDOFF_v0.5.md`
+6. `plan/head/SHINO80_CBIOS_V01_PLAN.md`
+7. `docs/head/SHINO80_CBIOS_v0.1.md`
+8. `working-logs/head/SHINO80_CBIOS_V01_WORKLOG.md`
+9. `plan/head/SHINO80_BLOCK_DEVICE_V01_PLAN.md`
+10. `docs/head/SHINO80_VIRTUAL_BLOCK_DEVICE_v0.1.md`
 
 ## Core concept
 
