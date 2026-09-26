@@ -43,10 +43,10 @@ function flags(f){return f&0xD7;} // documented S/Z/H/PV/N/C only
   assert.deepEqual(failures,[]);
 }
 
-// Indexed CB remains a separate, explicitly unsupported phase.
+// Prefix routes now include indexed CB; BASE decode still recognizes each introducer.
 for(const op of [0xDD,0xFD]){
   const {cpu}=fresh([op,0xCB,0,0]);
-  assert.throws(()=>cpu.step(),/UNIMPLEMENTED INDEXED CB/);
+  assert.equal(cpu.step().tStates,23);
 }
 
 // 8-bit ALU boundary behavior.

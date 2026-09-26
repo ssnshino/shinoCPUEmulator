@@ -14,6 +14,13 @@ PC-88 / MSX / ZX Spectrum / CP/M machine等の既存機をそのまま再現す�
 
 ### Active candidate — 2026-09-26
 
+LATEST: `feature/shino80-z80-indexed-cb-20260926`, parent `e01d5ed` / PR #24.
+DDCB/FDCB256 each now execute. All7 families externally checked:
+1,604,000 PASS, zero failures under D7 policy. See PHASE1I_INDEXED_CB docs.
+Instruction-family implementation is present, but interrupt dispatch and
+precision remain PHASE1J. Full Z80 NOT complete. MON paused; no merges.
+Earlier candidate status below is historical.
+
 CURRENT: `feature/shino80-z80-index-20260926`, parent `bb0daeb` / PR #23.
 DD/FD 252 terminal opcodes each execute (85 affected + 167 ignored-prefix).
 External BASE/CB/ED/DD/FD: 1,092,000 PASS, zero failures under D7 policy.

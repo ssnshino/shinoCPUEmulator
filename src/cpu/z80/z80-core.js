@@ -11,7 +11,7 @@
   if(!decoderApi||!decoderApi.decodeBase)throw new Error('SHINO Z80 CORE: decoder API missing');
   if(!flagsApi||!flagsApi.inc8||!flagsApi.add8)throw new Error('SHINO Z80 CORE: flags API missing');
 
-  const {decodeBase,decodeCB,decodeED,decodeIndex,REG8_KEYS,ALU_NAMES}=decoderApi;
+  const {decodeBase,decodeCB,decodeED,decodeIndex,decodeIndexedCB,REG8_KEYS,ALU_NAMES}=decoderApi;
   const {
     FLAG_BITS,FLAG_MASK,flagState,
     inc8,dec8,add8,sub8,and8,xor8,or8,cp8,
@@ -89,10 +89,10 @@
       return {...this.lastInstruction,bytes:[...this.lastInstruction.bytes]};
     }
 
-    fetchOperandByte(ctx,offsetT=4){
+    fetchOperandByte(ctx,offsetT=4,purpose='OPERAND_READ'){
       const s=this.state,address=s.pc&0xFFFF;
       const value=this.bus.cpuRead(address,{
-        tState:ctx.startTState+offsetT,purpose:'OPERAND_READ',signals:['MREQ','RD'],
+        tState:ctx.startTState+offsetT,purpose,signals:['MREQ','RD'],
         meta:{precision:'M_CYCLE_ABSTRACT'}
       });
       s.pc=(s.pc+1)&0xFFFF;ctx.bytes.push(value);return value;
@@ -637,6 +637,21 @@
       return desc.mnemonic;
     }
 
+    executeIndexedCB(desc,ctx){
+      const s=this.state,address=(s[desc.index.toLowerCase()]+signed8(ctx.displacement))&65535;
+      const value=this.readData(address,ctx,11);
+      if(desc.kind==='CB_BIT')s.f=bitTest8(s.f,value,desc.operation);
+      else{
+        let result;
+        if(desc.kind==='CB_ROTATE'){const next=rotateShift8(s.f,value,desc.rotate);result=next.result;s.f=next.f;}
+        else result=desc.kind==='CB_RES'?value&~(1<<desc.operation):value|(1<<desc.operation);
+        this.writeData(address,result,ctx,15);
+        // Copy the computed result, even if ROM protection blocked the memory write.
+        if(desc.targetCode!==6)this.setReg8(desc.targetCode,result);
+      }
+      return desc.mnemonic.replace('+d',signedText(ctx.displacement));
+    }
+
     executeIndex(desc,ctx){
       if(!desc.affected)return this.executeDescriptor(desc,ctx);
       const s=this.state,key=desc.index.toLowerCase();
@@ -705,10 +720,13 @@
         terminal=this.fetchOpcode(prefixCount*4).opcode;ctx.bytes.push(terminal);
       }
       ctx.startTState=startTState+prefixCount*4;
-      if(index&&terminal===0xCB)throw new Error('UNIMPLEMENTED INDEXED CB (PHASE 1I)');
-      if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
+      if(index&&terminal===0xCB){
+        ctx.displacement=this.fetchOperandByte(ctx,4);
+        desc=decodeIndexedCB(this.fetchOperandByte(ctx,7,'OPCODE_READ'),index);
+      }
+      else if(terminal===0xCB||terminal===0xED){const second=this.fetchOpcode(prefixCount*4+4).opcode;ctx.bytes.push(second);desc=terminal===0xCB?decodeCB(second):decodeED(second);}
       else if(index)desc=decodeIndex(terminal,index);
-      const execution=terminal===0xCB?this.executeCB(desc,ctx):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
+      const execution=terminal===0xCB?(index?this.executeIndexedCB(desc,ctx):this.executeCB(desc,ctx)):terminal===0xED?this.executeED(desc,ctx):index?this.executeIndex(desc,ctx):this.executeDescriptor(desc,ctx);
       const detail=typeof execution==='string'?{mnemonic:execution,tStates:desc.tStates}:execution;
       const actualTStates=(detail.tStates??desc.tStates)+(index?(terminal===0xED?prefixCount:prefixCount-1)*4:0);
       if(!Number.isFinite(actualTStates))throw new Error(`MISSING T-STATES FOR ${detail.mnemonic||desc.kind}`);

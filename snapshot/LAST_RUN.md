@@ -1,5 +1,9 @@
 # LAST RUN
 
+CURRENT: PHASE1I indexed CB, feature/shino80-z80-indexed-cb-20260926.
+Parent e01d5ed / PR #24; all7 external families1,604,000 PASS, failure0.
+See SHINO_Z80_PHASE1I_INDEXED_CB_WORKLOG.md. Next interrupts/precision; no merge.
+
 LATEST: PHASE1H DD/FD candidate 2026-09-26, feature/shino80-z80-index-20260926.
 Parent bb0daeb / PR #23. External baseline 1,092,000 PASS, zero failures.
 See SHINO_Z80_PHASE1H_INDEX_WORKLOG.md. Next indexed CB. No merge.

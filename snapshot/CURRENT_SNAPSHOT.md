@@ -1,6 +1,12 @@
 # CURRENT SNAPSHOT
 ## ONE-PAGE Z80 COMPUTER / SHINO-80
 
+CURRENT 2026-09-26: feature/shino80-z80-indexed-cb-20260926, parent e01d5ed /
+PR #24. DDCB/FDCB256 each; all7 families 1,604,000 external cases PASS.
+Read PHASE1I_INDEXED_CB plan/spec/worklog and QA JSONs. Next PHASE1J interrupt
+and precision work; full Z80 NOT finished. MON paused; no merge performed.
+Earlier snapshots below are historical.
+
 LATEST 2026-09-26: feature/shino80-z80-index-20260926, parent bb0daeb / PR #23.
 DD/FD252 each; external BASE/CB/ED/DD/FD 1,092,000 PASS. See PHASE1H_INDEX
 plan/spec/worklog and QA reports. Next PHASE1I indexed CB, then interrupts.
