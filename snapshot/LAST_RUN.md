@@ -1,5 +1,9 @@
 # LAST RUN
 
+LATEST: PHASE1H DD/FD candidate 2026-09-26, feature/shino80-z80-index-20260926.
+Parent bb0daeb / PR #23. External baseline 1,092,000 PASS, zero failures.
+See SHINO_Z80_PHASE1H_INDEX_WORKLOG.md. Next indexed CB. No merge.
+
 CURRENT: PHASE 1G ED candidate 2026-09-26, feature/shino80-z80-ed-20260926.
 Parent 42d04f7 / PR #22. External ED/BASE/CB: 588,000 PASS, no failures.
 See working-logs/head/SHINO_Z80_PHASE1G_ED_WORKLOG.md. Next DD/FD; no merges.

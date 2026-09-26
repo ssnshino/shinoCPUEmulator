@@ -5,7 +5,7 @@ const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Z80Core,coldState}=require('../src/cpu/z80/z80-core.js');
 const revision='ebe1875d48f374bcfd4b505d8eb8ee751568b5f7';
 const [family,cache,output]=process.argv.slice(2);
-if(!['cb','base','ed'].includes(family)||!cache||!output)throw Error('Usage: node scripts/check-z80-oracle.cjs cb|base|ed CACHE_DIR OUTPUT_JSON');
+if(!['cb','base','ed','dd','fd'].includes(family)||!cache||!output)throw Error('Usage: node scripts/check-z80-oracle.cjs cb|base|ed|dd|fd CACHE_DIR OUTPUT_JSON');
 // ED inventory is independent of our decoder: pinned upstream contains 80 files.
 const names=Array.from({length:256},(_,i)=>i).filter(i=>family==='cb'||(family==='ed'?((i>=0x40&&i<=0x7F)||[0xA0,0xA1,0xA2,0xA3,0xA8,0xA9,0xAA,0xAB,0xB0,0xB1,0xB2,0xB3,0xB8,0xB9,0xBA,0xBB].includes(i)):![0xCB,0xDD,0xED,0xFD].includes(i))).map(i=>(family==='base'?'':family+' ')+i.toString(16).padStart(2,'0'));
 async function main(){
