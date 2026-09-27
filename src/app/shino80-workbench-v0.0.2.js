@@ -13,6 +13,7 @@
   const beeper=new Shino80Beeper();
   const systemDisk=buildSystemDisk();
   const diskA=new Shino80BlockDevice({image:systemDisk.image});
+  let driveAEjectedMedia=null;
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -67,7 +68,11 @@
     {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
   ];
   const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a']);
-  function deviceState(device){return powerSensitiveDevices.has(device.id)&&!ui.powered?'OFF':device.state;}
+  function deviceState(device){
+    if(powerSensitiveDevices.has(device.id)&&!ui.powered)return 'OFF';
+    if(device.id==='disk-a')return diskA.mounted?'READY':'EMPTY';
+    return device.state;
+  }
 
   function makeLeds(container,width,color='green'){
     container.innerHTML='';
@@ -166,8 +171,33 @@
     root.replaceChildren(fragment);
   }
 
+  function diskAInspectorHtml(){
+    const mediaState=diskA.mounted?'INSERTED':'EJECTED';
+    const canEject=!ui.powered&&diskA.mounted&&driveAEjectedMedia===null;
+    const canInsert=!ui.powered&&!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array;
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div><div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive A media controls"><button type="button" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. POWER → RUN and RESET AUTOBOOT a valid A: medium. With A: empty, autoboot returns to ROM MON. MON O remains the manual retry path.</div>`;
+  }
+
+  function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
+  function ejectDriveA(){
+    if(ui.powered||!diskA.mounted||driveAEjectedMedia!==null)return false;
+    const media=diskA.eject();
+    if(!(media instanceof Uint8Array))return false;
+    driveAEjectedMedia=media;refreshDevicePresentation();return true;
+  }
+  function insertEjectedDriveA(){
+    if(ui.powered||diskA.mounted||!(driveAEjectedMedia instanceof Uint8Array))return false;
+    const media=driveAEjectedMedia;
+    diskA.mountImage(media);
+    driveAEjectedMedia=null;refreshDevicePresentation();return true;
+  }
+  function handleDiskAction(action){
+    if(action==='eject')ejectDriveA();
+    else if(action==='insert-ejected')insertEjectedDriveA();
+  }
+
   function renderInspector(){
-    const s=cpu.state,root=queryOne('#inspectorContent');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
+    const s=cpu.state,root=queryOne('#inspectorContent'),compactRoot=queryOne('#compactDeviceInspector');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
     if(ui.view==='cpu'){const li=cpu.lastInstruction;const current=li?`${li.bytes.length?li.bytes.map(b=>hex(b,2)).join(' ')+'h ':''}${li.mnemonic}`:'-- RESET';const flow=li&&li.branchTaken!==null?`${li.branchTaken?'TAKEN':'NOT TAKEN'} → ${hex(li.branchTaken?li.branchTarget:li.fallThrough,4)}h`:'—';const stack=li&&li.stackBefore!==null?`${hex(li.stackBefore,4)}h → ${hex(li.stackAfter,4)}h`:'—';html+=`<div class="inspector-section"><div class="inspector-kv"><span>Current instruction</span><b>${current}</b></div><div class="inspector-kv"><span>Flow</span><b>${flow}</b></div><div class="inspector-kv"><span>Stack</span><b>${stack}</b></div><div class="inspector-kv"><span>Decoder</span><b>BASE 252/252 ONLINE · CB 256/256 ONLINE</b></div><div class="inspector-kv"><span>ED</span><b>78 active · 178 unused NOP</b></div><div class="inspector-kv"><span>DD / FD</span><b>252 + 252 terminal opcodes ONLINE</b></div><div class="inspector-kv"><span>DDCB / FDCB</span><b>256 + 256 encodings ONLINE</b></div><div class="inspector-kv"><span>Interrupts</span><b>NMI · INT IM0 / IM1 / IM2</b></div><div class="inspector-kv"><span>Accuracy</span><b>Full F / WZ / P / Q / total T-states</b></div><div class="inspector-kv"><span>Bus trace</span><b>M-cycle abstract</b></div></div><div class="inspector-section inspector-note">Instruction-level CPU milestone: all families, full flags and interrupt dispatch. Oracle: 1,604,000 cases (ED: 80 encodings). Not pin/cycle-perfect; WAIT/BUSRQ and multi-byte device-supplied IM0 streams are not modeled.</div>`;}
     if(ui.view==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Physical RAM</span><b>64 KiB</b></div><div class="inspector-kv"><span>Lower mapping</span><b>${memory.lowRamEnabled?'FULL RAM':'BOOT + EXT ROM'}</b></div><div class="inspector-kv"><span>Extension bank</span><b>${memory.extensionBank}</b></div><div class="inspector-kv"><span>Control port</span><b>00h = ${hex(memory.control)}</b></div><div class="inspector-kv"><span>Last fetch</span><b>${hex(ui.lastFetchAddress,4)}h</b></div></div><div class="inspector-section inspector-note">Memory Inspector shows the currently visible mapping with DEBUG PEEK and creates no CPU Bus events. RAM exists underneath the lower ROM overlay.</div>`;
@@ -181,10 +211,11 @@
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">POWER → RUN and RESET AUTOBOOT a valid A: medium. MON O remains the manual retry path. Try DIR, TYPE WELCOME.TXT, HELLO and S80INFO. JP 0000h performs a disk-backed warm boot; writes and media stay mounted across RESET and POWER.</div>`;
+      else if(d.id==='disk-a')html+=diskAInspectorHtml();
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
+    if(compactRoot){compactRoot.hidden=ui.view!=='devices';compactRoot.innerHTML=ui.view==='devices'?html:'';}
   }
 
   function render(){
@@ -200,7 +231,7 @@
     else{const fetch=lastFetch();if(fetch)ui.lastFetchAddress=fetch.address;}
     updateTrace();
     if(ui.view==='memory')updateMemory();
-    if(matchMedia('(min-width:720px)').matches)renderInspector();
+    if(ui.view==='devices'||matchMedia('(min-width:720px)').matches)renderInspector();
     const state=!ui.powered?'POWER OFF':(ui.running?'RUNNING':'READY');
     queryOne('#machineState').textContent=state;queryOne('#statusRun').textContent=state;
     queryOne('#runPauseLabel').textContent=ui.running?'PAUSE':'RUN';queryOne('#runPauseBtn').classList.toggle('running',ui.running);
@@ -376,6 +407,7 @@
     queryOne('#memoryJump').addEventListener('change',event=>{if(event.target.value)selectMemoryAddress(parseInt(event.target.value,16));event.target.value='';});
     queryOne('#memoryFollow').addEventListener('change',event=>{memoryView.follow=event.target.value;ui.dirty=true;});
     queryAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-disk-action]');if(control)handleDiskAction(control.dataset.diskAction);});
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
     queryOne('#stepBtn').addEventListener('click',stepOne);

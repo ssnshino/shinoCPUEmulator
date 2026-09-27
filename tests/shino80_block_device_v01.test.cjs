@@ -110,6 +110,21 @@ for(const [setup,command,error] of [
   assert.equal(device.mounted,false);assert.equal(device.status(),0);
 }
 
+// A complete write survives an exact EJECT -> REINSERT round trip.
+{
+  const device=new Shino80BlockDevice({image:createBlankBlockImage(0x5A)}),pattern=sectorPattern(0x6D);
+  select(device,12,7);device.writePort(BLOCK_COMMAND_PORT,BLOCK_COMMAND_WRITE);
+  for(const byte of pattern)device.writePort(BLOCK_DATA_PORT,byte);
+  const beforeEject=device.exportImage(),ejected=device.eject();
+  assert.equal(device.mounted,false);assert.equal(device.status(),0);
+  assert.deepEqual(ejected,beforeEject);
+  device.mountImage(ejected);
+  assert.equal(device.mounted,true);assert.deepEqual(device.exportImage(),beforeEject);
+  select(device,12,7);device.writePort(BLOCK_COMMAND_PORT,BLOCK_COMMAND_READ);
+  const actual=Uint8Array.from({length:BLOCK_SECTOR_SIZE},()=>device.readPort(BLOCK_DATA_PORT));
+  assert.deepEqual(actual,pattern);
+}
+
 // The real Bus keeps the complete Z80 port in traces while the device decodes
 // its low byte. Debug access is observer-only and creates no trace event.
 {
