@@ -1,20 +1,16 @@
 # SHINO-80 Technical Manual v0.1
 
 Status: CURRENT / RELEASED
-Updated: 2026-09-26 JST
-Implementation baseline: `e75d8c0506a7b1bb711b54c352c8b04580cdddaf`
+Updated: 2026-09-27 JST
+Implementation baseline: `47f2d6e1870c21c7ac55ec47620594b4adb02217` / PR #47
 
 ## Deliverable and authority
 
 `deploy/shino80_technical_manual_v0.1.html` is the generated standalone manual.
 It works offline without font, CDN or runtime network dependencies. It is also
-published as an unlisted/noindex page by the Shinomiya Daihanten content
-repository.
+published as an unlisted/noindex page by the Shinomiya Daihanten content repository.
 
-Authoring sources:
-
-- `src/manual/`
-- `scripts/build-technical-manual.cjs`
+Authoring sources: `src/manual/` and `scripts/build-technical-manual.cjs`.
 
 Build and verification:
 
@@ -23,45 +19,40 @@ pnpm run build:manual
 pnpm run test:manual
 ```
 
-Do not hand-edit the generated HTML. When CPU, firmware or devices change,
-review authored prose, baseline labels, diagrams, examples and tests before
-rebuilding.
+Do not hand-edit the generated HTML.
 
 ## Current content
 
-- searchable BASE252 / CB256 / ED256 / DD252 / FD252 / DDCB256 / FDCB256:
-  1,780 encodings including aliases, unused ED slots and ignored-prefix forms
-- byte patterns, lengths, timings, flags, X/Y behavior and execution examples
-- logical system wiring diagram and memory/I/O maps
-- ROM BIOS/MON, pageable firmware and RAM handoff
-- DM-80 and actual 4 KiB CG-ROM glyph atlas
-- Virtual Disk A ports 30h–36h and beeper port 40h
-- S80B v2, SHINO CBIOS/WBOOT, CP/M 2.2 memory map and writable A: starter
-  filesystem
-- CP/M command reference for DIR, TYPE, ERA, REN, SAVE, USER and bundled COM
-  programs
-- source hashes, external references and explicit accuracy boundaries
-
-The generated examples are demonstrations made by running one instruction in
-an isolated CPU/Bus. They are not a replacement for the pinned external oracle
-suite.
+- 1,780 Z80 encoding reference with examples and accuracy boundaries
+- system wiring, memory/I/O maps, ROM BIOS/MON and pageable firmware
+- DM-80 / native CG-ROM
+- Virtual Disk A ports 30h–36h and POWER-OFF EJECT / REINSERT SAME MEDIA
+- desktop right Inspector and compact DEVICES inline Inspector media controls
+- S80B v2 canonical boot layout, SHINO CBIOS/WBOOT, CP/M 2.2 and writable A:
+- CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled COM programs
+- source hashes and external references
 
 ## Accuracy and implementation boundaries
 
-- external full-state CPU baseline: `1,604,000 / 1,604,000 PASS`, Failure 0
+- CPU external full-state baseline: `1,604,000 / 1,604,000 PASS`
 - instruction-level, not electrical/pin-cycle-perfect
-- WAIT/BUSRQ, hardware races, daisy chains and multi-byte external IM0 streams
-  remain outside the milestone
-- VRAM is physical RAM observed by video; CG-ROM is renderer-local
-- Virtual Disk A is a PIO block device, not a mechanical FDD/FDC
-- browser-reload disk persistence, host import/export, B: drive, UART, printer
-  and physical display interfaces remain future work
+- Virtual Disk A is PIO, not a mechanical FDD/FDC
+- POWER-OFF EJECT / REINSERT is page-local host media management
+- guest eject, browser-reload persistence, whole-disk import/export,
+  factory-media restore, B:, UART and printer remain NOT IMPLEMENTED / future
 - reserved BIOS vectors are not implemented drivers or interrupt handlers
-- no FPGA implementation is claimed
+
+## Software Division contract
+
+Google Drive `40_SHINO80_SOFTWARE_LAB/02_specs` contains draft
+cross-department contracts for the synchronization matrix, Programmer’s
+Reference and S80B v2 Boot Disk Image Format.
+
+The standalone Technical Manual is the product-facing online/offline reference.
+The Software Division documents are the deeper development contract. Both must
+describe the same implemented / reserved / not-implemented boundary.
 
 ## Publication
 
-The published manual is a vendored generated artifact. Publication updates must
-record the exact source commit and SHA-256 in
-`ssnshino/shinomiya-daihanten-content`; machine and manual remain independent
-standalone HTML files.
+Publication in `ssnshino/shinomiya-daihanten-content` is a separate,
+Human-authorized step and records the exact source commit and artifact SHA-256.

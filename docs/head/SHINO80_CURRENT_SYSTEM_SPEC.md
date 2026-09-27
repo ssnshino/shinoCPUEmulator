@@ -2,7 +2,7 @@
 
 Status: RELEASED BASELINE
 Updated: 2026-09-27 JST
-Released implementation baseline: `01c5d4433f06f5c41254c2d0b4137606d8990be5` / PR #42
+Released implementation baseline: `47f2d6e1870c21c7ac55ec47620594b4adb02217` / PR #47
 
 ## Purpose
 
@@ -73,7 +73,8 @@ multi-byte device-fed IM0 streams remain outside this milestone.
 - bundled original files: WELCOME.TXT, HELLO.COM, S80INFO.COM
 - supported resident CCP commands: DIR, TYPE, ERA, REN, SAVE, USER
 - page-local media survives RESET, POWER and WBOOT
-- browser reload persistence and host file import/export are not implemented
+- while POWER is OFF, Human-visible desktop and compact Device inspectors can EJECT A: and REINSERT the exact retained medium; POWER ON media change is blocked
+- browser reload persistence, whole-disk host import/export and factory-media restore are not implemented
 - POWER followed by RUN, and machine RESET, automatically boot a mounted valid
   S80B v2 A: medium without keyboard input
 - missing, unreadable or invalid boot media falls back to the ROM Monitor before
@@ -107,7 +108,9 @@ Real iPhone/Edge review confirmed:
 
 Issue #41 / PR #42 automatic POWER → RUN / RESET boot has automated,
 real-Chrome and Human Codex-preview coverage. Physical iPhone/Edge autoboot
-recheck is not recorded.
+recheck is not recorded. Issue #46 / PR #47 DRIVE A EJECT / REINSERT has
+aggregate regression, visible-control Chrome coverage at 390×844 / 1280×900 /
+900×400 and Human interactive QA PASS.
 
 ## Change rule
 

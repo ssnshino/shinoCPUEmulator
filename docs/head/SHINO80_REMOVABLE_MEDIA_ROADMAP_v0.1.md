@@ -40,7 +40,7 @@ portable image I/O
 browser persistence
 ```
 
-## Phase R1 — DRIVE A media lifecycle v0.1
+## Phase R1 — DRIVE A media lifecycle v0.1 — RELEASED
 
 Goal:
 
@@ -61,7 +61,10 @@ Required behavior:
 - reinserting the same valid medium restores normal autoboot
 - controller / CPU / firmware contracts do not change
 
-Explicitly excluded:
+Released by Issue #46 / PR #47 on main
+`47f2d6e1870c21c7ac55ec47620594b4adb02217`.
+
+Explicitly excluded from R1:
 
 - file import
 - file export
@@ -149,7 +152,8 @@ Future candidates after A: media usability stabilizes:
 - write-protect UX
 - optional richer host filesystem integration
 
-None are current commitments.
+None are current commitments. R2 whole-disk EXPORT is the next roadmap
+candidate, but no implementation PLAN is active until Human selection.
 
 ## Cross-phase invariants
 
@@ -176,5 +180,6 @@ This is both a debugging policy and a delivery policy.
 
 ## Update History
 
+- 2026-09-27 — 戸澤 / ChatGPT — Phase R1 EJECT / REINSERT SAME MEDIA released by Issue #46 / PR #47; R2 remains candidate, not active.
 - 2026-09-27 — 戸澤 / ChatGPT — Initial removable-media roadmap based on
   current SHINO-80 device contract and current Web engineering research.

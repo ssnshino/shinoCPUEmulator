@@ -1,10 +1,12 @@
 # SHINO-80 DRIVE A Media Lifecycle v0.1 — Implementation Worklog
 
 Date: 2026-09-27 JST
-Status: IMPLEMENTED / PR REVIEW PENDING
+Status: RELEASED / MERGED
 Issue: #46
 Branch: `feature/shino80-drive-a-media-lifecycle-v01-20260927`
 Baseline main: `97ff1d2882bc8ab9b3371fac03153e5cc85f7815`
+PR: #47
+Merge commit: `47f2d6e1870c21c7ac55ec47620594b4adb02217`
 
 ## Scope delivered
 
@@ -110,9 +112,15 @@ SHA-256 deploy/one_page_shino80_v0.0.9_z80_base_complete.html
 80cb6f98656918c59d29463cc9df637d7a2feb129b7c4adf7d8cc5158e2c83d9
 ```
 
-## Remaining authority
+## Closeout
 
-- Human review controls PR merge.
+- Human interactive review: PASS.
+- PR #47 merged to main at `47f2d6e1870c21c7ac55ec47620594b4adb02217`.
+- PLAN / WORKLOG are archived by PM-side Issue #48 contract synchronization.
+- Public deployment remains separate.
+
+## Remaining boundary
+
 - Public deployment is outside Issue #46.
 - Import, export, factory media, durable persistence, B:, write-protect UI and
   powered hot swap remain outside this implementation.
