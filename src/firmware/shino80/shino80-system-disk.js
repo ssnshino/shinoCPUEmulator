@@ -15,6 +15,7 @@
   const SYSTEM_CBIOS_TRACK=0,SYSTEM_CBIOS_SECTOR=3,SYSTEM_CBIOS_SECTORS=6;
   const SYSTEM_CPM_TRACK=0,SYSTEM_CPM_SECTOR=9,SYSTEM_CPM_SECTORS=44;
   const SYSTEM_ENTRY=0x8000;
+  const SYSTEM_STARTUP_TITLE='SHINO-80 CP/M 2.2\r\n';
   const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
   const mediaOffset=(track,sector)=>(track*block.BLOCK_SECTORS_PER_TRACK+(sector-1))*block.BLOCK_SECTOR_SIZE;
 
@@ -43,7 +44,10 @@
     word(0x21,0xC000);emit(0x36,0x00);word(0x11,0xC001);word(0x01,0x07CF);emit(0xED,0xB0);
     emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,cbios.CBIOS_ORG+3);word(0x22,0x0001);
     emit(0xAF);word(0x32,0x0003);emit(0x3E,0xC3);word(0x32,0x0005);
-    word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);
+    abs(0x21,'STARTUP_TITLE');callAddress(cbiosImage.labels.CBIOS_PRINT_STRING);
+    emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    label('STARTUP_TITLE');emit(...[...SYSTEM_STARTUP_TITLE].map(char=>char.charCodeAt(0)),0x00);
     for(const fixup of absFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);}
     for(const fixup of relFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);const displacement=address-fixup.after;if(displacement < -128||displacement > 127)throw new RangeError(`Loader JR ${fixup.name} out of range`);bytes[fixup.offset+1]=displacement&0xFF;}
     if(bytes.length>block.BLOCK_SECTOR_SIZE)throw new RangeError(`System payload exceeds one sector: ${bytes.length}`);
@@ -72,6 +76,6 @@
   }
 
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
-    SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,
+    SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,SYSTEM_STARTUP_TITLE,
     mediaOffset,buildSystemPayload,buildSystemDisk};
 });

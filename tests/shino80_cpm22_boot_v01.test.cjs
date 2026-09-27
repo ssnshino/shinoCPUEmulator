@@ -32,7 +32,7 @@ function machine(image=systemDisk.image){
 function until(m,predicate,limit=1500000){let count=0;while(!predicate()&&count++<limit)m.cpu.step();assert(count<limit,`CP/M timeout PC=${m.cpu.state.pc.toString(16)}`);return count;}
 function input(m,text){for(const char of text)m.keyboard.enqueueByte(char.charCodeAt(0));}
 function screen(m){return String.fromCharCode(...m.memory.ram.slice(TEXT_VRAM_BASE,TEXT_VRAM_BASE+2000)).replaceAll('\0',' ');}
-function boot(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);input(m,'O\r');until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));}
+function boot(m){until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));}
 
 // Cold boot traverses ROM loader + 44 real CBIOS reads and enters populated A:.
 {
@@ -42,7 +42,7 @@ function boot(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);input(m,
   assert.deepEqual(m.memory.ram.slice(CPM22_CCP_ORIGIN,CPM22_CCP_ORIGIN+64),cpm.ccp.slice(0,64));
   assert.deepEqual(m.memory.ram.slice(CPM22_BDOS_ORIGIN,CPM22_BDOS_ORIGIN+64),cpm.bdos.slice(0,64));
   assert.deepEqual(m.memory.ram.slice(CBIOS_ORG,CBIOS_ORG+64),cbios.bytes.slice(0,64));
-  assert.match(screen(m),/^\s*A>/);
+  assert.match(screen(m),/^SHINO-80 CP\/M 2\.2\s+A>/);
   input(m,'DIR\r');m.cpu.step();until(m,()=>screen(m).includes('WELCOME')&&(screen(m).match(/A>/g)||[]).length>=2);
   assert.match(screen(m),/WELCOME\s+TXT/);assert.match(screen(m),/HELLO\s+COM/);assert.match(screen(m),/S80INFO\s+COM/);
   const commands=m.bus.trace.filter(event=>event.space==='IO'&&event.operation==='WRITE'&&(event.address&255)===0x31&&event.data===1);

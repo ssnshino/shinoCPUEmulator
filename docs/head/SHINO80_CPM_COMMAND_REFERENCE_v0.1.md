@@ -6,8 +6,12 @@ Scope: the CP/M 2.2 CCP and starter disk currently shipped by SHINO-80
 ## Starting CP/M
 
 1. Power on SHINO-80 and run the machine.
-2. At the ROM Monitor `*` prompt, enter `O` and press Enter.
-3. A successful disk boot ends at the `A>` prompt.
+2. The mounted valid S80B v2 A: medium boots automatically.
+3. `SHINO-80 CP/M 2.2` and then the `A>` prompt appear.
+
+RESET follows the same automatic cold-boot path. If no readable valid medium is
+mounted, ROM remains visible and presents the Monitor `*` prompt. Mounting valid
+media and entering `O` remains the manual retry path.
 
 Commands are case-insensitive. Filenames use CP/M 8.3 form. Backspace and
 Delete edit the current command line, and output scrolls through the 80 x 25

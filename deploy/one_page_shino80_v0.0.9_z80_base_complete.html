@@ -1350,6 +1350,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const SYSTEM_CBIOS_TRACK=0,SYSTEM_CBIOS_SECTOR=3,SYSTEM_CBIOS_SECTORS=6;
   const SYSTEM_CPM_TRACK=0,SYSTEM_CPM_SECTOR=9,SYSTEM_CPM_SECTORS=44;
   const SYSTEM_ENTRY=0x8000;
+  const SYSTEM_STARTUP_TITLE='SHINO-80 CP/M 2.2\r\n';
   const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
   const mediaOffset=(track,sector)=>(track*block.BLOCK_SECTORS_PER_TRACK+(sector-1))*block.BLOCK_SECTOR_SIZE;
 
@@ -1378,7 +1379,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     word(0x21,0xC000);emit(0x36,0x00);word(0x11,0xC001);word(0x01,0x07CF);emit(0xED,0xB0);
     emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,cbios.CBIOS_ORG+3);word(0x22,0x0001);
     emit(0xAF);word(0x32,0x0003);emit(0x3E,0xC3);word(0x32,0x0005);
-    word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);
+    abs(0x21,'STARTUP_TITLE');callAddress(cbiosImage.labels.CBIOS_PRINT_STRING);
+    emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    label('STARTUP_TITLE');emit(...[...SYSTEM_STARTUP_TITLE].map(char=>char.charCodeAt(0)),0x00);
     for(const fixup of absFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);}
     for(const fixup of relFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);const displacement=address-fixup.after;if(displacement < -128||displacement > 127)throw new RangeError(`Loader JR ${fixup.name} out of range`);bytes[fixup.offset+1]=displacement&0xFF;}
     if(bytes.length>block.BLOCK_SECTOR_SIZE)throw new RangeError(`System payload exceeds one sector: ${bytes.length}`);
@@ -1407,7 +1411,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
 
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
-    SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,
+    SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,SYSTEM_STARTUP_TITLE,
     mediaOffset,buildSystemPayload,buildSystemDisk};
 });
 </script>
@@ -3035,12 +3039,21 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.ldHLLabel('BOOT_TEXT');
     call('BIOS_API_PRINT_STRING');
 
+    // A valid mounted S80B medium boots without Monitor input. Every read and
+    // header check completes before the common routine pages ROM out; failure
+    // therefore returns here with firmware and keyboard input still usable.
+    call('DISK_BOOT_ATTEMPT');
+    a.ldHLLabel('MONITOR_ENTRY_TEXT');
+    call('BIOS_API_PRINT_STRING');
+
     // Stable Monitor entry, with line parser outside the IPL region.
     a.label('MONITOR_LOOP');
     jp('MONITOR_READ');
 
     a.label('BOOT_TEXT');
-    a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_ENTRY_TEXT');
+    a.emit(...[...'MON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
     a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT  O DISK BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
@@ -3385,24 +3398,29 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
-    // Original system-disk cold path. Sector 1 validates a fixed v2 layout,
+    // Shared system-disk cold path. Sector 1 validates a fixed v2 layout,
     // sector 2 supplies the RAM payload, and sectors 3-8 supply CBIOS at FA00h.
     // Every byte crosses the I/O Bus; only after all reads succeed is page zero
-    // shadowed and firmware paged out.
+    // shadowed and firmware paged out. Automatic IPL failure returns quietly;
+    // the explicit Monitor command retains its diagnostic.
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
-    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    call('DISK_BOOT_ATTEMPT');
+    a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+
+    a.label('DISK_BOOT_ATTEMPT');
+    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,98,0,201,2,177]){
-      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,124,0,201,2,203]){
+      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
-      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     }
     a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
     a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
-    a.label('DISK_BOOT_FAIL');a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+    a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
     a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
 
     a.label('DISK_BOOT_READ_SECTOR');
@@ -3434,8 +3452,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         ramHandoffDemoBytes:demo.length,
         testPageInstructions,
         clearPageInstructions,
-        bootTextBytes:30,
-        instructionsBeforeLoop:14096
+        bootTextBytes:24,
+        instructionsBeforeLoop:14123
       })
     };
   }
@@ -3774,7 +3792,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">MON O boots CP/M. Try DIR, TYPE WELCOME.TXT, HELLO and S80INFO. JP 0000h performs a disk-backed warm boot; writes and media stay mounted across RESET and POWER.</div>`;
+      else if(d.id==='disk-a')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section inspector-note">POWER → RUN and RESET AUTOBOOT a valid A: medium. MON O remains the manual retry path. Try DIR, TYPE WELCOME.TXT, HELLO and S80INFO. JP 0000h performs a disk-backed warm boot; writes and media stay mounted across RESET and POWER.</div>`;
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;

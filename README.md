@@ -21,7 +21,7 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- last implementation-bearing main: `e75d8c0506a7b1bb711b54c352c8b04580cdddaf`（PR #38）
+- reviewed main at current work start: `12350d28b1dfddb344f2a6d0224debaa7b571d04`（PR #40）
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -40,6 +40,7 @@
 - DM-80 80×25 text display、native 8×16 CG-ROM、640×400 logical raster
 - Keyboard、ROM BIOS、interactive Monitor、Memory/Bus/Device inspector
 - Virtual Disk A、SHINO CBIOS、WBOOT、licensed CP/M 2.2
+- mounted valid S80B v2 mediaのPOWER → RUN / RESET autoboot、失敗時ROM MON fallback、manual `MON O`
 - writable starter filesystem
   - `WELCOME.TXT`
   - `HELLO.COM`
@@ -70,7 +71,7 @@ Human iPhone/Edge QAでは、起動、DIR、TYPE、HELLO、S80INFO、Backspace/D
 - project concept: `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 
-`plan/head/`は次の実装を始めるまで空に保つ。新しい実装はPLAN FIRSTで開始し、完了後は対応するPLAN/SPEC/worklogをhistoryへ閉じる。
+`plan/head/`には実行中のPLANだけを置く。現在はIssue #41 disk autobootのPLANがactive。完了後は対応するPLAN/SPEC/worklogをhistoryへ閉じる。
 
 ## 開発と検証
 
@@ -98,6 +99,14 @@ pnpm test
 場合だけworkspace dependency locatorで新しいpathを確認し、この節を更新する。
 
 UI変更ではPC/mobile、console、horizontal overflow、操作系を実ブラウザでも確認する。CPU変更では画面表示だけを根拠にせず、unit/oracle/interrupt/timing regressionを実行する。
+
+実Chrome smokeはPython版Playwrightを探さず、同梱Node packageを使う。
+
+```bash
+export NODE_PATH="/Users/shino/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules"
+export CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+pnpm run test:browser
+```
 
 ## 次の候補
 
