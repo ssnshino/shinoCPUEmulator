@@ -50,11 +50,16 @@ assert.equal(data.machine.systemDiskMagic,'S80B');assert.equal(data.machine.syst
 assert.deepEqual(data.machine.systemDiskFiles.map(file=>file.name),['WELCOME.TXT','HELLO.COM','S80INFO.COM']);
 assert.equal(data.machine.cbiosBytes,713);assert.equal(data.machine.cbiosEnd,0xFCC9);
 assert.equal(data.machine.cpmCcpOrigin,0x9400);assert.equal(data.machine.cpmBdosOrigin,0x9C00);assert.equal(data.machine.cpmBdosEntry,0x9C06);
+assert.equal(data.revision,'47f2d6e1870c21c7ac55ec47620594b4adb02217');
+assert(data.baseline.includes('DRIVE A removable media v0.1'));
+assert(Object.hasOwn(data.sources,'src/app/shino80-workbench-v0.0.2.js'));
 assert.equal(data.machine.cgBytes.length,4096);
 assert.equal(crypto.createHash('sha256').update(Buffer.from(data.machine.cgBytes)).digest('hex'),data.machine.cgHash);
 const html=build();assert.equal(build(),html,'deterministic output');
 assert(html.includes('MoreのBEEP TEST'));assert(html.includes('I/O 40h'));
 assert(html.includes('A: starter filesystem v0.1'));assert(html.includes('WELCOME.TXT'));
+assert(html.includes('DRIVE A removable media v0.1'));assert(html.includes('INSERT EJECTED DISK'));
+assert(html.includes('53 38 30 42 02 02 03 06 00 80 00 FA 7C 00 C9 02 CB'));
 assert(html.includes('CP/Mコマンドリファレンス'));assert(html.includes('href="#cpm"'));
 assert(html.includes('SAVE 1 COPY.COM'));assert(html.includes('REN NEW.COM=OLD.COM'));assert(html.includes('USER 0'));
 assert(html.includes('<link rel="icon" href="data:,">'));

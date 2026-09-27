@@ -1,6 +1,6 @@
 # SHINO-80 FDD / DISK Design Notes v0.1
 
-Status: DESIGN NOTES / AUTOBOOT SLICE RELEASED ON MAIN BY PR #42
+Status: DESIGN NOTES / AUTOBOOT + MEDIA LIFECYCLE RELEASED THROUGH PR #47
 Updated: 2026-09-27 JST
 
 ## Purpose
@@ -8,10 +8,14 @@ Updated: 2026-09-27 JST
 Record the agreed direction for SHINO-80 removable disk usability and the
 boundary between the implemented autoboot slice and later media phases.
 
-The first bounded slice was released on main by Issue #41 / PR #42:
-POWER → RUN / RESET autoboot, safe pre-page-out MON fallback, retained manual
-`MON O`, and a guest-side startup title. INSERT/EJECT UI, persistence and image
-import/export remain future phases.
+The first bounded slice was released by Issue #41 / PR #42: POWER → RUN /
+RESET autoboot, safe pre-page-out MON fallback, retained manual `MON O`, and a
+guest-side startup title.
+
+The second bounded slice was released by Issue #46 / PR #47: POWER-OFF DRIVE A
+EJECT / INSERT EJECTED DISK with exact-medium retention and Human-visible
+controls in desktop and compact layouts. Whole-disk export/import, factory
+media and durable persistence remain future phases.
 
 The immediate motivation is not persistence by itself. SHINO-80 needs a practical
 way to load and exchange software large enough to make the machine useful as a
@@ -69,8 +73,10 @@ Virtual Disk A currently provides:
 - controller reset preserves inserted media and write-protect state
 - SHINO-80 RESET and in-page POWER OFF/ON preserve the mounted medium
 - CP/M WBOOT preserves and rereads the mounted medium
+- POWER OFF allows EJECT and reinsertion of the exact retained medium
+- POWER ON blocks media replacement
 - browser reload/page close does not preserve media
-- host disk-image import/export is not yet exposed in the machine UI
+- whole-disk host import/export and factory-media restore are not yet exposed
 
 The current starter medium is the deterministic S80B v2 system disk containing
 the SHINO loader, SHINO CBIOS, licensed CP/M 2.2 and starter filesystem.
@@ -169,7 +175,7 @@ The ROM IPL may identify the machine and boot attempt. The richer system title
 should preferably come from software loaded from the disk, so another bootable
 disk may present a different environment in the future.
 
-## 5. INSERT / EJECT direction
+## 5. INSERT / EJECT released behavior and next host-media controls
 
 The Device Inspector is the preferred home for media operations.
 
@@ -193,11 +199,14 @@ OFF
 [ EXPORT IMAGE ]
 ```
 
-Initial safety direction:
+Released safety behavior:
 
-- POWER OFF: INSERT / EJECT / IMPORT / factory replacement allowed
-- POWER ON: media replacement initially disabled
-- running hot-swap is a separate future design problem
+- POWER OFF: current medium can be EJECTED and the exact ejected medium can be reinserted
+- POWER ON: media replacement is disabled and handler-guarded
+- running hot-swap is not implemented
+
+Future controls such as INSERT IMAGE, INSERT FACTORY DISK and EXPORT IMAGE remain
+separate bounded phases.
 
 This avoids silently changing media while CP/M may have assumptions about the
 currently logged disk.
@@ -299,24 +308,21 @@ Such host tooling must not become a shortcut in the Z80/CBIOS runtime path.
 
 ## 10. Candidate next implementation scope
 
-Released by Issue #41 / PR #42:
+Completed:
 
-- bootable-media detection and POWER → RUN / RESET automatic boot
-- ROM MON fallback before page-out
-- shared manual `MON O` retry path
-- guest-side startup title and matching boot regression
+- Issue #41 / PR #42: bootable-media detection, POWER → RUN / RESET automatic
+  boot, ROM MON fallback, shared `MON O`, guest-side startup title
+- Issue #46 / PR #47: POWER-OFF EJECT / REINSERT SAME MEDIA,
+  desktop/compact controls, exact-byte retention and regression coverage
 
-The next PLAN should decide whether one bounded phase can include all of the
-following, or whether it should be split:
+Current bounded candidates are tracked by
+`docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`:
 
-1. removable media UI for DRIVE A:
-2. browser-reload persistence
-3. explicit disk-image import/export
-4. factory-media restore
-5. imported-image corruption/version handling
-6. regression coverage for INSERT/EJECT, persistence and CP/M writes
-7. iPhone / Edge / standalone `file://` Human QA
+1. whole-disk EXPORT
+2. whole-disk IMPORT
+3. factory-media restore
+4. browser-reload persistence
+5. later B: / development-media expansion
 
-Assembler/compiler/editor selection, B: drive, individual host-file transfer
-and mechanical FDD timing are later work unless explicitly brought into a
-future PLAN.
+Assembler/compiler/editor selection and individual host-file transfer remain
+later work unless explicitly selected by the Human.

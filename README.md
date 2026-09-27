@@ -21,7 +21,7 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- reviewed released main: `01c5d4433f06f5c41254c2d0b4137606d8990be5`（PR #42）
+- reviewed released main: `47f2d6e1870c21c7ac55ec47620594b4adb02217`（PR #47）
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -41,6 +41,7 @@
 - Keyboard、ROM BIOS、interactive Monitor、Memory/Bus/Device inspector
 - Virtual Disk A、SHINO CBIOS、WBOOT、licensed CP/M 2.2
 - mounted valid S80B v2 mediaのPOWER → RUN / RESET autoboot、失敗時ROM MON fallback、manual `MON O`
+- POWER OFF時のDRIVE A `EJECT` / `INSERT EJECTED DISK`、exact medium保持、compact/desktop両UI対応
 - writable starter filesystem
   - `WELCOME.TXT`
   - `HELLO.COM`
@@ -53,7 +54,8 @@ Human iPhone/Edge QAでは、従来の手動boot経路で起動、DIR、TYPE、H
 S80INFO、Backspace/Delete、80×25 scrolling、SAVE、複製COM実行、ERA、
 mobile keyboard layoutを確認済み。PR #42のautomatic POWER → RUN / RESET
 autobootはCodex in-app previewでHuman確認済みだが、physical iPhone/Edgeでの
-autoboot再確認は未記録。
+autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallback →
+同一medium再挿入 → CP/M復帰はHuman interactive QAでPASS。
 
 ## 公開プレビュー
 
@@ -118,11 +120,11 @@ pnpm run test:browser
 
 次の実装はまだ固定しない。候補は以下。
 
-1. Virtual Diskのbrowser reload永続化と明示的image import/export
-2. original SHINO file-management utility、またはライセンス確認済みCP/M utility
-3. B: driveを追加する前のdevice/media contract
-4. storage安定後のライセンス確認済みBASIC
-5. 拡張slot、FDD、UART、printer、soundなどの周辺機器
+1. Removable Media Roadmap Phase R2: whole-disk EXPORT v0.1
+2. Phase R3: whole-disk IMPORT v0.1
+3. Phase R4/R5: factory media / browser reload persistence
+4. Software Division contractに基づくDisk Image Builder / Inspector / sample software
+5. B: drive、assembler/editor/BASIC、UART、printer、soundなどの拡張
 
 一度に一つの環境・一人のwriter・一つのpurpose branchだけを使う。CPU semanticsを変える場合は新しいaccuracy phaseと対応する検証証拠を必須とする。
 
