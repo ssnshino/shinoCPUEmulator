@@ -12,11 +12,11 @@ assert.equal(rom.labels.VRAM_TEST_LOOP,0x020B);
 assert.equal(rom.labels.VRAM_TEST_DONE,0x0213);
 assert.equal(rom.labels.VRAM_TEST_HOLD_LOOP,0x0215);
 assert.equal(rom.labels.VRAM_TEST_HOLD_DONE,0x0217);
-assert.equal(rom.labels.MONITOR_LOOP,0x0220);
+assert.equal(rom.labels.MONITOR_LOOP,0x0229);
 assert.equal(rom.meta.vramBytes,2048);
 assert.equal(rom.meta.testPageInstructions,771);
 assert.equal(rom.meta.clearPageInstructions,770);
-assert.equal(rom.meta.instructionsBeforeLoop,14096);
+assert.equal(rom.meta.instructionsBeforeLoop,14123);
 
 const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
 const bus=new Shino80Bus({traceLimit:256,memoryDevice:memory});

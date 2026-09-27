@@ -1,12 +1,17 @@
 # SHINO-80 FDD / DISK Design Notes v0.1
 
-Status: DESIGN NOTES / NOT YET IMPLEMENTATION SPEC
-Updated: 2026-09-26 JST
+Status: DESIGN NOTES / AUTOBOOT SLICE IMPLEMENTED ON ISSUE #41 BRANCH
+Updated: 2026-09-27 JST
 
 ## Purpose
 
-Record the agreed direction for SHINO-80 removable disk usability before a new
-implementation PLAN is created.
+Record the agreed direction for SHINO-80 removable disk usability and the
+boundary between the implemented autoboot slice and later media phases.
+
+The first bounded slice is now implemented on the Issue #41 purpose branch:
+POWER → RUN / RESET autoboot, safe pre-page-out MON fallback, retained manual
+`MON O`, and a guest-side startup title. INSERT/EJECT UI, persistence and image
+import/export remain future phases.
 
 The immediate motivation is not persistence by itself. SHINO-80 needs a practical
 way to load and exchange software large enough to make the machine useful as a
@@ -294,17 +299,23 @@ Such host tooling must not become a shortcut in the Z80/CBIOS runtime path.
 
 ## 10. Candidate next implementation scope
 
+Completed by Issue #41:
+
+- bootable-media detection and POWER → RUN / RESET automatic boot
+- ROM MON fallback before page-out
+- shared manual `MON O` retry path
+- guest-side startup title and matching boot regression
+
 The next PLAN should decide whether one bounded phase can include all of the
 following, or whether it should be split:
 
 1. removable media UI for DRIVE A:
-2. bootable-media detection and POWER ON automatic boot
-3. browser-reload persistence
-4. explicit disk-image import/export
-5. factory-media restore
-6. corruption/version validation
-7. regression coverage for RESET / POWER / WBOOT / CP/M writes
-8. iPhone / Edge / standalone `file://` Human QA
+2. browser-reload persistence
+3. explicit disk-image import/export
+4. factory-media restore
+5. imported-image corruption/version handling
+6. regression coverage for INSERT/EJECT, persistence and CP/M writes
+7. iPhone / Edge / standalone `file://` Human QA
 
 Assembler/compiler/editor selection, B: drive, individual host-file transfer
 and mechanical FDD timing are later work unless explicitly brought into a

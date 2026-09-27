@@ -19,11 +19,9 @@ function machine(){
   const cpu=new Z80Core(bus);cpu.reset();return {keyboard,disk,memory,bus,cpu};
 }
 function until(cpu,predicate,limit=800000){let count=0;while(!predicate()&&count++<limit)cpu.step();assert(count<limit,'warm boot timeout');return count;}
-function bootMonitor(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);assert.equal(m.cpu.state.pc,rom.labels.MONITOR_LOOP);}
-function command(m,text){for(const char of text+'\r')m.keyboard.enqueueByte(char.charCodeAt(0));}
 function screen(m,row=0,length=80){return String.fromCharCode(...Array.from({length},(_,index)=>m.bus.debugPeek(TEXT_VRAM_BASE+row*TEXT_COLS+index)));}
 function allScreen(m){return Array.from({length:25},(_,row)=>screen(m,row)).join('');}
-function coldBoot(m){bootMonitor(m);command(m,'O');until(m.cpu,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&allScreen(m).includes('A>'),1500000);assert.equal(m.memory.control,MEMORY_CONTROL_LOW_RAM);}
+function coldBoot(m){until(m.cpu,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&allScreen(m).includes('A>'),1500000);assert.equal(m.memory.control,MEMORY_CONTROL_LOW_RAM);}
 
 // Page zero enters CBIOS WBOOT. It must restore a destroyed system payload
 // through the public sector-2 READ path and execute that restored RAM image.

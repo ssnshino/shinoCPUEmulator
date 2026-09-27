@@ -252,12 +252,21 @@
     a.ldHLLabel('BOOT_TEXT');
     call('BIOS_API_PRINT_STRING');
 
+    // A valid mounted S80B medium boots without Monitor input. Every read and
+    // header check completes before the common routine pages ROM out; failure
+    // therefore returns here with firmware and keyboard input still usable.
+    call('DISK_BOOT_ATTEMPT');
+    a.ldHLLabel('MONITOR_ENTRY_TEXT');
+    call('BIOS_API_PRINT_STRING');
+
     // Stable Monitor entry, with line parser outside the IPL region.
     a.label('MONITOR_LOOP');
     jp('MONITOR_READ');
 
     a.label('BOOT_TEXT');
-    a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\nMON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.emit(...[...'SHINO-80 IPL\r\nVIDEO OK\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
+    a.label('MONITOR_ENTRY_TEXT');
+    a.emit(...[...'MON\r\n*'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_HELP_TEXT');
     a.emit(...[...'H HELP  C CLEAR  D xxxx [yyyy]  R REGS  U xxxx [yyyy]  B RAM BOOT  O DISK BOOT\r\n'].map(ch=>ch.charCodeAt(0)),0x00);
     a.label('MONITOR_UNKNOWN_TEXT');
@@ -602,24 +611,29 @@
     word(0x21,RAM_HANDOFF_DEMO_ENTRY);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
     a.label('RAM_HANDOFF_DEMO_IMAGE');a.emit(...demo);
 
-    // Original system-disk cold path. Sector 1 validates a fixed v2 layout,
+    // Shared system-disk cold path. Sector 1 validates a fixed v2 layout,
     // sector 2 supplies the RAM payload, and sectors 3-8 supply CBIOS at FA00h.
     // Every byte crosses the I/O Bus; only after all reads succeed is page zero
-    // shadowed and firmware paged out.
+    // shadowed and firmware paged out. Automatic IPL failure returns quietly;
+    // the explicit Monitor command retains its diagnostic.
     a.label('MONITOR_DISK_BOOT');a.emit(0x79,0xFE,1);a.absolute(0xC2,'MONITOR_ERROR');
-    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+    call('DISK_BOOT_ATTEMPT');
+    a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+
+    a.label('DISK_BOOT_ATTEMPT');
+    word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,98,0,201,2,177]){
-      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_FAIL');a.emit(0x23);
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,124,0,201,2,203]){
+      a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
-      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_FAIL');
+      word(0x21,address);a.emit(0x3E,sector);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     }
     a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
     a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
-    a.label('DISK_BOOT_FAIL');a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
+    a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
     a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
 
     a.label('DISK_BOOT_READ_SECTOR');
@@ -651,8 +665,8 @@
         ramHandoffDemoBytes:demo.length,
         testPageInstructions,
         clearPageInstructions,
-        bootTextBytes:30,
-        instructionsBeforeLoop:14096
+        bootTextBytes:24,
+        instructionsBeforeLoop:14123
       })
     };
   }

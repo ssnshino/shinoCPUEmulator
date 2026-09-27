@@ -1,7 +1,9 @@
 # Current implementation plan
 
-There is no active implementation plan at this closeout.
+Active plan:
 
-Choose one bounded next milestone from the root `README.md`, then create one
-PLAN here before implementation. Completed plans are preserved under
-`plan/history/` and must not be treated as unfinished current work.
+- `SHINO80_DISK_AUTOBOOT_PLAN.md` — Issue #41 disk autoboot
+
+Do not start a second implementation milestone while this plan is active.
+Completed plans are preserved under `plan/history/` and must not be treated as
+unfinished current work.

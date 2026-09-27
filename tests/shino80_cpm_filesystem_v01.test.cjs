@@ -60,7 +60,7 @@ function until(m,predicate,limit=4000000){let count=0;while(!predicate()&&count+
 function input(m,text){for(const char of text)m.keyboard.enqueueByte(char.charCodeAt(0));}
 function screen(m){return String.fromCharCode(...m.memory.ram.slice(TEXT_VRAM_BASE,TEXT_VRAM_BASE+2000)).replaceAll('\0',' ');}
 function command(m,text){input(m,text+'\r');m.cpu.step();until(m,()=>m.keyboard.depth===0&&m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT);}
-function boot(m){m.cpu.runInstructions(rom.meta.instructionsBeforeLoop);input(m,'O\r');until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));}
+function boot(m){until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));}
 
 // The actual CCP/BDOS reads and executes every starter file through CBIOS.
 {

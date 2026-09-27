@@ -39,9 +39,19 @@ console, sector READ/WRITE/error paths and an original sector-1 RAM boot proof.
 
 - v0.0.9_static.test.cjs
 - v0.0.9_artifact.test.cjs
-- browser_smoke_v0.0.9.py
+- browser_smoke_v0.0.9.cjs
 
-Run:
+Run the deterministic suite:
 ```bash
-npm test
+pnpm test
+```
+
+Run the real-Chromium mobile and desktop smoke with the Codex bundled Node
+dependencies:
+
+```bash
+export PATH="/Users/shino/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:/Users/shino/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH"
+export NODE_PATH="/Users/shino/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules"
+export CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+pnpm run test:browser
 ```

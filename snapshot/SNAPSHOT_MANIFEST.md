@@ -1,6 +1,6 @@
 # SNAPSHOT MANIFEST
 
-Updated: 2026-09-26 JST
+Updated: 2026-09-27 JST
 
 ## Required restart set
 
@@ -15,11 +15,12 @@ Read only this set for an ordinary restart:
 7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
 8. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
 9. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
-10. `working-logs/head/SHINO80_RELEASE_CLOSEOUT_20260926.md`
+10. `plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md`
+11. `working-logs/head/SHINO80_DISK_AUTOBOOT_WORKLOG.md`
 
 ## Current design direction
 
-There is no active implementation PLAN at this handoff.
+Issue #41 disk autoboot is the active implementation.
 
 The next Human-selected design focus is FDD/DISK usability for removable
 software media and a future self-hosted development workflow. The current
@@ -27,8 +28,8 @@ design note is:
 
 - `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
 
-Do not treat that note as an implementation specification. Create a new PLAN in
-`plan/head/` before runtime changes.
+The bounded implementation contract is the active PLAN. Persistence,
+INSERT/EJECT, import/export and B: remain later work.
 
 ## Generated artifacts
 

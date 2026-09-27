@@ -1,17 +1,18 @@
 # CURRENT SNAPSHOT — SHINO-80
 
-Updated: 2026-09-26 JST
+Updated: 2026-09-27 JST
 
 ## Current completed state
 
 - repository: `ssnshino/shinoCPUEmulator`
 - reviewed branch: `main`
-- current reviewed main at design-handoff start:
-  `22a197e301fe57fa0947a19e3e061fdc7004231d` / PR #39
-- last implementation-bearing main:
-  `e75d8c0506a7b1bb711b54c352c8b04580cdddaf` / PR #38
-- open implementation work: none at snapshot time
-- active implementation PLAN: none
+- current reviewed main at implementation start:
+  `12350d28b1dfddb344f2a6d0224debaa7b571d04` / PR #40
+- active branch: `feature/shino80-disk-autoboot-20260927`
+- active Issue: #41
+- open PR: #42
+- PR creation head: `f12459d8828426751847050b7eda41928fcfd570`
+- active implementation PLAN: `plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md`
 - CPU instruction-level milestone: complete
 - external full-state oracle: `1,604,000 / 1,604,000 PASS`, Failure 0
 - integrated machine: BIOS/MON v0.3, pageable 64 KiB RAM, DM-80, Keyboard,
@@ -19,16 +20,17 @@ Updated: 2026-09-26 JST
   filesystem
 - Human mobile QA: DIR/TYPE/HELLO/S80INFO/Backspace/scroll/SAVE/copied COM/ERA
   PASS
+- Human Codex in-app preview QA: POWER → RUN autoboot to CP/M PASS
+- physical iPhone/Edge autoboot recheck: pending
 
 The implementation artifact retains the filename
 `deploy/one_page_shino80_v0.0.9_z80_base_complete.html` for compatibility; the
 machine inside is the full integrated baseline above.
 
-## Current design handoff
+## Current implementation
 
-Human selected FDD/DISK usability as the next design focus because SHINO-80
-needs practical removable software media before larger development tools such
-as a text editor, assembler and compiler become useful.
+The first bounded FDD/DISK usability slice now implements POWER → RUN / RESET
+autoboot for a mounted valid S80B v2 A: medium.
 
 Current design note:
 
@@ -38,14 +40,15 @@ Key direction:
 
 - drive/controller and removable disk medium are separate concepts
 - DRIVE A: should expose INSERT/EJECT-style media operations
-- bootable media should automatically boot on POWER ON
+- bootable media automatically boots after POWER → RUN and on RESET
 - no/invalid/non-bootable media should fall back to ROM MON
 - existing `MON O` manual disk boot remains
 - browser persistence and image import/export belong outside the guest-machine
   hardware boundary
 - future B: may separate tools/system media from user/work media
-- next implementation must start with a fresh PLAN; no implementation has been
-  authorized by this documentation handoff
+- guest title is printed by the sector-2 payload through CBIOS
+- pre-page-out read/validation failures return to ROM MON
+- INSERT/EJECT, persistence and import/export remain future work
 
 ## Published copy
 
@@ -83,11 +86,7 @@ state wins when it is newer than this record.
 
 ## Next
 
-Read `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`, inspect the live
-Virtual Disk A / CBIOS / WBOOT / system-disk / one-page boundaries, then create
-one fresh PLAN in `plan/head/` before implementation.
-
-The first PLAN should explicitly decide the bounded scope for removable media,
-POWER ON autoboot, persistence and disk-image import/export. B: drive,
-assembler/compiler/editor selection and individual host-file transfer remain
-later work unless Human explicitly expands the phase.
+PR #42 is open with verification complete and review follow-up applied. Human
+physical-device QA and merge remain pending. Do not merge automatically. After
+Human merge, promote the merge SHA to the released baseline, archive the
+completed PLAN/worklog during closeout and select the next media phase.

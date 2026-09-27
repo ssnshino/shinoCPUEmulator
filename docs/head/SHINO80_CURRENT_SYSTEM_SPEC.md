@@ -1,8 +1,9 @@
 # SHINO-80 Current Integrated System Specification
 
-Status: CURRENT / RELEASED IMPLEMENTATION BASELINE
-Updated: 2026-09-26 JST
-Implementation baseline: `e75d8c0506a7b1bb711b54c352c8b04580cdddaf` / PR #38
+Status: RELEASED BASELINE + PR #42 CANDIDATE DELTA
+Updated: 2026-09-27 JST
+Released implementation baseline: `e75d8c0506a7b1bb711b54c352c8b04580cdddaf` / PR #38
+Candidate delta: PR #42 / `feature/shino80-disk-autoboot-20260927`
 
 ## Purpose
 
@@ -74,6 +75,11 @@ multi-byte device-fed IM0 streams remain outside this milestone.
 - supported resident CCP commands: DIR, TYPE, ERA, REN, SAVE, USER
 - page-local media survives RESET, POWER and WBOOT
 - browser reload persistence and host file import/export are not implemented
+- PR #42 candidate: POWER followed by RUN, and machine RESET, automatically boot a mounted valid
+  S80B v2 A: medium without keyboard input
+- PR #42 candidate: missing, unreadable or invalid boot media falls back to the ROM Monitor before
+  page-out; `MON O` remains the explicit retry path
+- PR #42 candidate: the disk payload prints `SHINO-80 CP/M 2.2` through CBIOS before CCP enters A>
 
 The CP/M CCP/BDOS redistribution permission, exact upstream origin, patches and
 hashes are retained under `third_party/cpm22/`. SHINO firmware, filesystem
@@ -99,6 +105,12 @@ Real iPhone/Edge review confirmed:
 - 80×25 scrolling
 - SAVE 1 COPY.COM, copied COM execution and ERA COPY.COM
 - cursor and BEEP behavior
+
+Issue #41 automatic POWER → RUN / RESET boot has automated, real-Chrome and
+Human Codex-preview coverage. Physical iPhone/Edge recheck remains pending.
+
+After Human merges PR #42, closeout must promote its merge SHA to the released
+implementation baseline and remove the candidate qualifiers above.
 
 ## Change rule
 
