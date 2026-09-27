@@ -6,13 +6,12 @@ Updated: 2026-09-27 JST
 
 - repository: `ssnshino/shinoCPUEmulator`
 - reviewed branch: `main`
-- current reviewed main at implementation start:
-  `12350d28b1dfddb344f2a6d0224debaa7b571d04` / PR #40
-- active branch: `feature/shino80-disk-autoboot-20260927`
-- active Issue: #41
-- open PR: #42
-- PR creation head: `f12459d8828426751847050b7eda41928fcfd570`
-- active implementation PLAN: `plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md`
+- current released main:
+  `01c5d4433f06f5c41254c2d0b4137606d8990be5` / PR #42
+- completed Issue: #41
+- merged implementation PR: #42
+- active implementation PLAN: none
+- open implementation PR: none at closeout start
 - CPU instruction-level milestone: complete
 - external full-state oracle: `1,604,000 / 1,604,000 PASS`, Failure 0
 - integrated machine: BIOS/MON v0.3, pageable 64 KiB RAM, DM-80, Keyboard,
@@ -27,10 +26,10 @@ The implementation artifact retains the filename
 `deploy/one_page_shino80_v0.0.9_z80_base_complete.html` for compatibility; the
 machine inside is the full integrated baseline above.
 
-## Current implementation
+## Current released implementation
 
-The first bounded FDD/DISK usability slice now implements POWER → RUN / RESET
-autoboot for a mounted valid S80B v2 A: medium.
+The first bounded FDD/DISK usability slice is released on main. POWER → RUN /
+RESET autoboots a mounted valid S80B v2 A: medium.
 
 Current design note:
 
@@ -86,7 +85,9 @@ state wins when it is newer than this record.
 
 ## Next
 
-PR #42 is open with verification complete and review follow-up applied. Human
-physical-device QA and merge remain pending. Do not merge automatically. After
-Human merge, promote the merge SHA to the released baseline, archive the
-completed PLAN/worklog during closeout and select the next media phase.
+The next implementation is not selected. Start from
+`docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md` when the Human chooses the
+next bounded media phase. Candidate topics remain removable-media UI, explicit
+whole-disk image import/export, factory-media restore, browser reload
+persistence and corruption/version handling. Do not activate a PLAN merely
+because a candidate is listed.

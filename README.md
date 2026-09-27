@@ -21,7 +21,7 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- reviewed main at current work start: `12350d28b1dfddb344f2a6d0224debaa7b571d04`（PR #40）
+- reviewed released main: `01c5d4433f06f5c41254c2d0b4137606d8990be5`（PR #42）
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -49,7 +49,11 @@
 - non-destructive cursor、Bus-visible one-bit BEEP
 - standalone Technical Manual、Z80 machine-code reference、system wiring diagram
 
-Human iPhone/Edge QAでは、起動、DIR、TYPE、HELLO、S80INFO、Backspace/Delete、80×25 scrolling、SAVE、複製COM実行、ERA、mobile keyboard layoutを確認済み。
+Human iPhone/Edge QAでは、従来の手動boot経路で起動、DIR、TYPE、HELLO、
+S80INFO、Backspace/Delete、80×25 scrolling、SAVE、複製COM実行、ERA、
+mobile keyboard layoutを確認済み。PR #42のautomatic POWER → RUN / RESET
+autobootはCodex in-app previewでHuman確認済みだが、physical iPhone/Edgeでの
+autoboot再確認は未記録。
 
 ## 公開プレビュー
 
@@ -71,7 +75,9 @@ Human iPhone/Edge QAでは、起動、DIR、TYPE、HELLO、S80INFO、Backspace/D
 - project concept: `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 
-`plan/head/`には実行中のPLANだけを置く。現在はIssue #41 disk autobootのPLANがactive。完了後は対応するPLAN/SPEC/worklogをhistoryへ閉じる。
+`plan/head/`には実行中のPLANだけを置く。現在activeなimplementation PLANは
+ない。次の実装を選択した時だけPLANを追加し、完了後は対応するPLAN/worklogを
+historyへ閉じる。
 
 ## 開発と検証
 

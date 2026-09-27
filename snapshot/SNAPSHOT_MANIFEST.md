@@ -15,12 +15,11 @@ Read only this set for an ordinary restart:
 7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
 8. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
 9. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
-10. `plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md`
-11. `working-logs/head/SHINO80_DISK_AUTOBOOT_WORKLOG.md`
 
 ## Current design direction
 
-Issue #41 disk autoboot is the active implementation.
+Issue #41 / PR #42 disk autoboot is part of the released baseline. There is no
+active implementation PLAN.
 
 The next Human-selected design focus is FDD/DISK usability for removable
 software media and a future self-hosted development workflow. The current
@@ -28,8 +27,9 @@ design note is:
 
 - `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
 
-The bounded implementation contract is the active PLAN. Persistence,
-INSERT/EJECT, import/export and B: remain later work.
+The next implementation has not been selected. Persistence, INSERT/EJECT,
+import/export and B: remain candidate later work and must not be treated as an
+active contract until the Human selects a bounded phase and a new PLAN exists.
 
 ## Generated artifacts
 

@@ -2,8 +2,8 @@
 
 Active plan:
 
-- `SHINO80_DISK_AUTOBOOT_PLAN.md` — Issue #41 disk autoboot
+- none
 
-Do not start a second implementation milestone while this plan is active.
+Create a PLAN here only after the next implementation milestone is selected.
 Completed plans are preserved under `plan/history/` and must not be treated as
 unfinished current work.
