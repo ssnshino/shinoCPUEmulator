@@ -5,26 +5,20 @@ SHINO-80を再開してください。
 
 README.mdから正規restart順を読み、GitHubをfetchしてlive stateを確認してください。
 
-current reviewed main at work start:
-12350d28b1dfddb344f2a6d0224debaa7b571d04
+current released main:
+01c5d4433f06f5c41254c2d0b4137606d8990be5
 
-Issue:
+completed Issue:
 https://github.com/ssnshino/shinoCPUEmulator/issues/41
 
-purpose branch:
-feature/shino80-disk-autoboot-20260927
-
-open PR:
+merged implementation PR:
 https://github.com/ssnshino/shinoCPUEmulator/pull/42
 
-PR creation head:
-f12459d8828426751847050b7eda41928fcfd570
-
 active plan:
-plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md
+none
 
 active worklog:
-working-logs/head/SHINO80_DISK_AUTOBOOT_WORKLOG.md
+none
 
 実装内容:
 - POWER → RUN / RESETでvalid S80B v2 A:をautomatic cold boot
@@ -33,9 +27,11 @@ working-logs/head/SHINO80_DISK_AUTOBOOT_WORKLOG.md
 - sector-2 guest loaderがCBIOS経由でSHINO-80 CP/M 2.2を表示
 - WBOOT/CPU/CBIOS ABI/S80B versionは変更なし
 
-verificationはcomplete。HumanのCodex内previewでPOWER → RUN autoboot to
-CP/MもPASS。PR review follow-upも反映済みです。
+この実装はPR #42としてmainへmerge済み。HumanのCodex内previewでPOWER →
+RUN autoboot to CP/MもPASS。physical iPhone/Edge autoboot recheckは未記録。
 
-再開時はbranch/HEAD/dirty/PR #42をlive確認してください。残件は物理
-iPhone/Edge recheck、Human review/merge、merge後closeoutです。
-Humanの明示指示なしにmerge/publishしないでください。
+再開時はbranch/HEAD/dirty/open PRをlive確認してください。activeな実装は
+ありません。次の実装候補は
+docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.mdから選び、Humanが選択するまで
+PLANをactive化しないでください。Humanの明示指示なしにmerge/publishしない
+でください。

@@ -1,6 +1,6 @@
 # SHINO-80 FDD / DISK Design Notes v0.1
 
-Status: DESIGN NOTES / AUTOBOOT SLICE IMPLEMENTED ON ISSUE #41 BRANCH
+Status: DESIGN NOTES / AUTOBOOT SLICE RELEASED ON MAIN BY PR #42
 Updated: 2026-09-27 JST
 
 ## Purpose
@@ -8,7 +8,7 @@ Updated: 2026-09-27 JST
 Record the agreed direction for SHINO-80 removable disk usability and the
 boundary between the implemented autoboot slice and later media phases.
 
-The first bounded slice is now implemented on the Issue #41 purpose branch:
+The first bounded slice was released on main by Issue #41 / PR #42:
 POWER → RUN / RESET autoboot, safe pre-page-out MON fallback, retained manual
 `MON O`, and a guest-side startup title. INSERT/EJECT UI, persistence and image
 import/export remain future phases.
@@ -299,7 +299,7 @@ Such host tooling must not become a shortcut in the Z80/CBIOS runtime path.
 
 ## 10. Candidate next implementation scope
 
-Completed by Issue #41:
+Released by Issue #41 / PR #42:
 
 - bootable-media detection and POWER → RUN / RESET automatic boot
 - ROM MON fallback before page-out

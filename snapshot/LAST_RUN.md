@@ -1,21 +1,19 @@
-# LAST RUN — 2026-09-27 DISK AUTOBOOT
+# LAST RUN — 2026-09-27 DISK AUTOBOOT POST-MERGE CLOSEOUT
 
 ## Goal
 
-Implement Issue #41 as the first bounded FDD/DISK usability slice: automatic
-boot of the mounted factory S80B v2 medium after POWER → RUN and on RESET,
-without removing ROM Monitor recovery or manual `MON O`.
+Promote the merged Issue #41 / PR #42 disk-autoboot result to the released
+baseline and close its completed PLAN/worklog out of the ordinary restart set.
 
 ## Live baseline
 
-- reviewed main: `12350d28b1dfddb344f2a6d0224debaa7b571d04`
-- purpose branch: `feature/shino80-disk-autoboot-20260927`
-- open PR: #42
-- PR creation head: `f12459d8828426751847050b7eda41928fcfd570`
-- active plan: `plan/head/SHINO80_DISK_AUTOBOOT_PLAN.md`
-- active worklog: `working-logs/head/SHINO80_DISK_AUTOBOOT_WORKLOG.md`
+- released main: `01c5d4433f06f5c41254c2d0b4137606d8990be5`
+- merged implementation PR: #42
+- completed Issue: #41
+- active implementation PLAN: none
+- open implementation PR: none at closeout start
 
-## Implemented
+## Released implementation
 
 - shared ROM boot-attempt core used by IPL and `MON O`
 - quiet pre-page-out MON fallback for no/invalid/unreadable media
@@ -35,10 +33,20 @@ Manual checks and real Chrome mobile/desktop smoke pass. Human also confirmed
 POWER → RUN autoboot to CP/M in the Codex in-app preview. The browser test uses
 the bundled Node Playwright path documented in README.
 
-PR #42 review accepted the runtime design and requested restart/spec alignment
-plus direct unsupported-version/layout fixtures. Those follow-ups are applied;
-physical iPhone/Edge recheck and Human merge remain pending.
+PR #42 review accepted the runtime design and its requested restart/spec
+alignment plus direct unsupported-version/layout fixtures were merged. Physical
+iPhone/Edge autoboot recheck remains not recorded; it is not inferred from the
+earlier mobile QA.
+
+## Closeout
+
+- promoted PR #42 merge SHA to the released baseline in current docs
+- archived the completed Disk Autoboot PLAN and WORKLOG under dated history
+- removed completed implementation records from the current restart set
+- left the next implementation unselected
+- retained the FDD/DISK design note as the entry point for future media work
 
 ## Authority
 
-Do not merge or publish without explicit Human instruction.
+Human review still controls merge and publication. This closeout changes no
+runtime source or generated deploy artifact.
