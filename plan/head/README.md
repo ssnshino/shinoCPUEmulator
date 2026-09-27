@@ -2,8 +2,8 @@
 
 Active plan:
 
-- none
+- `SHINO80_DRIVE_A_MEDIA_LIFECYCLE_V01_PLAN.md` — DRIVE A EJECT / REINSERT SAME MEDIA
 
-Create a PLAN here only after the next implementation milestone is selected.
+Do not start a second implementation milestone while this plan is active.
 Completed plans are preserved under `plan/history/` and must not be treated as
 unfinished current work.
