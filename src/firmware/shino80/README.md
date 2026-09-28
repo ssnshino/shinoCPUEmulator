@@ -32,7 +32,10 @@ overlay over the existing ROM/CBIOS cursor pointer; it never changes VRAM.
 CBIOS v0.2 WBOOT at FA03h reloads A: track 0 sector 2 to 8000h through its
 ordinary READ path and jumps to the restored payload. Failure is reported by
 the loaded CBIOS itself and HALTs. The restored payload reads the 44 CCP/BDOS
-system sectors and returns to the CP/M command processor.
+system sectors and returns to the CP/M command processor. PHASE 1 adds DPH_A
+and DPH_B: both share the same DPB and FD00h DIRBUF, while CSV/ALV are per-drive.
+WBOOT preserves the current CP/M drive so B: returns to B>; ROM autoboot and
+MON O explicitly initialize the current drive to A:.
 
 The current BIOS/MON executable remains in fixed ROM. Its compressed
 disassembler tables live in Extension bank 0 at 2000h. The machine provides

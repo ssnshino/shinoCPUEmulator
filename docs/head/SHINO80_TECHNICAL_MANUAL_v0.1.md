@@ -1,16 +1,19 @@
 # SHINO-80 Technical Manual v0.1
 
-Status: CURRENT / RELEASED
-Updated: 2026-09-27 JST
-Implementation baseline: `47f2d6e1870c21c7ac55ec47620594b4adb02217` / PR #47
+Status: CURRENT INTEGRATION REFERENCE
+Updated: 2026-09-28 JST
+Reviewed implementation: Issue #54 / PR #55
+Code reference commit: `3d492559c4765186e232cabefafa8c43a9ff814d`
 
 ## Deliverable and authority
 
 `deploy/shino80_technical_manual_v0.1.html` is the generated standalone manual.
-It works offline without font, CDN or runtime network dependencies. It is also
-published as an unlisted/noindex page by the Shinomiya Daihanten content repository.
+It works offline without font, CDN or runtime network dependencies.
 
-Authoring sources: `src/manual/` and `scripts/build-technical-manual.cjs`.
+Authoring sources:
+
+- `src/manual/`
+- `scripts/build-technical-manual.cjs`
 
 Build and verification:
 
@@ -26,33 +29,39 @@ Do not hand-edit the generated HTML.
 - 1,780 Z80 encoding reference with examples and accuracy boundaries
 - system wiring, memory/I/O maps, ROM BIOS/MON and pageable firmware
 - DM-80 / native CG-ROM
-- Virtual Disk A ports 30h–36h and POWER-OFF EJECT / REINSERT SAME MEDIA
-- desktop right Inspector and compact DEVICES inline Inspector media controls
-- S80B v2 canonical boot layout, SHINO CBIOS/WBOOT, CP/M 2.2 and writable A:
-- CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled COM programs
+- one Virtual Disk controller on 30h–36h with A:/B: media slots
+- DRIVE 32h selector: 0=A:, 1=B:
+- A: BOOT / SYSTEM / TOOLS with S80B v2 autoboot
+- B: USER / WORK / INTERCHANGE blank CLASSIC medium
+- independent POWER-OFF A/B EJECT / REINSERT SAME MEDIA
+- shared desktop/compact disk inspector/action path
+- DPH_A / DPH_B, shared DPB / FD00h DIRBUF, independent CSV / ALV
+- CBIOS 657 bytes inside the existing 768-byte S80B v2 reservation
+- WBOOT B: preservation versus ROM/UI RESET A: initialization
+- CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled A: programs
 - source hashes and external references
 
 ## Accuracy and implementation boundaries
 
 - CPU external full-state baseline: `1,604,000 / 1,604,000 PASS`
 - instruction-level, not electrical/pin-cycle-perfect
-- Virtual Disk A is PIO, not a mechanical FDD/FDC
-- POWER-OFF EJECT / REINSERT is page-local host media management
-- guest eject, browser-reload persistence, whole-disk import/export,
-  factory-media restore, B:, UART and printer remain NOT IMPLEMENTED / future
+- block controller is PIO, not a mechanical FDD/FDC
+- B: is implemented but is not a boot source in PHASE 1
+- browser-reload persistence, whole-disk IMPORT/EXPORT and factory-media restore are not implemented
+- larger media profiles are not implemented
+- UART and printer remain future work
 - reserved BIOS vectors are not implemented drivers or interrupt handlers
 
-## Software Division contract
+## Storage roadmap relationship
 
-Google Drive `40_SHINO80_SOFTWARE_LAB/02_specs` contains draft
-cross-department contracts for the synchronization matrix, Programmer’s
-Reference and S80B v2 Boot Disk Image Format.
+PHASE 1 is the reviewed dual-drive implementation.
+PHASE 2 is Whole Disk IMPORT + EXPORT as one bounded feature.
 
-The standalone Technical Manual is the product-facing online/offline reference.
-The Software Division documents are the deeper development contract. Both must
-describe the same implemented / reserved / not-implemented boundary.
+See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
 
 ## Publication
 
 Publication in `ssnshino/shinomiya-daihanten-content` is a separate,
 Human-authorized step and records the exact source commit and artifact SHA-256.
+Updating this repository's generated manual does not itself publish the
+Daihanten unlisted reference page.

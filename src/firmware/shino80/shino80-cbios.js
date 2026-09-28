@@ -8,6 +8,7 @@
   const CBIOS_ORG=0xFA00;
   const CBIOS_ENTRY_SIZE=3;
   const CBIOS_DEFAULT_DMA=0x0080;
+  const CBIOS_DIRBUF=0xFD00;
   const CBIOS_SYSTEM_TRACK=0;
   const CBIOS_SYSTEM_SECTOR=2;
   const CBIOS_SYSTEM_ENTRY=0x8000;
@@ -68,6 +69,7 @@
     const jpZ=name=>a.absolute(0xCA,name);
     const jpNZ=name=>a.absolute(0xC2,name);
     const jpC=name=>a.absolute(0xDA,name);
+    const jpNC=name=>a.absolute(0xD2,name);
     const ldAFrom=name=>a.absolute(0x3A,name);
     const ldATo=name=>a.absolute(0x32,name);
     const ldHLFrom=name=>a.absolute(0x2A,name);
@@ -146,8 +148,9 @@
     a.label('CBIOS_HOME');a.emit(0x01,0x00,0x00);jp('CBIOS_SETTRK');
 
     a.label('CBIOS_SELDSK');
-    a.emit(0x79,0xB7);jpNZ('CBIOS_SELDSK_INVALID');ldATo('CBIOS_SELECTED_DRIVE');
-    a.absolute(0x21,'CBIOS_DPH');a.emit(0xC9);
+    a.emit(0x79,0xFE,0x02);jpNC('CBIOS_SELDSK_INVALID');ldATo('CBIOS_SELECTED_DRIVE');
+    a.emit(0xB7);jpNZ('CBIOS_SELDSK_B');a.absolute(0x21,'CBIOS_DPH_A');a.emit(0xC9);
+    a.label('CBIOS_SELDSK_B');a.absolute(0x21,'CBIOS_DPH_B');a.emit(0xC9);
     a.label('CBIOS_SELDSK_INVALID');a.word(0x21,0);a.emit(0xC9);
 
     a.label('CBIOS_SETTRK');ldBCTo('CBIOS_SELECTED_TRACK');a.emit(0xC9);
@@ -182,9 +185,12 @@
     a.dataWord(DPB.spt);a.emit(DPB.bsh,DPB.blm,DPB.exm);a.dataWord(DPB.dsm);a.dataWord(DPB.drm);
     a.emit(DPB.al0,DPB.al1);a.dataWord(DPB.cks);a.dataWord(DPB.off);
 
-    a.label('CBIOS_DPH');
+    a.label('CBIOS_DPH');a.label('CBIOS_DPH_A');
     a.dataWord(0);a.dataWord(0);a.dataWord(0);a.dataWord(0);
-    a.refWord('CBIOS_DIRBUF');a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV');a.refWord('CBIOS_ALV');
+    a.dataWord(CBIOS_DIRBUF);a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV_A');a.refWord('CBIOS_ALV_A');
+    a.label('CBIOS_DPH_B');
+    a.dataWord(0);a.dataWord(0);a.dataWord(0);a.dataWord(0);
+    a.dataWord(CBIOS_DIRBUF);a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV_B');a.refWord('CBIOS_ALV_B');
 
     a.label('CBIOS_SELECTED_DRIVE');a.emit(0);
     a.label('CBIOS_SELECTED_TRACK');a.emit(0);a.label('CBIOS_SELECTED_TRACK_HI');a.emit(0);
@@ -192,9 +198,10 @@
     a.label('CBIOS_DMA');a.dataWord(CBIOS_DEFAULT_DMA);
     a.label('CBIOS_CURSOR');a.dataWord(TEXT_VRAM_BASE);
     a.label('CBIOS_COLUMN');a.emit(0);
-    a.label('CBIOS_DIRBUF');a.emit(...new Array(128).fill(0));
-    a.label('CBIOS_CSV');a.emit(...new Array(DPB.cks).fill(0));
-    a.label('CBIOS_ALV');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
+    a.label('CBIOS_CSV');a.label('CBIOS_CSV_A');a.emit(...new Array(DPB.cks).fill(0));
+    a.label('CBIOS_CSV_B');a.emit(...new Array(DPB.cks).fill(0));
+    a.label('CBIOS_ALV');a.label('CBIOS_ALV_A');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
+    a.label('CBIOS_ALV_B');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
 
     const assembled=a.resolve();
     return {
@@ -202,12 +209,12 @@
       origin:CBIOS_ORG,
       end:assembled.end,
       labels:assembled.labels,
-      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
+      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dirbuf:CBIOS_DIRBUF,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
     };
   }
 
   return {
-    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,
+    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,CBIOS_DIRBUF,
     CBIOS_SYSTEM_TRACK,CBIOS_SYSTEM_SECTOR,CBIOS_SYSTEM_ENTRY,DPB,
     TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
     KEY_DATA_PORT,KEY_STATUS_PORT,

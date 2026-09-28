@@ -52,6 +52,7 @@ for(const file of systemDisk.files){
 
 function machine(){
   const keyboard=new Shino80Keyboard({capacity:256}),disk=new Shino80BlockDevice({image:systemDisk.image});
+  disk.mountImage(createBlankBlockImage(),{drive:1});
   const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
   const bus=new Shino80Bus({traceLimit:300000,memoryDevice:memory,ioDevices:[keyboard,disk]});
   const cpu=new Z80Core(bus);cpu.reset();return {keyboard,disk,memory,bus,cpu};
@@ -77,6 +78,35 @@ function boot(m){until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&scr
   Object.assign(m.cpu.state,{pc:0,halted:false});until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT&&screen(m).includes('A>'));
   command(m,'DIR');assert.match(screen(m),/COPY\s+COM/);command(m,'COPY');assert.match(screen(m),/SHINO-80 \/ CP\/M 2\.2/);
   command(m,'ERA COPY.COM');assert(!filesystem.readDirectory(m.disk.exportImage()).some(entry=>entry.name==='COPY.COM'));
+}
+
+// The real CCP/BDOS/CBIOS path treats B: as an independent writable work disk,
+// preserves it across WBOOT/UI RESET and never contaminates A:.
+{
+  const m=machine();boot(m);
+  command(m,'B:');assert.equal(m.memory.ram[4]&0x0F,1);assert.match(screen(m),/B>/);
+  command(m,'DIR');assert.match(screen(m),/NO FILE/);
+  command(m,'SAVE 1 WORK.COM');command(m,'DIR');assert.match(screen(m),/WORK\s+COM/);
+  assert(filesystem.readDirectory(m.disk.exportImage({drive:1})).some(entry=>entry.name==='WORK.COM'));
+  assert(!filesystem.readDirectory(m.disk.exportImage({drive:0})).some(entry=>entry.name==='WORK.COM'));
+
+  command(m,'A:');assert.equal(m.memory.ram[4]&0x0F,0);command(m,'DIR');assert.match(screen(m),/WELCOME\s+TXT/);
+  assert(!filesystem.readDirectory(m.disk.exportImage({drive:0})).some(entry=>entry.name==='WORK.COM'));
+  command(m,'B:');assert.equal(m.memory.ram[4]&0x0F,1);command(m,'DIR');assert.match(screen(m),/WORK\s+COM/);
+
+  Object.assign(m.cpu.state,{pc:0,halted:false});
+  until(m,()=>m.cpu.state.pc===cbios.labels.CBIOS_CONIN_WAIT);
+  assert.equal(m.memory.ram[4]&0x0F,1);assert.match(screen(m),/B>/);
+  assert(filesystem.readDirectory(m.disk.exportImage({drive:1})).some(entry=>entry.name==='WORK.COM'));
+
+  const bBeforeReset=m.disk.exportImage({drive:1});
+  m.bus.resetIoDevices();m.cpu.reset();boot(m);
+  assert.equal(m.memory.ram[4]&0x0F,0);assert.match(screen(m),/A>/);assert.deepEqual(m.disk.exportImage({drive:1}),bBeforeReset);
+  command(m,'B:');command(m,'DIR');assert.match(screen(m),/WORK\s+COM/);
+
+  const ejected=m.disk.eject({drive:1});assert.equal(m.disk.mountedAt(0),true);assert.equal(m.disk.mountedAt(1),false);
+  m.disk.mountImage(ejected,{drive:1});assert.deepEqual(m.disk.exportImage({drive:1}),bBeforeReset);
+  assert(filesystem.readDirectory(m.disk.exportImage({drive:1})).some(entry=>entry.name==='WORK.COM'));
 }
 
 console.log('SHINO-80 CP/M FILESYSTEM v0.1: 8.3 DIRECTORY + EXTENTS + STARTER FILES + SAVE/WBOOT PASS');

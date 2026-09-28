@@ -1,6 +1,6 @@
 # SNAPSHOT MANIFEST
 
-Updated: 2026-09-27 JST
+Updated: 2026-09-28 JST
 
 ## Required restart set
 
@@ -17,14 +17,20 @@ Updated: 2026-09-27 JST
 
 ## Current design direction
 
-PR #42 Disk Autoboot and PR #47 DRIVE A media lifecycle are released baseline.
-There is no active implementation PLAN.
+Latest reviewed storage feature:
 
-Roadmap: R1 released; R2 EXPORT / R3 IMPORT / R4 factory media / R5 persistence
-remain candidates; R6 development-media expansion is future.
+- Issue #54 / PR #55 — PHASE 1 A:/B: Dual Drive
+- implementation review head: `3d492559c4765186e232cabefafa8c43a9ff814d`
+- live Git determines merge/release SHA
 
-Software Division contract drafts live in Google Drive and are not required for
-ordinary runtime restart.
+The current completion roadmap is PHASE 0–5.
+
+Next implementation after PHASE 1 release:
+
+**PHASE 2 — Whole Disk IMPORT + EXPORT**
+
+The old EXPORT-only split is superseded and its PLAN/design documents are
+history, not active work.
 
 ## Generated artifacts
 
@@ -33,8 +39,8 @@ ordinary runtime restart.
 
 ## Historical material
 
-Completed plans, basic/detailed designs and worklogs live under their respective
-`history/` trees. History is evidence, not current work.
+Completed/superseded plans, designs and worklogs live under their history trees.
+History is evidence, not current work.
 
 ## Validation rule
 

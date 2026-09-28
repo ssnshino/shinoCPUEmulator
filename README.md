@@ -21,7 +21,7 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- reviewed released main: `47f2d6e1870c21c7ac55ec47620594b4adb02217`（PR #47）
+- latest reviewed storage implementation: Issue #54 / PR #55（live Gitでmerge状態を確認）
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -39,9 +39,9 @@
 - 64 KiB RAMとRESET-visible pageable firmware
 - DM-80 80×25 text display、native 8×16 CG-ROM、640×400 logical raster
 - Keyboard、ROM BIOS、interactive Monitor、Memory/Bus/Device inspector
-- Virtual Disk A、SHINO CBIOS、WBOOT、licensed CP/M 2.2
+- Virtual Disk A/B、SHINO CBIOS、WBOOT、licensed CP/M 2.2
 - mounted valid S80B v2 mediaのPOWER → RUN / RESET autoboot、失敗時ROM MON fallback、manual `MON O`
-- POWER OFF時のDRIVE A `EJECT` / `INSERT EJECTED DISK`、exact medium保持、compact/desktop両UI対応
+- POWER OFF時のDRIVE A/B `EJECT` / `INSERT EJECTED DISK`、independent exact-medium shelves、compact/desktop両UI対応
 - writable starter filesystem
   - `WELCOME.TXT`
   - `HELLO.COM`
@@ -54,8 +54,7 @@ Human iPhone/Edge QAでは、従来の手動boot経路で起動、DIR、TYPE、H
 S80INFO、Backspace/Delete、80×25 scrolling、SAVE、複製COM実行、ERA、
 mobile keyboard layoutを確認済み。PR #42のautomatic POWER → RUN / RESET
 autobootはCodex in-app previewでHuman確認済みだが、physical iPhone/Edgeでの
-autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallback →
-同一medium再挿入 → CP/M復帰はHuman interactive QAでPASS。
+autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallback →同一medium再挿入 → CP/M復帰はHuman interactive QAでPASS。Issue #54 / PR #55ではA:/B: dual-drive、B filesystem、WBOOT B>維持、実UI RESET A>復帰、A/B media lifecycleをautomated/browser QAで確認済み。
 
 ## 公開プレビュー
 
@@ -118,15 +117,19 @@ pnpm run test:browser
 
 ## 次の候補
 
-次の実装はまだ固定しない。候補は以下。
+Disk SubsystemはPHASE 0–5で完成ラインを固定している。
 
-1. Removable Media Roadmap Phase R2: whole-disk EXPORT v0.1
-2. Phase R3: whole-disk IMPORT v0.1
-3. Phase R4/R5: factory media / browser reload persistence
-4. Software Division contractに基づくDisk Image Builder / Inspector / sample software
-5. B: drive、assembler/editor/BASIC、UART、printer、soundなどの拡張
+1. PHASE 2: Whole Disk IMPORT + EXPORT
+2. PHASE 3: CLASSIC + practical larger WORK media / multi-profile
+3. PHASE 4: CP/M compatibility + filesystem regression
+4. PHASE 5: daily development environment
+5. PHASE 5以降: Advanced Storage
 
-一度に一つの環境・一人のwriter・一つのpurpose branchだけを使う。CPU semanticsを変える場合は新しいaccuracy phaseと対応する検証証拠を必須とする。
+EXPORT-only / IMPORT-onlyへ再分割しない。未決事項は談話室で揉み、実装単位が
+固まるまでrepositoryへ小刻みな設計PRを作らない。
+
+一度に一つの環境・一人のwriter・一つのpurpose branchだけを使う。CPU semanticsを
+変える場合は新しいaccuracy phaseと対応する検証証拠を必須とする。
 
 ## プロジェクト境界
 

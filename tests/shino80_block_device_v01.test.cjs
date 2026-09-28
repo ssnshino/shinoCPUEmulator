@@ -9,13 +9,14 @@ const {
   BLOCK_COMMAND_READ,BLOCK_COMMAND_WRITE,BLOCK_COMMAND_RESET,
   BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
   BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
-  BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE
+  BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE,BLOCK_DRIVE_COUNT
 }=require('../src/devices/shino80/shino80-block-device.js');
 
 assert.equal(BLOCK_IMAGE_SIZE,256256);
 assert.equal(BLOCK_TRACKS,77);
 assert.equal(BLOCK_SECTORS_PER_TRACK,26);
 assert.equal(BLOCK_SECTOR_SIZE,128);
+assert.equal(BLOCK_DRIVE_COUNT,2);
 assert.equal(createBlankBlockImage().every(byte=>byte===BLOCK_BLANK_BYTE),true);
 assert.throws(()=>new Shino80BlockDevice({image:new Uint8Array(1)}),/exactly 256256 bytes/);
 assert.throws(()=>new Shino80BlockDevice({image:[]}),/Uint8Array/);
@@ -80,7 +81,7 @@ for(const [track,sector,seed] of [[0,1,3],[BLOCK_TRACKS-1,BLOCK_SECTORS_PER_TRAC
 // Every invalid selection and protocol path has a stable error code.
 for(const [setup,command,error] of [
   [d=>select(d,0,1,0),BLOCK_COMMAND_READ,BLOCK_ERROR_NO_MEDIA],
-  [d=>{d.mountImage(createBlankBlockImage());select(d,0,1,1);},BLOCK_COMMAND_READ,BLOCK_ERROR_BAD_DRIVE],
+  [d=>{d.mountImage(createBlankBlockImage());select(d,0,1,2);},BLOCK_COMMAND_READ,BLOCK_ERROR_BAD_DRIVE],
   [d=>{d.mountImage(createBlankBlockImage());select(d,BLOCK_TRACKS,1);},BLOCK_COMMAND_READ,BLOCK_ERROR_BAD_TRACK],
   [d=>{d.mountImage(createBlankBlockImage());select(d,0,0);},BLOCK_COMMAND_READ,BLOCK_ERROR_BAD_SECTOR],
   [d=>{d.mountImage(createBlankBlockImage(),{writeProtected:true});select(d,0,1);},BLOCK_COMMAND_WRITE,BLOCK_ERROR_WRITE_PROTECTED],
@@ -99,15 +100,17 @@ for(const [setup,command,error] of [
   assert.equal(device.error,BLOCK_ERROR_PROTOCOL);
 }
 
-// Controller reset preserves media and write protection; eject returns a copy.
+// Controller reset preserves both media slots and per-drive write protection.
 {
   const image=createBlankBlockImage(0x22),device=new Shino80BlockDevice({image,writeProtected:true});
+  device.mountImage(createBlankBlockImage(0x44),{drive:1,writeProtected:true});
   select(device,8,9);device.writePort(BLOCK_COMMAND_PORT,0xAA);device.reset();
   assert.equal(device.mounted,true);assert.equal(device.writeProtected,true);
+  assert.equal(device.mountedAt(1),true);assert.equal(device.writeProtectedAt(1),true);
   assert.equal(device.drive,0);assert.equal(device.track,0);assert.equal(device.sector,1);
   assert.equal(device.error,BLOCK_ERROR_NONE);assert.equal(device.exportImage()[0],0x22);
   const ejected=device.eject();ejected[0]=0x33;
-  assert.equal(device.mounted,false);assert.equal(device.status(),0);
+  assert.equal(device.mounted,false);assert.equal(device.mountedAt(1),true);assert.equal(device.status(),0);
 }
 
 // A complete write survives an exact EJECT -> REINSERT round trip.
@@ -123,6 +126,30 @@ for(const [setup,command,error] of [
   select(device,12,7);device.writePort(BLOCK_COMMAND_PORT,BLOCK_COMMAND_READ);
   const actual=Uint8Array.from({length:BLOCK_SECTOR_SIZE},()=>device.readPort(BLOCK_DATA_PORT));
   assert.deepEqual(actual,pattern);
+}
+
+// A and B retain independent media, writes and exact eject/reinsert cycles.
+{
+  const device=new Shino80BlockDevice({image:createBlankBlockImage(0x11)});
+  device.mountImage(createBlankBlockImage(0x22),{drive:1});
+  const aPattern=sectorPattern(0x31),bPattern=sectorPattern(0x72);
+  for(const [drive,pattern] of [[0,aPattern],[1,bPattern]]){
+    select(device,4,5,drive);device.writePort(BLOCK_COMMAND_PORT,BLOCK_COMMAND_WRITE);
+    for(const byte of pattern)device.writePort(BLOCK_DATA_PORT,byte);
+    select(device,4,5,drive);device.writePort(BLOCK_COMMAND_PORT,BLOCK_COMMAND_READ);
+    const actual=Uint8Array.from({length:BLOCK_SECTOR_SIZE},()=>device.readPort(BLOCK_DATA_PORT));
+    assert.deepEqual(actual,pattern);
+  }
+  const offset=device.sectorOffset();
+  assert.deepEqual(device.exportImage({drive:0}).subarray(offset,offset+BLOCK_SECTOR_SIZE),aPattern);
+  assert.deepEqual(device.exportImage({drive:1}).subarray(offset,offset+BLOCK_SECTOR_SIZE),bPattern);
+  const beforeA=device.exportImage({drive:0}),beforeB=device.exportImage({drive:1});
+  const ejectedB=device.eject({drive:1});
+  assert.equal(device.mountedAt(0),true);assert.equal(device.mountedAt(1),false);assert.deepEqual(ejectedB,beforeB);
+  device.mountImage(ejectedB,{drive:1});
+  assert.deepEqual(device.exportImage({drive:0}),beforeA);assert.deepEqual(device.exportImage({drive:1}),beforeB);
+  const ejectedA=device.eject({drive:0});device.mountImage(ejectedA,{drive:0});
+  assert.deepEqual(device.exportImage({drive:0}),beforeA);assert.deepEqual(device.exportImage({drive:1}),beforeB);
 }
 
 // The real Bus keeps the complete Z80 port in traces while the device decodes

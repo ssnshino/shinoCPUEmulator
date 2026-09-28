@@ -36,6 +36,7 @@
   const BLOCK_SECTOR_SIZE=128;
   const BLOCK_IMAGE_SIZE=BLOCK_TRACKS*BLOCK_SECTORS_PER_TRACK*BLOCK_SECTOR_SIZE;
   const BLOCK_BLANK_BYTE=0xE5;
+  const BLOCK_DRIVE_COUNT=2;
 
   function createBlankBlockImage(fill=BLOCK_BLANK_BYTE){
     const image=new Uint8Array(BLOCK_IMAGE_SIZE);
@@ -46,8 +47,7 @@
   class Shino80BlockDevice {
     constructor({image=null,writeProtected=false}={}){
       this.id='SHINO80_BLOCK_DEVICE_A';
-      this.medium=null;
-      this.writeProtected=false;
+      this.slots=Array.from({length:BLOCK_DRIVE_COUNT},()=>({medium:null,writeProtected:false}));
       this.drive=0;
       this.track=0;
       this.sector=1;
@@ -56,37 +56,49 @@
       this.transferMode=null;
       this.transferIndex=0;
       this.transferBuffer=null;
-      if(image!==null)this.mountImage(image,{writeProtected});
+      if(image!==null)this.mountImage(image,{drive:0,writeProtected});
     }
 
     lowPort(port){return Number(port)&0xFF;}
     handlesPort(port){const low=this.lowPort(port);return low>=BLOCK_STATUS_PORT&&low<=BLOCK_ERROR_PORT;}
 
-    mountImage(image,{writeProtected=false}={}){
+    validDrive(drive){return Number.isInteger(drive)&&drive>=0&&drive<BLOCK_DRIVE_COUNT;}
+    slotAt(drive){return this.validDrive(drive)?this.slots[drive]:null;}
+    selectedSlot(){return this.slotAt(this.drive);}
+
+    mountImage(image,{drive=0,writeProtected=false}={}){
       if(!(image instanceof Uint8Array))throw new TypeError('Block image must be a Uint8Array');
       if(image.length!==BLOCK_IMAGE_SIZE)throw new RangeError(`Block image must be exactly ${BLOCK_IMAGE_SIZE} bytes`);
-      this.medium=new Uint8Array(image);
-      this.writeProtected=Boolean(writeProtected);
+      const slot=this.slotAt(drive);
+      if(!slot)throw new RangeError(`Block drive must be from 0 to ${BLOCK_DRIVE_COUNT-1}`);
+      slot.medium=new Uint8Array(image);
+      slot.writeProtected=Boolean(writeProtected);
       this.reset();
       return this;
     }
 
-    eject(){
-      const image=this.medium?new Uint8Array(this.medium):null;
-      this.medium=null;
-      this.writeProtected=false;
+    eject({drive=0}={}){
+      const slot=this.slotAt(drive);
+      if(!slot)return null;
+      const image=slot.medium?new Uint8Array(slot.medium):null;
+      slot.medium=null;
+      slot.writeProtected=false;
       this.reset();
       return image;
     }
 
-    exportImage(){return this.medium?new Uint8Array(this.medium):null;}
-    get mounted(){return this.medium!==null;}
+    exportImage({drive=0}={}){const slot=this.slotAt(drive);return slot?.medium?new Uint8Array(slot.medium):null;}
+    mountedAt(drive){return Boolean(this.slotAt(drive)?.medium);}
+    writeProtectedAt(drive){return Boolean(this.slotAt(drive)?.writeProtected);}
+    get medium(){return this.slotAt(0).medium;}
+    get writeProtected(){return this.writeProtectedAt(0);}
+    get mounted(){return this.mountedAt(0);}
     get transferRemaining(){return this.transferMode?BLOCK_SECTOR_SIZE-this.transferIndex:0;}
 
     status(){
-      return (this.mounted?BLOCK_STATUS_READY:0)|
+      return (this.mountedAt(this.drive)?BLOCK_STATUS_READY:0)|
         (this.transferMode?BLOCK_STATUS_DRQ:0)|
-        (this.mounted&&this.writeProtected?BLOCK_STATUS_WRITE_PROTECT:0)|
+        (this.mountedAt(this.drive)&&this.writeProtectedAt(this.drive)?BLOCK_STATUS_WRITE_PROTECT:0)|
         (this.error!==BLOCK_ERROR_NONE?BLOCK_STATUS_ERROR:0);
     }
 
@@ -101,11 +113,11 @@
     fail(code){this.clearTransfer();this.error=code;}
 
     validateSelection({write=false}={}){
-      if(this.drive!==0)return BLOCK_ERROR_BAD_DRIVE;
-      if(!this.mounted)return BLOCK_ERROR_NO_MEDIA;
+      if(!this.validDrive(this.drive))return BLOCK_ERROR_BAD_DRIVE;
+      if(!this.mountedAt(this.drive))return BLOCK_ERROR_NO_MEDIA;
       if(this.track<0||this.track>=BLOCK_TRACKS)return BLOCK_ERROR_BAD_TRACK;
       if(this.sector<1||this.sector>BLOCK_SECTORS_PER_TRACK)return BLOCK_ERROR_BAD_SECTOR;
-      if(write&&this.writeProtected)return BLOCK_ERROR_WRITE_PROTECTED;
+      if(write&&this.writeProtectedAt(this.drive))return BLOCK_ERROR_WRITE_PROTECTED;
       return BLOCK_ERROR_NONE;
     }
 
@@ -121,8 +133,8 @@
       this.transferMode=command===BLOCK_COMMAND_READ?'read':'write';
       this.transferBuffer=new Uint8Array(BLOCK_SECTOR_SIZE);
       if(this.transferMode==='read'){
-        const offset=this.sectorOffset();
-        this.transferBuffer.set(this.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
+        const offset=this.sectorOffset(),slot=this.selectedSlot();
+        this.transferBuffer.set(slot.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
       }
     }
 
@@ -143,7 +155,7 @@
       if(this.transferMode!=='write'||!this.transferBuffer){this.fail(BLOCK_ERROR_PROTOCOL);return;}
       this.transferBuffer[this.transferIndex++]=Number(value)&0xFF;
       if(this.transferIndex===BLOCK_SECTOR_SIZE){
-        this.medium.set(this.transferBuffer,this.sectorOffset());
+        this.selectedSlot().medium.set(this.transferBuffer,this.sectorOffset());
         this.clearTransfer();
       }
     }
@@ -200,6 +212,6 @@
     BLOCK_COMMAND_READ,BLOCK_COMMAND_WRITE,BLOCK_COMMAND_RESET,
     BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
     BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
-    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE
+    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE,BLOCK_DRIVE_COUNT
   };
 });

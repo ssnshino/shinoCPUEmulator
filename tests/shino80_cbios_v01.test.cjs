@@ -5,12 +5,12 @@ const {Shino80Memory}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Shino80Keyboard}=require('../src/devices/shino80/shino80-keyboard.js');
 const {
-  Shino80BlockDevice,createBlankBlockImage,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE
+  Shino80BlockDevice,createBlankBlockImage,BLOCK_DRIVE_PORT,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE
 }=require('../src/devices/shino80/shino80-block-device.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {MEMORY_CONTROL_LOW_RAM}=require('../src/machine/shino80/shino80-memory.js');
 const {
-  buildCbios,CBIOS_ORG,CBIOS_ENTRY_NAMES,CBIOS_ENTRY_SIZE,CBIOS_DEFAULT_DMA,DPB,TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS
+  buildCbios,CBIOS_ORG,CBIOS_ENTRY_NAMES,CBIOS_ENTRY_SIZE,CBIOS_DEFAULT_DMA,CBIOS_DIRBUF,DPB,TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS
 }=require('../src/firmware/shino80/shino80-cbios.js');
 
 const cbios=buildCbios(),lo=value=>value&255,hi=value=>(value>>8)&255;
@@ -22,7 +22,7 @@ assert.equal(CBIOS_ORG,0xFA00);
 assert.equal(CBIOS_ENTRY_NAMES.length,17);
 assert.equal(cbios.origin,CBIOS_ORG);
 assert(cbios.end<=0x10000);
-assert.equal(cbios.bytes.length,713);
+assert(cbios.bytes.length<=768,`CBIOS exceeds six reserved sectors: ${cbios.bytes.length}`);
 
 // The standard 17-entry table is contiguous JP instructions in exact order.
 for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){
@@ -38,17 +38,21 @@ for(const [index,name] of CBIOS_ENTRY_NAMES.entries()){
   assert.deepEqual(Array.from(dpb),[
     DPB.spt,0,DPB.bsh,DPB.blm,DPB.exm,DPB.dsm,0,DPB.drm,0,DPB.al0,DPB.al1,DPB.cks,0,DPB.off,0
   ]);
-  const dph=cbios.labels.CBIOS_DPH;
-  assert.equal(wordAt(dph),0);assert.equal(wordAt(dph+2),0);assert.equal(wordAt(dph+4),0);assert.equal(wordAt(dph+6),0);
-  assert.equal(wordAt(dph+8),cbios.labels.CBIOS_DIRBUF);
-  assert.equal(wordAt(dph+10),cbios.labels.CBIOS_DPB);
-  assert.equal(wordAt(dph+12),cbios.labels.CBIOS_CSV);
-  assert.equal(wordAt(dph+14),cbios.labels.CBIOS_ALV);
+  const checkDph=(dph,csv,alv)=>{
+    assert.equal(wordAt(dph),0);assert.equal(wordAt(dph+2),0);assert.equal(wordAt(dph+4),0);assert.equal(wordAt(dph+6),0);
+    assert.equal(wordAt(dph+8),CBIOS_DIRBUF);assert.equal(wordAt(dph+10),cbios.labels.CBIOS_DPB);
+    assert.equal(wordAt(dph+12),csv);assert.equal(wordAt(dph+14),alv);
+  };
+  checkDph(cbios.labels.CBIOS_DPH_A,cbios.labels.CBIOS_CSV_A,cbios.labels.CBIOS_ALV_A);
+  checkDph(cbios.labels.CBIOS_DPH_B,cbios.labels.CBIOS_CSV_B,cbios.labels.CBIOS_ALV_B);
+  assert.notEqual(cbios.labels.CBIOS_CSV_A,cbios.labels.CBIOS_CSV_B);
+  assert.notEqual(cbios.labels.CBIOS_ALV_A,cbios.labels.CBIOS_ALV_B);
 }
 
-function machine({image=createBlankBlockImage(),writeProtected=false,traceLimit=20000}={}){
+function machine({image=createBlankBlockImage(),imageB=createBlankBlockImage(),writeProtected=false,writeProtectedB=false,traceLimit=20000}={}){
   const keyboard=new Shino80Keyboard({capacity:256});
   const disk=new Shino80BlockDevice({image,writeProtected});
+  if(imageB!==null)disk.mountImage(imageB,{drive:1,writeProtected:writeProtectedB});
   const memory=new Shino80Memory();
   const bus=new Shino80Bus({traceLimit,memoryDevice:memory,ioDevices:[keyboard,disk]});
   bus.load(cbios.bytes,CBIOS_ORG);bus.cpuIoWrite(0,MEMORY_CONTROL_LOW_RAM,{purpose:'TEST_ALL_RAM'});
@@ -106,12 +110,13 @@ function pattern(seed){return Uint8Array.from({length:128},(_,index)=>(seed+inde
   assert.equal(m.bus.debugPeek(0xE200),0xFF);assert.equal(m.bus.debugPeek(0xE201),0x5A);
 }
 
-// SELDSK returns DPH for A: and zero for all unsupported drives.
+// SELDSK returns independent DPHs for A:/B: and zero for unsupported drives.
 {
   const m=machine();
-  run(m,[0x0E,0,...call(api('SELDSK')),...word(0x22,0xE210),0x0E,1,...call(api('SELDSK')),...word(0x22,0xE212),0x76]);
-  assert.equal(m.bus.debugPeek(0xE210)|(m.bus.debugPeek(0xE211)<<8),cbios.labels.CBIOS_DPH);
-  assert.equal(m.bus.debugPeek(0xE212)|(m.bus.debugPeek(0xE213)<<8),0);
+  run(m,[0x0E,0,...call(api('SELDSK')),...word(0x22,0xE210),0x0E,1,...call(api('SELDSK')),...word(0x22,0xE212),0x0E,2,...call(api('SELDSK')),...word(0x22,0xE214),0x76]);
+  assert.equal(m.bus.debugPeek(0xE210)|(m.bus.debugPeek(0xE211)<<8),cbios.labels.CBIOS_DPH_A);
+  assert.equal(m.bus.debugPeek(0xE212)|(m.bus.debugPeek(0xE213)<<8),cbios.labels.CBIOS_DPH_B);
+  assert.equal(m.bus.debugPeek(0xE214)|(m.bus.debugPeek(0xE215)<<8),0);
 }
 
 // HOME, LISTST, READER and both SECTRAN paths follow their ABI contracts.
@@ -127,6 +132,25 @@ function pattern(seed){return Uint8Array.from({length:128},(_,index)=>(seed+inde
   assert.equal(m.bus.debugPeek(0xE214)|(m.bus.debugPeek(0xE215)<<8),4);
   assert.equal(m.bus.debugPeek(0xE216)|(m.bus.debugPeek(0xE217)<<8),8);
   assert.equal(m.bus.debugPeek(0xE218),0xFF);assert.equal(m.bus.debugPeek(0xE219),0x1A);
+}
+
+// B READ/WRITE selects controller drive 1 and never changes A bytes.
+{
+  const aImage=createBlankBlockImage(0x11),bImage=createBlankBlockImage(0x22),fromB=pattern(0x53),toB=pattern(0x97);
+  bImage.set(fromB,0);const m=machine({image:aImage,imageB:bImage,traceLimit:50000});m.bus.load(toB,0x4100);m.bus.clearTrace();
+  run(m,[
+    ...call(api('BOOT')),0x0E,1,...call(api('SELDSK')),
+    ...word(0x01,0),...call(api('SETTRK')),...word(0x01,1),...call(api('SETSEC')),...word(0x01,0x4000),...call(api('SETDMA')),
+    ...call(api('READ')),...word(0x32,0xE224),
+    ...word(0x01,2),...call(api('SETSEC')),...word(0x01,0x4100),...call(api('SETDMA')),
+    0x0E,0,...call(api('WRITE')),...word(0x32,0xE225),0x76
+  ]);
+  assert.equal(m.bus.debugPeek(0xE224),0);assert.equal(m.bus.debugPeek(0xE225),0);
+  assert.deepEqual(m.memory.ram.slice(0x4000,0x4080),fromB);
+  assert(m.disk.exportImage({drive:0}).every(byte=>byte===0x11));
+  assert.deepEqual(m.disk.exportImage({drive:1}).slice(BLOCK_SECTOR_SIZE,BLOCK_SECTOR_SIZE*2),toB);
+  const driveWrites=m.bus.trace.filter(event=>event.space==='IO'&&event.operation==='WRITE'&&(event.address&255)===BLOCK_DRIVE_PORT);
+  assert(driveWrites.length>=2);assert(driveWrites.every(event=>event.data===1));
 }
 
 // READ and WRITE use the standard vector, selected registers and exactly 128

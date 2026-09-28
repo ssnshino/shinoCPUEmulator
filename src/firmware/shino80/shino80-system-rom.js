@@ -623,7 +623,7 @@
     a.label('DISK_BOOT_ATTEMPT');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,124,0,201,2,203]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,128,0,145,2,151]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
@@ -631,6 +631,7 @@
     }
     a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
     a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
+    a.emit(0xAF);word(0x32,0x0004); // ROM cold/autoboot paths always enter CCP on A:
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
     a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET

@@ -6,7 +6,8 @@ for(const id of ['powerBtn','crtCanvas','crtViewport','displayDevice','keyboardC
 if(!h.includes('Z80 BASE COMPLETE v0.0.9'))throw Error('BASE COMPLETE banner missing');
 if(!h.includes('BASE 252/252 ONLINE'))throw Error('CPU inspector BASE status missing');
 if(!h.includes('DM-80')||!h.includes('SHINOMIYA')||!h.includes('GREEN MONO DIGITAL DISPLAY'))throw Error('display identity missing');
-if(!h.includes('VIRTUAL DISK A')||!h.includes('CP/M 2.2 · S80B v2 · 3 STARTER FILES'))throw Error('Virtual Disk A CP/M identity missing');
+if(!h.includes('VIRTUAL DISK A')||!h.includes('SYSTEM / TOOLS · CP/M 2.2 · S80B v2'))throw Error('Virtual Disk A CP/M identity missing');
+if(!h.includes('VIRTUAL DISK B')||!h.includes('USER / WORK / INTERCHANGE · CLASSIC'))throw Error('Virtual Disk B CP/M identity missing');
 for(const name of ['WELCOME.TXT','HELLO.COM','S80INFO.COM'])if(!h.includes(name))throw Error('CP/M starter file missing: '+name);
 if(!h.includes('ONE-BIT BEEPER')||!h.includes('BEEP TEST')||!h.includes('BEL · I/O 40h'))throw Error('beeper UI missing');
 if(!h.includes('https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-reference.html')||!h.includes('Z80 · BIOS · WIRING'))throw Error('public reference link missing');

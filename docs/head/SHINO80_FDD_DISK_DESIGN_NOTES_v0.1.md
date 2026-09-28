@@ -1,328 +1,141 @@
 # SHINO-80 FDD / DISK Design Notes v0.1
 
-Status: DESIGN NOTES / AUTOBOOT + MEDIA LIFECYCLE RELEASED THROUGH PR #47
-Updated: 2026-09-27 JST
+Status: CURRENT DESIGN NOTES
+Updated: 2026-09-28 JST
 
 ## Purpose
 
-Record the agreed direction for SHINO-80 removable disk usability and the
-boundary between the implemented autoboot slice and later media phases.
+Record the storage architecture that is already implemented/reviewed and the
+boundary to later disk phases.
 
-The first bounded slice was released by Issue #41 / PR #42: POWER → RUN /
-RESET autoboot, safe pre-page-out MON fallback, retained manual `MON O`, and a
-guest-side startup title.
+## 1. Drive and medium are separate
 
-The second bounded slice was released by Issue #46 / PR #47: POWER-OFF DRIVE A
-EJECT / INSERT EJECTED DISK with exact-medium retention and Human-visible
-controls in desktop and compact layouts. Whole-disk export/import, factory
-media and durable persistence remain future phases.
+SHINO-80 separates the installed controller/drive concept from removable media.
 
-The immediate motivation is not persistence by itself. SHINO-80 needs a practical
-way to load and exchange software large enough to make the machine useful as a
-development computer: text editor, assembler, compiler, linker, utilities and
-user programs.
-
-This note separates three things:
-
-- current implemented behavior
-- agreed design direction
-- future candidates that are not yet fixed specifications
-
-## 1. Core model: drive and medium are separate
-
-SHINO-80 treats the drive/controller and removable disk medium as different
-objects.
-
-- **FDD / DRIVE** — the installed drive/controller device
-- **DISK / MEDIA** — the removable medium inserted into that drive
-
-The A: drive remains part of the machine even when no medium is inserted.
+Current machine:
 
 ```text
-SHINO-80
+Z80 / CP/M
    |
-   +-- DRIVE A:
-        +-- controller state
-        |    drive
-        |    track
-        |    sector
-        |    command
-        |    transfer state
-        |    error
-        |
-        +-- removable DISK MEDIA
-             256,256 bytes
+   v
+Bus
+   |
+   v
+SHINO block controller · I/O 30h–36h
+   |
+   +-- selector 0 -> DRIVE A: -> removable medium
+   |
+   +-- selector 1 -> DRIVE B: -> removable medium
 ```
 
-The current implementation is a virtual PIO block device. Calling it an FDD in
-the UI/design sense does **not** imply that mechanical seek/rotation timing or a
-real historical FDC chip is already emulated.
+The UI may call these virtual disk drives. This does not mean seek timing,
+rotation latency, DMA or a historical physical FDC chip are emulated.
 
-## 2. Current implemented baseline
+## 2. Current PHASE 1 baseline
 
-Virtual Disk A currently provides:
+Both drives currently use CLASSIC media:
 
 - 77 tracks
-- 26 sectors per track
-- 128 bytes per sector
-- 256,256 bytes total
-- writable media
-- Bus-visible PIO through low I/O ports 30h-36h
-- atomic 128-byte sector writes
-- incomplete writes are not committed to the medium
-- controller reset preserves inserted media and write-protect state
-- SHINO-80 RESET and in-page POWER OFF/ON preserve the mounted medium
-- CP/M WBOOT preserves and rereads the mounted medium
-- POWER OFF allows EJECT and reinsertion of the exact retained medium
-- POWER ON blocks media replacement
-- browser reload/page close does not preserve media
-- whole-disk host import/export and factory-media restore are not yet exposed
+- 26 sectors/track
+- 128 bytes/sector
+- 256,256 bytes
+- writable
+- atomic complete-sector writes
+- controller RESET preserves mounted media
 
-The current starter medium is the deterministic S80B v2 system disk containing
-the SHINO loader, SHINO CBIOS, licensed CP/M 2.2 and starter filesystem.
+A:
 
-The block-device implementation already has media-oriented primitives including
-mount, eject and defensive image export. The next phase should build on those
-boundaries rather than bypassing them.
+- BOOT / SYSTEM / TOOLS
+- deterministic S80B v2
+- only ROM autoboot / MON O source
 
-## 3. Why disk usability is a priority
+B:
 
-A CPU that can execute machine code is not yet a comfortable development
-computer.
+- USER / WORK / INTERCHANGE
+- blank E5h CLASSIC medium at page construction
+- no boot payload
+- never probed by ROM IPL
 
-SHINO-80 should eventually support a workflow such as:
+## 3. Controller contract
 
-```text
-A>EDIT HELLO.ASM
-A>ASM HELLO
-A>HELLO
+Existing ports remain authoritative:
 
-HELLO FROM SHINO-80!
-```
+- 30h STATUS
+- 31h COMMAND
+- 32h DRIVE: 0=A:, 1=B:
+- 33h TRACK
+- 34h SECTOR
+- 35h DATA
+- 36h ERROR
 
-The disk system therefore needs to support practical software distribution and
-working media, not only boot demonstration.
+One controller owns shared register/transfer state and two independent media
+slots. Attaching two devices that both claim 30h–36h is not the architecture.
 
-Important future software classes include:
+## 4. CP/M disk tables
 
-- text editor
-- assembler
-- compiler
-- linker
-- debugger / monitor utilities
-- file-management utilities
-- graphics and sound development tools
-- user-created ASM, source, data and COM files
+A and B use:
 
-ROM should not absorb software merely because disk handling is inconvenient.
+- separate DPH_A / DPH_B
+- shared DPB because media geometry is identical
+- shared DIRBUF at FD00h–FD7Fh
+- separate CSV_A / CSV_B
+- separate ALV_A / ALV_B
 
-**ROM is the machine. DISK is the software culture that grows on top of it.**
+The CBIOS remains inside the unchanged S80B v2 six-sector reservation.
 
-## 4. Agreed POWER ON boot direction
+## 5. Boot and warm boot
 
-Current manual disk boot through ROM Monitor command `O` remains useful and
-should be retained.
+ROM boot always selects A:.
 
-The desired normal POWER ON behavior is:
+- POWER -> RUN -> A:
+- UI RESET -> ROM autoboot -> A:
+- MON O -> A:
+- A absent/invalid -> MON, even if B is inserted
 
-```text
-POWER ON
-   |
-   v
-ROM IPL
-   |
-   v
-RAM / VIDEO / DEVICE initialization
-   |
-   v
-DRIVE A: media present?
-   | no
-   +--------------------> MON
-   |
-  yes
-   |
-   v
-bootable SHINO-80 medium?
-   | no
-   +--------------------> MON
-   |
-  yes
-   |
-   v
-BOOT A:
-   |
-   v
-disk loader / SHINO CBIOS / operating system
-   |
-   v
-disk-side title/startup message
-   |
-   v
-A>
-```
+CP/M WBOOT is different: it reloads system code from A: but preserves the
+current drive from Page Zero 0004h, so WBOOT from B: returns to B:.
 
-The automatic boot path should reuse the existing disk-boot logic rather than
-creating a second unrelated loader.
+## 6. Removable-media host lifecycle
 
-Expected fallback behavior:
+A and B each have an independent page-local ejected-media shelf.
 
-- no medium -> enter MON
-- non-bootable or rejected medium -> enter MON
-- bootable S80B system medium -> boot it automatically
-- `MON O` remains the explicit manual retry/boot command
+POWER OFF:
 
-The ROM IPL may identify the machine and boot attempt. The richer system title
-should preferably come from software loaded from the disk, so another bootable
-disk may present a different environment in the future.
+- EJECT target medium
+- exact bytes retained
+- INSERT EJECTED DISK restores the same bytes
 
-## 5. INSERT / EJECT released behavior and next host-media controls
+POWER ON:
 
-The Device Inspector is the preferred home for media operations.
+- controls disabled
+- handler guard rejects replacement
 
-Conceptual DRIVE A: controls:
+Host actions do not synthesize guest Bus transactions.
+
+## 7. Browser persistence boundary
+
+The medium remains the canonical machine-facing object.
 
 ```text
-VIRTUAL DISK DRIVE A:
-
-MEDIA
-S80B SYSTEM DISK v2
-
-STATUS
-INSERTED / READY
-
-WRITE PROTECT
-OFF
-
-[ EJECT ]
-[ INSERT IMAGE... ]
-[ INSERT FACTORY DISK ]
-[ EXPORT IMAGE ]
+guest CPU / Bus / controller / media
+----------------------------------- guest-host boundary
+host shelf / import-export / persistence
 ```
 
-Released safety behavior:
+Browser reload persistence is not yet implemented.
 
-- POWER OFF: current medium can be EJECTED and the exact ejected medium can be reinserted
-- POWER ON: media replacement is disabled and handler-guarded
-- running hot-swap is not implemented
+## 8. Next phase
 
-Future controls such as INSERT IMAGE, INSERT FACTORY DISK and EXPORT IMAGE remain
-separate bounded phases.
+PHASE 2 combines whole-disk IMPORT and EXPORT. Do not revive the old
+EXPORT-only implementation split.
 
-This avoids silently changing media while CP/M may have assumptions about the
-currently logged disk.
+Larger work-media profiles belong to PHASE 3.
 
-## 6. Disk-image and browser-persistence direction
+## 9. Design invariants
 
-The disk medium should remain the canonical machine-facing object. Browser
-persistence and host files belong outside the guest-machine boundary.
-
-```text
-Z80
- |
-Bus
- |
-FDD / Virtual Block Device
- |
-DISK MEDIA
----------------- machine / host boundary
- |
-browser persistence
-image import / export
-```
-
-Current planning candidates:
-
-- preserve the exact 256,256-byte medium as a portable raw disk image
-- use a SHINO-specific extension such as `.s80b` if adopted by the PLAN
-- browser-reload persistence using IndexedDB or another explicitly selected
-  browser-storage mechanism
-- explicit image import/export as the portable backup and exchange boundary
-- persistence failure must not prevent SHINO-80 itself from running
-
-These mechanisms are not fixed implementation specifications until the next
-PLAN defines validation, migration, corruption handling, mobile behavior and
-`file://` constraints.
-
-## 7. Future A: / B: development model
-
-A second drive is not part of the next committed implementation yet, but the
-current design should not make it difficult.
-
-A useful future arrangement is:
-
-```text
-A: SYSTEM / TOOLS DISK
-
-EDITOR.COM
-ASM.COM
-LINK.COM
-UTILITY.COM
-
-B: USER / WORK DISK
-
-HELLO.ASM
-GAME.ASM
-TEST.COM
-DATA.TXT
-```
-
-That provides a natural separation between the development environment and
-user work.
-
-B: drive I/O allocation and exact device contract remain undecided.
-
-## 8. Future host file exchange
-
-The first portable boundary should be whole disk-image import/export.
-
-A later host-side disk workshop may also understand the CP/M filesystem and
-support individual file transfer:
-
-```text
-HOST HELLO.ASM
-      |
-      v
-import into CP/M medium
-      |
-      v
-B:HELLO.ASM
-```
-
-and the reverse for COM/source/data files.
-
-Such host tooling must not become a shortcut in the Z80/CBIOS runtime path.
-
-## 9. Design principles carried forward
-
-- FDD/drive and removable disk medium are separate concepts.
-- Guest disk I/O continues through CPU -> Bus -> device.
-- Browser persistence remains outside the guest hardware contract.
-- Debugger/host tooling stays observer-side where possible.
-- `MON O` remains available even after automatic boot exists.
-- Automatic boot and manual boot should share the same loader path.
-- Disk usability should enable larger software instead of pushing tools into ROM.
-- CPU core must not change merely to implement host-side media handling.
-- Generated standalone HTML is never hand-edited.
-- One environment / one writer / one purpose branch.
-- PLAN FIRST before implementation.
-
-## 10. Candidate next implementation scope
-
-Completed:
-
-- Issue #41 / PR #42: bootable-media detection, POWER → RUN / RESET automatic
-  boot, ROM MON fallback, shared `MON O`, guest-side startup title
-- Issue #46 / PR #47: POWER-OFF EJECT / REINSERT SAME MEDIA,
-  desktop/compact controls, exact-byte retention and regression coverage
-
-Current bounded candidates are tracked by
-`docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`:
-
-1. whole-disk EXPORT
-2. whole-disk IMPORT
-3. factory-media restore
-4. browser-reload persistence
-5. later B: / development-media expansion
-
-Assembler/compiler/editor selection and individual host-file transfer remain
-later work unless explicitly selected by the Human.
+- CPU -> Bus -> device remains the guest execution path
+- A is the boot/system role in the current architecture
+- B is the work/interchange role
+- host tooling does not shortcut guest filesystem execution
+- generated HTML is never hand-edited
+- future undecided items stay outside active implementation contracts
