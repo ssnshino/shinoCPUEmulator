@@ -28,12 +28,14 @@ PHASE 1E exhaustively checks:
 Keyboard / Monitor regression checks the controller FIFO, debugger-safe peek,
 full-address I/O trace, BIOS GETCHAR ABI, and ROM commands `H` / `?` / `C` / CR.
 
-Virtual Block Device regression checks 77×26×128 geometry, errors, atomic
-sector writes, reset/media lifetime, observer-safe peek, Bus trace and an
-end-to-end Z80 OTIR/INIR sector round trip.
+Virtual Block Device regression checks 77×26×128 geometry, A/B media-slot
+independence, drive select/error handling, atomic sector writes, reset/media
+lifetime, exact eject/reinsert, observer-safe peek, Bus trace and Z80
+OTIR/INIR sector round trips.
 
-CBIOS regression checks the standard 17-entry vector, DPH/DPB bytes, RAM-only
-console, sector READ/WRITE/error paths and an original sector-1 RAM boot proof.
+CBIOS regression checks the standard 17-entry vector, DPH_A/DPH_B, shared DPB
+and FD00h DIRBUF, independent CSV/ALV, RAM-only console, A/B sector
+READ/WRITE/error paths and the original RAM boot proof.
 
 ## Current artifact QA
 

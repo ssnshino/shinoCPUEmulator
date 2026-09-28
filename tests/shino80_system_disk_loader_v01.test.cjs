@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const {Shino80Memory,MEMORY_CONTROL_LOW_RAM}=require('../src/machine/shino80/shino80-memory.js');
 const {Shino80Bus}=require('../src/machine/shino80/shino80-bus.js');
 const {Shino80Keyboard}=require('../src/devices/shino80/shino80-keyboard.js');
-const {Shino80BlockDevice,BLOCK_COMMAND_READ,BLOCK_ERROR_PROTOCOL,BLOCK_SECTOR_SIZE,BLOCK_BLANK_BYTE}=require('../src/devices/shino80/shino80-block-device.js');
+const {Shino80BlockDevice,createBlankBlockImage,BLOCK_COMMAND_READ,BLOCK_DRIVE_PORT,BLOCK_ERROR_PROTOCOL,BLOCK_SECTOR_SIZE,BLOCK_BLANK_BYTE}=require('../src/devices/shino80/shino80-block-device.js');
 const {Z80Core}=require('../src/cpu/z80/z80-core.js');
 const {buildCbios}=require('../src/firmware/shino80/shino80-cbios.js');
 const {
@@ -30,6 +30,8 @@ assert.equal(systemDisk.header[16],systemDisk.header.slice(0,16).reduce((sum,val
 assert.deepEqual(systemDisk.image.slice(offset(SYSTEM_PAYLOAD_SECTOR),offset(SYSTEM_PAYLOAD_SECTOR)+systemDisk.payload.length),systemDisk.payload);
 assert.deepEqual(systemDisk.image.slice(offset(SYSTEM_CBIOS_SECTOR),offset(SYSTEM_CBIOS_SECTOR)+cbios.bytes.length),cbios.bytes);
 assert(systemDisk.image.slice(offset(SYSTEM_CBIOS_SECTOR)+cbios.bytes.length,offset(SYSTEM_CBIOS_SECTOR)+SYSTEM_CBIOS_SECTORS*128).every(byte=>byte===BLOCK_BLANK_BYTE));
+assert(systemDisk.payload.length<=BLOCK_SECTOR_SIZE);
+assert(cbios.bytes.length<=SYSTEM_CBIOS_SECTORS*BLOCK_SECTOR_SIZE);
 
 class FaultReadBlockDevice extends Shino80BlockDevice {
   constructor({image,failRead}){super({image});this.readCount=0;this.failRead=failRead;}
@@ -38,12 +40,21 @@ class FaultReadBlockDevice extends Shino80BlockDevice {
     if(value===BLOCK_COMMAND_READ&&++this.readCount===this.failRead)this.fail(BLOCK_ERROR_PROTOCOL);
   }
 }
-function machine(image=systemDisk.image,traceLimit=150000,failRead=0){
+function machine(image=systemDisk.image,traceLimit=150000,failRead=0,imageB=null){
   const keyboard=new Shino80Keyboard({capacity:256});
   const disk=failRead?new FaultReadBlockDevice({image,failRead}):new Shino80BlockDevice({image});
+  if(imageB!==null)disk.mountImage(imageB,{drive:1});
   const memory=new Shino80Memory();memory.loadFirmware(rom.bytes);
   const bus=new Shino80Bus({traceLimit,memoryDevice:memory,ioDevices:[keyboard,disk]});
   const cpu=new Z80Core(bus);cpu.reset();return {keyboard,disk,memory,bus,cpu};
+}
+
+// B: is never a ROM boot source. A: absent falls back to MON even when B:
+// contains a valid system image.
+{
+  const m=machine(null,150000,0,systemDisk.image);bootMonitor(m);
+  assert.equal(m.disk.mountedAt(0),false);assert.equal(m.disk.mountedAt(1),true);
+  assert.equal(m.memory.control,0);assert(allScreen(m).includes('MON'));
 }
 function until(cpu,predicate,limit=800000){let count=0;while(!predicate()&&count++<limit)cpu.step();assert(count<limit,'system disk loader timeout');return count;}
 function bootMonitor(m){until(m.cpu,()=>m.cpu.state.pc===rom.labels.MONITOR_LOOP,30000);}
@@ -75,7 +86,7 @@ for(const failRead of [1,2,5]){
 // A mounted valid S80B medium performs seven ROM reads with no keyboard input,
 // pages ROM out, prints its guest-side title and reaches the CCP prompt.
 {
-  const m=machine();m.bus.clearTrace();
+  const m=machine(systemDisk.image,150000,0,createBlankBlockImage());m.bus.clearTrace();
   until(m.cpu,()=>m.cpu.state.pc===SYSTEM_ENTRY);
   assert.equal(m.memory.control,MEMORY_CONTROL_LOW_RAM);
   assert.deepEqual(Array.from(m.memory.ram.slice(0,3)),[0xC3,0x03,0xFA]);
@@ -88,6 +99,7 @@ for(const failRead of [1,2,5]){
   assert.equal(m.memory.ram[CPM22_BDOS_ORIGIN],systemDisk.cpm.bdos[0]);
 
   const diskEvents=m.bus.trace.filter(event=>event.space==='IO'&&event.meta.device===m.disk.id);
+  assert(diskEvents.filter(event=>event.operation==='WRITE'&&(event.address&255)===BLOCK_DRIVE_PORT).every(event=>event.data===0));
   assert(diskEvents.filter(event=>event.operation==='WRITE'&&(event.address&255)===0x31&&event.data===1).length>=51);
   assert(diskEvents.filter(event=>event.operation==='READ'&&(event.address&255)===0x35).length>=51*128);
   const pageout=m.bus.trace.findIndex(event=>event.space==='IO'&&(event.address&255)===0&&event.data===1);

@@ -46,7 +46,7 @@
     emit(0xAF);word(0x32,0x0003);emit(0x3E,0xC3);word(0x32,0x0005);
     word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);
     abs(0x21,'STARTUP_TITLE');callAddress(cbiosImage.labels.CBIOS_PRINT_STRING);
-    emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    word(0x3A,0x0004);emit(0xE6,0x01,0x4F);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
     label('STARTUP_TITLE');emit(...[...SYSTEM_STARTUP_TITLE].map(char=>char.charCodeAt(0)),0x00);
     for(const fixup of absFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);}
     for(const fixup of relFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);const displacement=address-fixup.after;if(displacement < -128||displacement > 127)throw new RangeError(`Loader JR ${fixup.name} out of range`);bytes[fixup.offset+1]=displacement&0xFF;}

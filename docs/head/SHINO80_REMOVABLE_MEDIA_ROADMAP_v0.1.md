@@ -1,4 +1,4 @@
-# SHINO-80 Removable Media Roadmap v0.1
+# SHINO-80 Disk Subsystem Roadmap v0.1
 
 Status: CURRENT DESIGN ROADMAP
 Updated: 2026-09-28 JST
@@ -6,143 +6,188 @@ Author: 戸澤 / ChatGPT
 
 ## Purpose
 
-Define the cross-phase plan for turning Virtual Disk A from a page-local writable
-image into a safe removable-software-media workflow.
+Define the bounded path from the current SHINO-80 removable disk implementation
+to a daily-use CP/M development environment.
 
-Only one bounded implementation slice is active at a time.
+**Disk Subsystem completion is PHASE 5.**
+Features after that line are Advanced Storage and are not allowed to keep the
+base disk project permanently unfinished.
 
-## Guiding rule
+Guiding rule:
 
 **ROM is the machine. DISK is the software culture.**
 
-Browser conveniences remain outside the guest hardware boundary.
+## PHASE 0 — DRIVE A removable media lifecycle — RELEASED
 
-```text
-Z80 / CP/M
-   |
-   v
-Bus
-   |
-   v
-DRIVE A controller
-   |
-   v
-removable DISK MEDIA
---------------------------- guest / host boundary
-host media shelf
-portable whole-disk I/O
-browser persistence
-```
+Issue #46 / PR #47.
 
-## Phase R1 — DRIVE A media lifecycle v0.1 — RELEASED
+- A: EJECT / REINSERT SAME MEDIA
+- exact page-local shelf retention
+- POWER-OFF-only replacement
+- A: no-media ROM MON fallback
+- S80B v2 A: autoboot retained
 
-Released by Issue #46 / PR #47.
+## PHASE 1 — A:/B: Dual Drive — IMPLEMENTED / REVIEWED
 
-- EJECT current medium
-- retain exact ejected bytes in one host-side shelf
-- INSERT EJECTED DISK
-- POWER-OFF-only media replacement
-- no-media autoboot reuses ROM MON fallback
-- reinsertion restores CP/M boot
+Issue #54 / PR #55. Human merge status must be read from live Git.
 
-## Phase R2 — whole-disk EXPORT v0.1 — SELECTED / DESIGN READY
+Architecture:
 
-Goal:
+- one block controller on 30h–36h
+- DRIVE 32h: 0=A:, 1=B:
+- A: = BOOT / SYSTEM / TOOLS
+- B: = USER / WORK / INTERCHANGE
+- A and B initially use the same CLASSIC 256,256-byte geometry
+- A only is a ROM autoboot source
+- B starts as a blank writable work disk
+- DPH_A / DPH_B
+- shared DPB and FD00h DIRBUF
+- independent CSV / ALV
+- A/B independent POWER-OFF EJECT / REINSERT shelves
+- WBOOT preserves B: current-drive state
+- UI RESET re-enters ROM autoboot on A:
 
-Allow the Human to save an exact defensive copy of the current canonical DRIVE A
-medium outside the browser.
+Completion criterion:
 
-Contract:
+`A> -> B: -> B> -> write/read files -> A/B isolation -> WBOOT/RESET/media-cycle persistence`
 
-- POWER OFF only in v0.1
-- works from INSERTED or EJECTED canonical ownership state
-- raw 256,256-byte payload
-- Blob -> blob URL -> anchor download
-- no File System Access API
-- suggested filename: `SHINO80_DRIVE_A.s80d`
-- `.s80d` means SHINO-80 whole-disk host image
-- S80B remains a boot-profile magic/layout inside media
-- export is read-only and preserves ownership
-- actual Chromium download bytes are regression-tested
+## PHASE 2 — Whole Disk IMPORT + EXPORT — NEXT
 
-Active PLAN:
-
-- `plan/head/SHINO80_DRIVE_A_WHOLE_DISK_EXPORT_V01_PLAN.md`
-
-Design:
-
-- `docs/head/SHINO80_DRIVE_A_WHOLE_DISK_EXPORT_BASIC_DESIGN_v0.1.md`
-- `docs/head/SHINO80_DRIVE_A_WHOLE_DISK_EXPORT_DETAILED_DESIGN_v0.1.md`
-
-Research:
-
-- `research/shino80/SHINO80_WHOLE_DISK_EXPORT_ENGINEERING_RESEARCH_20260928.md`
-
-## Phase R3 — whole-disk IMPORT v0.1
+IMPORT and EXPORT are one bounded host-media feature, not separate implementation
+phases.
 
 Goal:
 
-Allow a Human-selected local disk image to become removable media.
+- save a canonical whole medium to a user-owned host file
+- later import the whole medium and continue work
+- support the A/B dual-drive model without bypassing guest I/O
 
-Direction:
+Design topics to resolve in PHASE 2 only:
 
-- ordinary `<input type="file">`
-- read with `Blob.arrayBuffer()`
-- exact image-length validation
-- do not trust extension / accept hint alone
-- invalid input must not mutate current disk or shelf
-- imported-image validation policy is fixed by the R3 PLAN
+- A/B target selection
+- POWER-OFF safety rule
+- inserted/ejected shelf ownership semantics
+- exact filename / extension
+- transactional import validation
+- replacement confirmation
+- browser/mobile save behavior
 
-R3 is also the runtime-acceptance gate for Software Division-generated prototype
-whole-disk images.
+Baseline direction:
 
-## Phase R4 — factory media v0.1
+- standard browser File API / Blob mechanisms
+- invalid import must be atomic no-op
+- host actions must not fabricate Bus I/O
+- no File System Access API dependency for the baseline
 
-Create a fresh deterministic SHINO-80 factory medium only on explicit Human
-request.
+The superseded EXPORT-only PLAN/basic/detailed design are archived under
+`*/history/2026-09-28/`. Their useful browser-download research remains
+available as input, not as an active implementation contract.
 
-Do not silently overwrite inserted or ejected working media.
+## PHASE 3 — Practical Work Media / Multi-profile
 
-## Phase R5 — browser persistence v0.1
+Keep CLASSIC 256,256-byte media supported and add one practical larger work
+profile.
 
-Restore removable-media state across browser reload where supported.
+Current leading candidate:
 
-- host-side only
-- IndexedDB remains the primary candidate
-- failure degrades to non-persistent machine operation
-- do not depend on unload as the only save point
-- portable whole-disk export remains the Human-controlled escape hatch
+- CLASSIC: 256,256 bytes
+- WORK: 720 KiB class
 
-## Phase R6 — development media expansion
+This phase owns:
 
-Future candidates:
+- final larger-media geometry
+- drive/media-profile responsibility split
+- profile/header/container decisions
+- mixed-profile A/B behavior
 
-- B: drive
-- system/tools disk and user/work disk split
-- host-side CP/M file workshop
-- assembler / linker / editor / compiler
-- multiple removable-media inventory
-- write-protect UX
+Do not add 2HD/1.2 MB merely to make the matrix look complete.
 
-None are current commitments.
+## PHASE 4 — CP/M Compatibility + Filesystem Regression
+
+Turn compatibility into an explicit quality gate.
+
+Targets:
+
+- standard 8080/Z80 CP/M .COM software through normal CP/M APIs
+- Page Zero / FCB / BIOS compatibility where practical
+- A/B cross-drive operations
+- USER areas
+- extent and allocation-boundary tests
+- disk-full behavior
+- host-side directory/extent/allocation inspection
+- selected known legacy CP/M media profiles
+
+Foreign-machine hardware pokes and foreign BIOS/system-disk boot are not the
+general compatibility target.
+
+## PHASE 5 — Daily Development Environment — DISK SUBSYSTEM COMPLETE
+
+Provide a practical development workflow.
+
+A: system/tools side:
+
+- CP/M
+- editor
+- assembler/compiler
+- linker
+- debugger
+- required utilities
+
+B: work side:
+
+- source
+- object
+- COM
+- data
+- tests
+
+Completion experience:
+
+`EDIT -> ASSEMBLE/COMPILE -> LINK -> RUN -> EXPORT -> later IMPORT -> continue`
+
+When this works reliably, the base SHINO-80 Disk Subsystem is complete.
+
+## Advanced Storage — AFTER PHASE 5
+
+Not completion blockers:
+
+- IndexedDB browser persistence
+- media library / recent disks
+- factory restore / blank-disk wizard
+- additional C:/D: drives
+- 2HD profiles
+- HDD / RAM disk
+- host individual-file bridge
+- network drive
+- optional File System Access API integrations
 
 ## Cross-phase invariants
 
 - guest I/O remains CPU -> Bus -> device
-- host media management never writes guest RAM
+- A: remains the boot-system role unless a later explicit design changes it
+- host media management never shortcuts guest RAM/filesystem execution
 - Debugger remains observer-side
 - `src/` remains authoring source
-- `deploy/*.html` remains generated
-- CPU semantics do not change for host-media features
-- one active implementation PLAN
-- one purpose branch
-- one logical behavior change per PR
-- tests ship with behavior
+- generated `deploy/*.html` is never hand-edited
+- one implementation PHASE at a time
+- unresolved future items stay in the lounge, not in active repository contracts
 - Human controls merge/publication
 
-## Update History
+## Phase operating rule
 
-- 2026-09-28 — 戸澤 / ChatGPT — R2 whole-disk EXPORT selected and designed;
-  POWER-OFF-only contract and `.s80d` host extension fixed.
-- 2026-09-27 — 戸澤 / ChatGPT — R1 EJECT / REINSERT SAME MEDIA released.
-- 2026-09-27 — 戸澤 / ChatGPT — Initial roadmap.
+For each PHASE:
+
+1. lounge discussion and external research
+2. detailed design for that PHASE only
+3. one implementation Issue
+4. Codex implementation + tests + PR
+5. PM/PL/SE review
+6. Human merge
+7. only then design the next PHASE
+
+## Update history
+
+- 2026-09-28 — replaced obsolete R1–R6 split with PHASE 0–5 completion roadmap
+- 2026-09-28 — PHASE 1 A:/B: Dual Drive reviewed in Issue #54 / PR #55
+- 2026-09-28 — EXPORT-only Issue #51 / PR #52 superseded; IMPORT+EXPORT unified as PHASE 2
+- 2026-09-27 — DRIVE A EJECT / REINSERT SAME MEDIA released

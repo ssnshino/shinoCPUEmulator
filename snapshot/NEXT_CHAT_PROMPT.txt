@@ -5,30 +5,40 @@ SHINO-80を再開してください。
 
 README.mdから正規restart順を読み、GitHubをfetchしてlive stateを確認してください。
 
-current released main:
-47f2d6e1870c21c7ac55ec47620594b4adb02217
+latest reviewed storage implementation:
+- Issue #54 / PR #55 — PHASE 1 A:/B: Dual Drive
+- reviewed implementation commit: 3d492559c4765186e232cabefafa8c43a9ff814d
+- merge statusはlive Gitを確認
 
-completed implementation:
-- Issue #41 / PR #42 — Disk Autoboot
-- Issue #46 / PR #47 — DRIVE A EJECT / REINSERT SAME MEDIA
+reviewed storage behavior:
+- one controller / ports 30h–36h
+- 32h selector 0=A: / 1=B:
+- A: BOOT / SYSTEM / TOOLS / S80B v2 autoboot
+- B: USER / WORK / INTERCHANGE / blank CLASSIC work disk
+- AだけがROM autoboot source
+- A/B independent filesystem
+- A/B POWER-OFF EJECT / REINSERT SAME MEDIA
+- CP/M WBOOT from B: は B> 維持
+- UI RESETはROM autobootへ戻り A>
+- B media bytesはRESET後も保持
+- A absent + B insertedでもBからbootせずMON fallback
 
-active implementation plan:
-none
-
-released storage behavior:
-- valid S80B v2 A:はPOWER → RUN / RESET autoboot
-- no/invalid/pre-page-out read errorはROM MON fallback
-- POWER OFFでA: mediumをEJECTし、exact mediumをpage-local shelfへ保持
-- POWER OFFで同じmediumを再挿入
-- POWER ON media replacementは禁止
-- browser reload persistence / import/export / factory restore / B:は未実装
+not implemented:
+- whole-disk IMPORT / EXPORT
+- 720KiB/multi-profile
+- browser reload persistence
+- factory restore
+- C:/D: additional drives
 
 current design entry:
+- docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md
 - docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md
 - docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md
+- docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md
 
-Software DivisionのGD 40_SHINO80_SOFTWARE_LAB/02_specsにはProgrammer’s
-Reference、Boot Disk Image Format、契約同期マトリクスのdraftがあります。
+next:
+PHASE 1がlive mainへmerge済みなら、PHASE 2 Whole Disk IMPORT + EXPORT の
+詳細設計だけを開始してください。EXPORT-onlyへ再分割しないでください。
 
-R2 whole-disk EXPORTは候補ですが、Humanが選択してPM/SE側でPLANを作るまで
-active化しないでください。Humanの明示指示なしにmerge/publishしないでください。
+未決事項は談話室で揉み、repoへ小刻みPRを作らないでください。
+Humanの明示GOなしにmerge/publishしないでください。

@@ -4,7 +4,7 @@
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Shino80Beeper,BEEPER_PORT}=globalThis.SHINO_BEEPER;
-  const {Shino80BlockDevice}=globalThis.SHINO_BLOCK_DEVICE;
+  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
   const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
@@ -13,7 +13,8 @@
   const beeper=new Shino80Beeper();
   const systemDisk=buildSystemDisk();
   const diskA=new Shino80BlockDevice({image:systemDisk.image});
-  let driveAEjectedMedia=null;
+  diskA.mountImage(createBlankBlockImage(),{drive:1});
+  const driveEjectedMedia=[null,null];
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -60,17 +61,19 @@
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 3 STARTER FILES',state:'ONLINE'},
-    {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · S80B v2',state:'ONLINE'},
+    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · CLASSIC',state:'ONLINE'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
     {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
   ];
-  const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a']);
+  const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a','disk-b']);
+  const diskDeviceDrive=id=>id==='disk-a'?0:(id==='disk-b'?1:null);
   function deviceState(device){
     if(powerSensitiveDevices.has(device.id)&&!ui.powered)return 'OFF';
-    if(device.id==='disk-a')return diskA.mounted?'READY':'EMPTY';
+    const drive=diskDeviceDrive(device.id);
+    if(drive!==null)return diskA.mountedAt(drive)?'READY':'EMPTY';
     return device.state;
   }
 
@@ -171,29 +174,36 @@
     root.replaceChildren(fragment);
   }
 
-  function diskAInspectorHtml(){
-    const mediaState=diskA.mounted?'INSERTED':'EJECTED';
-    const canEject=!ui.powered&&diskA.mounted&&driveAEjectedMedia===null;
-    const canInsert=!ui.powered&&!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array;
-    return `<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div><div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive A media controls"><button type="button" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. POWER → RUN and RESET AUTOBOOT a valid A: medium. With A: empty, autoboot returns to ROM MON. MON O remains the manual retry path.</div>`;
+  function diskInspectorHtml(drive){
+    const letter=drive===0?'A':'B',mounted=diskA.mountedAt(drive),mediaState=mounted?'INSERTED':'EJECTED';
+    const canEject=!ui.powered&&mounted&&driveEjectedMedia[drive]===null;
+    const canInsert=!ui.powered&&!mounted&&driveEjectedMedia[drive] instanceof Uint8Array;
+    const role=drive===0?'SYSTEM / TOOLS':'USER / WORK / INTERCHANGE';
+    const details=drive===0
+      ?`<div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div>`
+      :'<div class="inspector-kv"><span>Format</span><b>CLASSIC · CP/M DATA</b></div><div class="inspector-kv"><span>Initial state</span><b>BLANK · E5h</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
+    const note=drive===0?'A: is the only POWER → RUN / RESET AUTOBOOT source. With A: empty, autoboot returns to ROM MON. MON O remains the manual A: retry path.':'B: is an independent writable work disk and is never an autoboot source in PHASE 1.';
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtectedAt(drive)?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
   }
 
   function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
-  function ejectDriveA(){
-    if(ui.powered||!diskA.mounted||driveAEjectedMedia!==null)return false;
-    const media=diskA.eject();
+  function ejectDrive(drive){
+    if(ui.powered||!diskA.mountedAt(drive)||driveEjectedMedia[drive]!==null)return false;
+    const media=diskA.eject({drive});
     if(!(media instanceof Uint8Array))return false;
-    driveAEjectedMedia=media;refreshDevicePresentation();return true;
+    driveEjectedMedia[drive]=media;refreshDevicePresentation();return true;
   }
-  function insertEjectedDriveA(){
-    if(ui.powered||diskA.mounted||!(driveAEjectedMedia instanceof Uint8Array))return false;
-    const media=driveAEjectedMedia;
-    diskA.mountImage(media);
-    driveAEjectedMedia=null;refreshDevicePresentation();return true;
+  function insertEjectedDrive(drive){
+    if(ui.powered||diskA.mountedAt(drive)||!(driveEjectedMedia[drive] instanceof Uint8Array))return false;
+    const media=driveEjectedMedia[drive];
+    diskA.mountImage(media,{drive});
+    driveEjectedMedia[drive]=null;refreshDevicePresentation();return true;
   }
-  function handleDiskAction(action){
-    if(action==='eject')ejectDriveA();
-    else if(action==='insert-ejected')insertEjectedDriveA();
+  function handleDiskAction(action,drive){
+    if(!Number.isInteger(drive)||drive<0||drive>1)return false;
+    if(action==='eject')return ejectDrive(drive);
+    if(action==='insert-ejected')return insertEjectedDrive(drive);
+    return false;
   }
 
   function renderInspector(){
@@ -211,7 +221,7 @@
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=diskAInspectorHtml();
+      else if(d.id==='disk-a'||d.id==='disk-b')html+=diskInspectorHtml(diskDeviceDrive(d.id));
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -407,7 +417,7 @@
     queryOne('#memoryJump').addEventListener('change',event=>{if(event.target.value)selectMemoryAddress(parseInt(event.target.value,16));event.target.value='';});
     queryOne('#memoryFollow').addEventListener('change',event=>{memoryView.follow=event.target.value;ui.dirty=true;});
     queryAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-disk-action]');if(control)handleDiskAction(control.dataset.diskAction);});
+    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-disk-action]');if(control)handleDiskAction(control.dataset.diskAction,Number(control.dataset.diskDrive));});
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
     queryOne('#stepBtn').addEventListener('click',stepOne);

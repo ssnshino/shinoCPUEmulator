@@ -753,6 +753,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BLOCK_SECTOR_SIZE=128;
   const BLOCK_IMAGE_SIZE=BLOCK_TRACKS*BLOCK_SECTORS_PER_TRACK*BLOCK_SECTOR_SIZE;
   const BLOCK_BLANK_BYTE=0xE5;
+  const BLOCK_DRIVE_COUNT=2;
 
   function createBlankBlockImage(fill=BLOCK_BLANK_BYTE){
     const image=new Uint8Array(BLOCK_IMAGE_SIZE);
@@ -763,8 +764,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   class Shino80BlockDevice {
     constructor({image=null,writeProtected=false}={}){
       this.id='SHINO80_BLOCK_DEVICE_A';
-      this.medium=null;
-      this.writeProtected=false;
+      this.slots=Array.from({length:BLOCK_DRIVE_COUNT},()=>({medium:null,writeProtected:false}));
       this.drive=0;
       this.track=0;
       this.sector=1;
@@ -773,37 +773,49 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       this.transferMode=null;
       this.transferIndex=0;
       this.transferBuffer=null;
-      if(image!==null)this.mountImage(image,{writeProtected});
+      if(image!==null)this.mountImage(image,{drive:0,writeProtected});
     }
 
     lowPort(port){return Number(port)&0xFF;}
     handlesPort(port){const low=this.lowPort(port);return low>=BLOCK_STATUS_PORT&&low<=BLOCK_ERROR_PORT;}
 
-    mountImage(image,{writeProtected=false}={}){
+    validDrive(drive){return Number.isInteger(drive)&&drive>=0&&drive<BLOCK_DRIVE_COUNT;}
+    slotAt(drive){return this.validDrive(drive)?this.slots[drive]:null;}
+    selectedSlot(){return this.slotAt(this.drive);}
+
+    mountImage(image,{drive=0,writeProtected=false}={}){
       if(!(image instanceof Uint8Array))throw new TypeError('Block image must be a Uint8Array');
       if(image.length!==BLOCK_IMAGE_SIZE)throw new RangeError(`Block image must be exactly ${BLOCK_IMAGE_SIZE} bytes`);
-      this.medium=new Uint8Array(image);
-      this.writeProtected=Boolean(writeProtected);
+      const slot=this.slotAt(drive);
+      if(!slot)throw new RangeError(`Block drive must be from 0 to ${BLOCK_DRIVE_COUNT-1}`);
+      slot.medium=new Uint8Array(image);
+      slot.writeProtected=Boolean(writeProtected);
       this.reset();
       return this;
     }
 
-    eject(){
-      const image=this.medium?new Uint8Array(this.medium):null;
-      this.medium=null;
-      this.writeProtected=false;
+    eject({drive=0}={}){
+      const slot=this.slotAt(drive);
+      if(!slot)return null;
+      const image=slot.medium?new Uint8Array(slot.medium):null;
+      slot.medium=null;
+      slot.writeProtected=false;
       this.reset();
       return image;
     }
 
-    exportImage(){return this.medium?new Uint8Array(this.medium):null;}
-    get mounted(){return this.medium!==null;}
+    exportImage({drive=0}={}){const slot=this.slotAt(drive);return slot?.medium?new Uint8Array(slot.medium):null;}
+    mountedAt(drive){return Boolean(this.slotAt(drive)?.medium);}
+    writeProtectedAt(drive){return Boolean(this.slotAt(drive)?.writeProtected);}
+    get medium(){return this.slotAt(0).medium;}
+    get writeProtected(){return this.writeProtectedAt(0);}
+    get mounted(){return this.mountedAt(0);}
     get transferRemaining(){return this.transferMode?BLOCK_SECTOR_SIZE-this.transferIndex:0;}
 
     status(){
-      return (this.mounted?BLOCK_STATUS_READY:0)|
+      return (this.mountedAt(this.drive)?BLOCK_STATUS_READY:0)|
         (this.transferMode?BLOCK_STATUS_DRQ:0)|
-        (this.mounted&&this.writeProtected?BLOCK_STATUS_WRITE_PROTECT:0)|
+        (this.mountedAt(this.drive)&&this.writeProtectedAt(this.drive)?BLOCK_STATUS_WRITE_PROTECT:0)|
         (this.error!==BLOCK_ERROR_NONE?BLOCK_STATUS_ERROR:0);
     }
 
@@ -818,11 +830,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     fail(code){this.clearTransfer();this.error=code;}
 
     validateSelection({write=false}={}){
-      if(this.drive!==0)return BLOCK_ERROR_BAD_DRIVE;
-      if(!this.mounted)return BLOCK_ERROR_NO_MEDIA;
+      if(!this.validDrive(this.drive))return BLOCK_ERROR_BAD_DRIVE;
+      if(!this.mountedAt(this.drive))return BLOCK_ERROR_NO_MEDIA;
       if(this.track<0||this.track>=BLOCK_TRACKS)return BLOCK_ERROR_BAD_TRACK;
       if(this.sector<1||this.sector>BLOCK_SECTORS_PER_TRACK)return BLOCK_ERROR_BAD_SECTOR;
-      if(write&&this.writeProtected)return BLOCK_ERROR_WRITE_PROTECTED;
+      if(write&&this.writeProtectedAt(this.drive))return BLOCK_ERROR_WRITE_PROTECTED;
       return BLOCK_ERROR_NONE;
     }
 
@@ -838,8 +850,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       this.transferMode=command===BLOCK_COMMAND_READ?'read':'write';
       this.transferBuffer=new Uint8Array(BLOCK_SECTOR_SIZE);
       if(this.transferMode==='read'){
-        const offset=this.sectorOffset();
-        this.transferBuffer.set(this.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
+        const offset=this.sectorOffset(),slot=this.selectedSlot();
+        this.transferBuffer.set(slot.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
       }
     }
 
@@ -860,7 +872,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(this.transferMode!=='write'||!this.transferBuffer){this.fail(BLOCK_ERROR_PROTOCOL);return;}
       this.transferBuffer[this.transferIndex++]=Number(value)&0xFF;
       if(this.transferIndex===BLOCK_SECTOR_SIZE){
-        this.medium.set(this.transferBuffer,this.sectorOffset());
+        this.selectedSlot().medium.set(this.transferBuffer,this.sectorOffset());
         this.clearTransfer();
       }
     }
@@ -917,7 +929,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     BLOCK_COMMAND_READ,BLOCK_COMMAND_WRITE,BLOCK_COMMAND_RESET,
     BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
     BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
-    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE
+    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE,BLOCK_DRIVE_COUNT
   };
 });
 </script>
@@ -931,6 +943,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const CBIOS_ORG=0xFA00;
   const CBIOS_ENTRY_SIZE=3;
   const CBIOS_DEFAULT_DMA=0x0080;
+  const CBIOS_DIRBUF=0xFD00;
   const CBIOS_SYSTEM_TRACK=0;
   const CBIOS_SYSTEM_SECTOR=2;
   const CBIOS_SYSTEM_ENTRY=0x8000;
@@ -991,6 +1004,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const jpZ=name=>a.absolute(0xCA,name);
     const jpNZ=name=>a.absolute(0xC2,name);
     const jpC=name=>a.absolute(0xDA,name);
+    const jpNC=name=>a.absolute(0xD2,name);
     const ldAFrom=name=>a.absolute(0x3A,name);
     const ldATo=name=>a.absolute(0x32,name);
     const ldHLFrom=name=>a.absolute(0x2A,name);
@@ -1069,8 +1083,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('CBIOS_HOME');a.emit(0x01,0x00,0x00);jp('CBIOS_SETTRK');
 
     a.label('CBIOS_SELDSK');
-    a.emit(0x79,0xB7);jpNZ('CBIOS_SELDSK_INVALID');ldATo('CBIOS_SELECTED_DRIVE');
-    a.absolute(0x21,'CBIOS_DPH');a.emit(0xC9);
+    a.emit(0x79,0xFE,0x02);jpNC('CBIOS_SELDSK_INVALID');ldATo('CBIOS_SELECTED_DRIVE');
+    a.emit(0xB7);jpNZ('CBIOS_SELDSK_B');a.absolute(0x21,'CBIOS_DPH_A');a.emit(0xC9);
+    a.label('CBIOS_SELDSK_B');a.absolute(0x21,'CBIOS_DPH_B');a.emit(0xC9);
     a.label('CBIOS_SELDSK_INVALID');a.word(0x21,0);a.emit(0xC9);
 
     a.label('CBIOS_SETTRK');ldBCTo('CBIOS_SELECTED_TRACK');a.emit(0xC9);
@@ -1105,9 +1120,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.dataWord(DPB.spt);a.emit(DPB.bsh,DPB.blm,DPB.exm);a.dataWord(DPB.dsm);a.dataWord(DPB.drm);
     a.emit(DPB.al0,DPB.al1);a.dataWord(DPB.cks);a.dataWord(DPB.off);
 
-    a.label('CBIOS_DPH');
+    a.label('CBIOS_DPH');a.label('CBIOS_DPH_A');
     a.dataWord(0);a.dataWord(0);a.dataWord(0);a.dataWord(0);
-    a.refWord('CBIOS_DIRBUF');a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV');a.refWord('CBIOS_ALV');
+    a.dataWord(CBIOS_DIRBUF);a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV_A');a.refWord('CBIOS_ALV_A');
+    a.label('CBIOS_DPH_B');
+    a.dataWord(0);a.dataWord(0);a.dataWord(0);a.dataWord(0);
+    a.dataWord(CBIOS_DIRBUF);a.refWord('CBIOS_DPB');a.refWord('CBIOS_CSV_B');a.refWord('CBIOS_ALV_B');
 
     a.label('CBIOS_SELECTED_DRIVE');a.emit(0);
     a.label('CBIOS_SELECTED_TRACK');a.emit(0);a.label('CBIOS_SELECTED_TRACK_HI');a.emit(0);
@@ -1115,9 +1133,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('CBIOS_DMA');a.dataWord(CBIOS_DEFAULT_DMA);
     a.label('CBIOS_CURSOR');a.dataWord(TEXT_VRAM_BASE);
     a.label('CBIOS_COLUMN');a.emit(0);
-    a.label('CBIOS_DIRBUF');a.emit(...new Array(128).fill(0));
-    a.label('CBIOS_CSV');a.emit(...new Array(DPB.cks).fill(0));
-    a.label('CBIOS_ALV');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
+    a.label('CBIOS_CSV');a.label('CBIOS_CSV_A');a.emit(...new Array(DPB.cks).fill(0));
+    a.label('CBIOS_CSV_B');a.emit(...new Array(DPB.cks).fill(0));
+    a.label('CBIOS_ALV');a.label('CBIOS_ALV_A');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
+    a.label('CBIOS_ALV_B');a.emit(...new Array(Math.floor(DPB.dsm/8)+1).fill(0));
 
     const assembled=a.resolve();
     return {
@@ -1125,12 +1144,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       origin:CBIOS_ORG,
       end:assembled.end,
       labels:assembled.labels,
-      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
+      meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dirbuf:CBIOS_DIRBUF,systemTrack:CBIOS_SYSTEM_TRACK,systemSector:CBIOS_SYSTEM_SECTOR,systemEntry:CBIOS_SYSTEM_ENTRY,dpb:DPB})
     };
   }
 
   return {
-    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,
+    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,CBIOS_DIRBUF,
     CBIOS_SYSTEM_TRACK,CBIOS_SYSTEM_SECTOR,CBIOS_SYSTEM_ENTRY,DPB,
     TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
     KEY_DATA_PORT,KEY_STATUS_PORT,
@@ -1382,7 +1401,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     emit(0xAF);word(0x32,0x0003);emit(0x3E,0xC3);word(0x32,0x0005);
     word(0x21,cpm22.CPM22_BDOS_ENTRY);word(0x22,0x0006);
     abs(0x21,'STARTUP_TITLE');callAddress(cbiosImage.labels.CBIOS_PRINT_STRING);
-    emit(0x0E,0x00);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
+    word(0x3A,0x0004);emit(0xE6,0x01,0x4F);word(0xC3,cpm22.CPM22_CCP_ORIGIN);
     label('STARTUP_TITLE');emit(...[...SYSTEM_STARTUP_TITLE].map(char=>char.charCodeAt(0)),0x00);
     for(const fixup of absFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);bytes[fixup.offset]=lo(address);bytes[fixup.offset+1]=hi(address);}
     for(const fixup of relFixups){const address=labels[fixup.name];if(address===undefined)throw new Error(`Unknown loader label ${fixup.name}`);const displacement=address-fixup.after;if(displacement < -128||displacement > 127)throw new RangeError(`Loader JR ${fixup.name} out of range`);bytes[fixup.offset+1]=displacement&0xFF;}
@@ -3411,7 +3430,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.label('DISK_BOOT_ATTEMPT');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
-    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,124,0,201,2,203]){
+    for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,128,0,145,2,151]){
       a.emit(0x7E,0xFE,expected);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x23);
     }
     for(const [sector,address] of [[2,0x8000],[3,0xFA00],[4,0xFA80],[5,0xFB00],[6,0xFB80],[7,0xFC00],[8,0xFC80]]){
@@ -3419,6 +3438,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     }
     a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
     a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xFA03);word(0x22,0x0001);
+    a.emit(0xAF);word(0x32,0x0004); // ROM cold/autoboot paths always enter CCP on A:
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
     a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
@@ -3616,7 +3636,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Shino80Beeper,BEEPER_PORT}=globalThis.SHINO_BEEPER;
-  const {Shino80BlockDevice}=globalThis.SHINO_BLOCK_DEVICE;
+  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
   const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
@@ -3625,7 +3645,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const beeper=new Shino80Beeper();
   const systemDisk=buildSystemDisk();
   const diskA=new Shino80BlockDevice({image:systemDisk.image});
-  let driveAEjectedMedia=null;
+  diskA.mountImage(createBlankBlockImage(),{drive:1});
+  const driveEjectedMedia=[null,null];
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -3672,17 +3693,19 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'CP/M 2.2 · S80B v2 · 3 STARTER FILES',state:'ONLINE'},
-    {id:'fdd-b',icon:'B:',name:'FDD B',desc:'Floppy Disk Drive',state:'RESERVED'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · S80B v2',state:'ONLINE'},
+    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · CLASSIC',state:'ONLINE'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
     {id:'psg',icon:'♪',name:'PSG',desc:'Sound generator slot',state:'RESERVED'}
   ];
-  const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a']);
+  const powerSensitiveDevices=new Set(['video','display','keyboard','beeper','disk-a','disk-b']);
+  const diskDeviceDrive=id=>id==='disk-a'?0:(id==='disk-b'?1:null);
   function deviceState(device){
     if(powerSensitiveDevices.has(device.id)&&!ui.powered)return 'OFF';
-    if(device.id==='disk-a')return diskA.mounted?'READY':'EMPTY';
+    const drive=diskDeviceDrive(device.id);
+    if(drive!==null)return diskA.mountedAt(drive)?'READY':'EMPTY';
     return device.state;
   }
 
@@ -3783,29 +3806,36 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     root.replaceChildren(fragment);
   }
 
-  function diskAInspectorHtml(){
-    const mediaState=diskA.mounted?'INSERTED':'EJECTED';
-    const canEject=!ui.powered&&diskA.mounted&&driveAEjectedMedia===null;
-    const canInsert=!ui.powered&&!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array;
-    return `<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div><div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive A media controls"><button type="button" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. POWER → RUN and RESET AUTOBOOT a valid A: medium. With A: empty, autoboot returns to ROM MON. MON O remains the manual retry path.</div>`;
+  function diskInspectorHtml(drive){
+    const letter=drive===0?'A':'B',mounted=diskA.mountedAt(drive),mediaState=mounted?'INSERTED':'EJECTED';
+    const canEject=!ui.powered&&mounted&&driveEjectedMedia[drive]===null;
+    const canInsert=!ui.powered&&!mounted&&driveEjectedMedia[drive] instanceof Uint8Array;
+    const role=drive===0?'SYSTEM / TOOLS':'USER / WORK / INTERCHANGE';
+    const details=drive===0
+      ?`<div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div>`
+      :'<div class="inspector-kv"><span>Format</span><b>CLASSIC · CP/M DATA</b></div><div class="inspector-kv"><span>Initial state</span><b>BLANK · E5h</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
+    const note=drive===0?'A: is the only POWER → RUN / RESET AUTOBOOT source. With A: empty, autoboot returns to ROM MON. MON O remains the manual A: retry path.':'B: is an independent writable work disk and is never an autoboot source in PHASE 1.';
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtectedAt(drive)?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
   }
 
   function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
-  function ejectDriveA(){
-    if(ui.powered||!diskA.mounted||driveAEjectedMedia!==null)return false;
-    const media=diskA.eject();
+  function ejectDrive(drive){
+    if(ui.powered||!diskA.mountedAt(drive)||driveEjectedMedia[drive]!==null)return false;
+    const media=diskA.eject({drive});
     if(!(media instanceof Uint8Array))return false;
-    driveAEjectedMedia=media;refreshDevicePresentation();return true;
+    driveEjectedMedia[drive]=media;refreshDevicePresentation();return true;
   }
-  function insertEjectedDriveA(){
-    if(ui.powered||diskA.mounted||!(driveAEjectedMedia instanceof Uint8Array))return false;
-    const media=driveAEjectedMedia;
-    diskA.mountImage(media);
-    driveAEjectedMedia=null;refreshDevicePresentation();return true;
+  function insertEjectedDrive(drive){
+    if(ui.powered||diskA.mountedAt(drive)||!(driveEjectedMedia[drive] instanceof Uint8Array))return false;
+    const media=driveEjectedMedia[drive];
+    diskA.mountImage(media,{drive});
+    driveEjectedMedia[drive]=null;refreshDevicePresentation();return true;
   }
-  function handleDiskAction(action){
-    if(action==='eject')ejectDriveA();
-    else if(action==='insert-ejected')insertEjectedDriveA();
+  function handleDiskAction(action,drive){
+    if(!Number.isInteger(drive)||drive<0||drive>1)return false;
+    if(action==='eject')return ejectDrive(drive);
+    if(action==='insert-ejected')return insertEjectedDrive(drive);
+    return false;
   }
 
   function renderInspector(){
@@ -3823,7 +3853,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='keyboard')html+=`<div class="inspector-section"><div class="inspector-kv"><span>DATA</span><b>20h</b></div><div class="inspector-kv"><span>STATUS</span><b>21h</b></div><div class="inspector-kv"><span>FIFO</span><b>${keyboard.depth} / ${keyboard.capacity}</b></div><div class="inspector-kv"><span>Overrun</span><b>${keyboard.overrun?'YES':'NO'}</b></div></div><div class="inspector-section inspector-note">Tap the DM-80 or use More → KEYBOARD to type into the ROM Monitor.</div>`;
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
-      else if(d.id==='disk-a')html+=diskAInspectorHtml();
+      else if(d.id==='disk-a'||d.id==='disk-b')html+=diskInspectorHtml(diskDeviceDrive(d.id));
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
     root.innerHTML=html;
@@ -4019,7 +4049,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     queryOne('#memoryJump').addEventListener('change',event=>{if(event.target.value)selectMemoryAddress(parseInt(event.target.value,16));event.target.value='';});
     queryOne('#memoryFollow').addEventListener('change',event=>{memoryView.follow=event.target.value;ui.dirty=true;});
     queryAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-disk-action]');if(control)handleDiskAction(control.dataset.diskAction);});
+    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-disk-action]');if(control)handleDiskAction(control.dataset.diskAction,Number(control.dataset.diskDrive));});
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
     queryOne('#stepBtn').addEventListener('click',stepOne);

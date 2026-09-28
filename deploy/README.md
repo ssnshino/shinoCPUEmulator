@@ -11,14 +11,14 @@ in this directory.
 
 The machine filename is retained for compatibility. Its contents have advanced
 beyond the historical PHASE 1E milestone through all Z80 instruction families,
-BIOS/MON v0.3, DM-80, pageable RAM, Virtual Disk A, CBIOS/WBOOT and writable
-CP/M 2.2 starter filesystem.
+BIOS/MON v0.3, DM-80, pageable RAM, one Virtual Disk controller with A:/B:
+media slots, CBIOS/WBOOT and writable CP/M 2.2 system/work filesystems.
 
 ## Build
 
 ```bash
-npm run build
-npm run build:manual
+pnpm run build
+pnpm run build:manual
 ```
 
 Authoring source lives under `src/`; tooling lives under `scripts/`. A fix made

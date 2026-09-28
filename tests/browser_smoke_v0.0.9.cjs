@@ -19,6 +19,12 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
       const bytes=await page.locator('#memoryGrid [data-address]').allTextContents();
       return String.fromCharCode(...bytes.map(value=>parseInt(value,16)));
     };
+    const readDisplayMemoryText=async()=>{
+      let text='';
+      for(let pageAddress=0xC000;pageAddress<=0xC700;pageAddress+=0x100)text+=await readVisibleMemoryText(pageAddress.toString(16));
+      return text;
+    };
+    const typeCpmCommand=async text=>{await page.keyboard.type(text);await page.keyboard.press('Enter');await page.waitForTimeout(650);};
     page.on('pageerror',error=>errors.push(String(error)));
     page.on('request',request=>requests.push(request.url()));
     await page.setContent(html,{waitUntil:'load'});await page.waitForTimeout(180);
@@ -37,49 +43,88 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert(Math.abs(canvasBox.height-viewportBox.height)<1.5);
     assert(Math.abs(viewportBox.width/viewportBox.height-1.6)<0.02);
 
-    // Compact/mobile uses a Human-visible inline Device inspector. Exercise the
-    // complete EJECT -> MON fallback -> REINSERT -> CP/M lifecycle through it.
+    // Compact/mobile uses one shared inline inspector for independent A/B media.
     await page.locator('.bottom-nav button[data-view="devices"]').click();await page.waitForTimeout(80);
-    const disk=page.locator('[data-device="disk-a"]');
-    assert((await disk.innerText()).includes('VIRTUAL DISK A'));assert((await disk.innerText()).includes('OFF'));
-    await disk.click();await page.waitForTimeout(80);
+    const diskA=page.locator('[data-device="disk-a"]'),diskB=page.locator('[data-device="disk-b"]');
+    assert((await diskA.innerText()).includes('VIRTUAL DISK A'));assert((await diskA.innerText()).includes('OFF'));
+    assert((await diskB.innerText()).includes('VIRTUAL DISK B'));assert((await diskB.innerText()).includes('OFF'));
+    await diskA.click();await page.waitForTimeout(80);
     const compactInspector=page.locator('#compactDeviceInspector');
     assert.equal(await compactInspector.isVisible(),true);
-    assert((await compactInspector.innerText()).includes('INSERTED'));
+    assert((await compactInspector.innerText()).includes('SYSTEM / TOOLS'));assert((await compactInspector.innerText()).includes('INSERTED'));
     const compactEject=compactInspector.getByRole('button',{name:'EJECT',exact:true});
     const compactInsert=compactInspector.getByRole('button',{name:'INSERT EJECTED DISK',exact:true});
     assert.equal(await compactEject.isEnabled(),true);assert.equal(await compactInsert.isDisabled(),true);
-    const traceBeforeEject=await page.locator('#traceSummary').innerText();
-    await compactEject.click();await page.waitForTimeout(80);
-    assert((await compactInspector.innerText()).includes('EJECTED'));
-    assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isEnabled(),true);
-    assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeEject);
-
-    await page.locator('#powerBtn').click();await page.waitForTimeout(100);
-    assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);
-    assert((await disk.innerText()).includes('EMPTY'));
-    await compactInsert.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
-    assert((await compactInspector.innerText()).includes('EJECTED'),'powered action handler must reject reinsertion');
-    await page.locator('#runPauseBtn').click();await page.waitForTimeout(900);await page.locator('#runPauseBtn').click();
-    const monitorText=await readVisibleMemoryText('C000');
-    assert(monitorText.includes('MON'),monitorText);assert(!monitorText.includes('SHINO-80 CP/M 2.2'),monitorText);
-
-    await page.locator('#powerBtn').click();await page.waitForTimeout(80);
-    await page.locator('.bottom-nav button[data-view="devices"]').click();await disk.click();await page.waitForTimeout(80);
-    assert.equal(await compactInsert.isEnabled(),true);
-    const traceBeforeInsert=await page.locator('#traceSummary').innerText();
-    await compactInsert.click();await page.waitForTimeout(80);
-    assert((await compactInspector.innerText()).includes('INSERTED'));
+    await diskB.click();await page.waitForTimeout(80);
+    assert((await compactInspector.innerText()).includes('USER / WORK / INTERCHANGE'));
+    assert((await compactInspector.innerText()).includes('CLASSIC · CP/M DATA'));
+    assert((await compactInspector.innerText()).includes('NOT AN AUTOBOOT SOURCE'));
     assert.equal(await compactEject.isEnabled(),true);assert.equal(await compactInsert.isDisabled(),true);
-    assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeInsert);
+
+    // Boot from A:, switch through the real CCP to blank B:, and create WORK.COM.
     await page.locator('#powerBtn').click();await page.waitForTimeout(100);
     assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);
-    assert((await disk.innerText()).includes('READY'));
     await compactEject.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
-    assert((await compactInspector.innerText()).includes('INSERTED'),'powered action handler must reject eject');
+    assert((await compactInspector.innerText()).includes('INSERTED'),'powered B handler must reject eject');
+    await page.locator('#runPauseBtn').click();await page.waitForTimeout(1200);
+    await page.locator('#moreBtn').click();await page.locator('[data-more-action="keyboard"]').click();
+    await typeCpmCommand('b:');await typeCpmCommand('dir');await typeCpmCommand('save 1 work.com');await typeCpmCommand('dir');
+    await page.locator('#keyboardCapture').evaluate(element=>element.blur());await page.locator('#runPauseBtn').click();
+    let displayText=await readDisplayMemoryText();
+    assert(displayText.includes('B>'),displayText);assert(displayText.includes('NO FILE'),displayText);assert.match(displayText,/WORK\s+COM/);
+
+    // POWER OFF B-only EJECT/REINSERT preserves A and does not fabricate Bus events.
+    await page.locator('#powerBtn').click();await page.waitForTimeout(80);
+    await page.locator('.bottom-nav button[data-view="devices"]').click();await diskB.click();await page.waitForTimeout(80);
+    const traceBeforeBEject=await page.locator('#traceSummary').innerText();
+    await compactEject.click();await page.waitForTimeout(80);
+    assert((await compactInspector.innerText()).includes('EJECTED'));assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeBEject);
+    await diskA.click();await page.waitForTimeout(80);assert((await compactInspector.innerText()).includes('INSERTED'));
+    await diskB.click();await page.waitForTimeout(80);assert.equal(await compactInsert.isEnabled(),true);
+    await compactInsert.click();await page.waitForTimeout(80);
+    assert((await compactInspector.innerText()).includes('INSERTED'));assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeBEject);
+
+    // Cold boot still starts at A:, then B: retains WORK.COM.
+    await page.locator('#powerBtn').click();await page.waitForTimeout(100);
     await page.locator('#runPauseBtn').click();await page.waitForTimeout(1200);await page.locator('#runPauseBtn').click();
-    const cpmText=await readVisibleMemoryText('C000');
-    assert(cpmText.includes('SHINO-80 CP/M 2.2'),cpmText);assert(cpmText.includes('A>'),cpmText);
+    displayText=await readDisplayMemoryText();assert(displayText.includes('SHINO-80 CP/M 2.2'),displayText);assert(displayText.includes('A>'),displayText);
+    await page.locator('#runPauseBtn').click();await page.locator('#moreBtn').click();await page.locator('[data-more-action="keyboard"]').click();
+    await typeCpmCommand('b:');await typeCpmCommand('dir');
+    await page.locator('#keyboardCapture').evaluate(element=>element.blur());await page.locator('#runPauseBtn').click();
+    displayText=await readDisplayMemoryText();assert(displayText.includes('B>'),displayText);assert.match(displayText,/WORK\s+COM/);
+
+    // The real compact RESET control re-enters ROM autoboot on A: without
+    // clearing RAM or losing B media. Returning to B: still finds WORK.COM.
+    await page.locator('#moreBtn').click();await page.locator('[data-more-action="reset"]').click();await page.waitForTimeout(100);
+    await page.locator('#runPauseBtn').click();await page.waitForTimeout(1200);await page.locator('#runPauseBtn').click();
+    displayText=await readDisplayMemoryText();assert(displayText.includes('A>'),displayText);
+    await page.locator('#memoryAddress').fill('0004');await page.locator('#memoryAddressForm').press('Enter');await page.waitForTimeout(80);
+    assert.equal(parseInt(await page.locator('[data-address="0004"]').innerText(),16)&0x0F,0);
+    await page.locator('#runPauseBtn').click();await page.locator('#moreBtn').click();await page.locator('[data-more-action="keyboard"]').click();
+    await typeCpmCommand('b:');await typeCpmCommand('dir');
+    await page.locator('#keyboardCapture').evaluate(element=>element.blur());await page.locator('#runPauseBtn').click();
+    displayText=await readDisplayMemoryText();assert(displayText.includes('B>'),displayText);assert.match(displayText,/WORK\s+COM/);
+
+    // A: missing with valid B: must fall back to ROM MON; B is never booted.
+    await page.locator('#powerBtn').click();await page.waitForTimeout(80);
+    await page.locator('.bottom-nav button[data-view="devices"]').click();await diskA.click();await page.waitForTimeout(80);
+    const traceBeforeAEject=await page.locator('#traceSummary').innerText();await compactEject.click();await page.waitForTimeout(80);
+    assert((await compactInspector.innerText()).includes('EJECTED'));assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeAEject);
+    await diskB.click();await page.waitForTimeout(80);assert((await compactInspector.innerText()).includes('INSERTED'));
+    await page.locator('#powerBtn').click();await page.waitForTimeout(100);
+    assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);
+    await compactEject.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+    assert((await compactInspector.innerText()).includes('INSERTED'),'powered B handler must reject eject');
+    await page.locator('#runPauseBtn').click();await page.waitForTimeout(900);await page.locator('#runPauseBtn').click();
+    const monitorText=await readDisplayMemoryText();assert(monitorText.includes('MON'),monitorText);assert(!monitorText.includes('SHINO-80 CP/M 2.2'),monitorText);
+
+    // Restore A and leave the machine in the normal powered/paused CP/M state.
+    await page.locator('#powerBtn').click();await page.waitForTimeout(80);
+    await page.locator('.bottom-nav button[data-view="devices"]').click();await diskA.click();await page.waitForTimeout(80);
+    assert.equal(await compactInsert.isEnabled(),true);await compactInsert.click();await page.waitForTimeout(80);
+    assert((await compactInspector.innerText()).includes('INSERTED'));
+    await page.locator('#powerBtn').click();await page.locator('#runPauseBtn').click();await page.waitForTimeout(1200);await page.locator('#runPauseBtn').click();
+    const cpmText=await readVisibleMemoryText('C000');assert(cpmText.includes('SHINO-80 CP/M 2.2'),cpmText);assert(cpmText.includes('A>'),cpmText);
 
     await page.locator('#moreBtn').click();await page.locator('[data-more-action="pace"]').click();
     await page.locator('#moreCloseBtn').click();await page.waitForTimeout(220);
@@ -127,10 +172,13 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     let inspector=await page.locator('#inspectorContent').innerText();
     assert(inspector.includes('I/O 40h'));assert(inspector.replaceAll('\n','').replaceAll(' ','').includes('Count1'));
 
-    const diskText=await disk.innerText();
-    assert(diskText.includes('VIRTUAL DISK A'));assert(diskText.includes('READY'));
-    await disk.click();await page.waitForTimeout(80);inspector=await page.locator('#inspectorContent').innerText();
+    const diskAText=await diskA.innerText(),diskBText=await diskB.innerText();
+    assert(diskAText.includes('VIRTUAL DISK A'));assert(diskAText.includes('READY'));
+    assert(diskBText.includes('VIRTUAL DISK B'));assert(diskBText.includes('READY'));
+    await diskA.click();await page.waitForTimeout(80);inspector=await page.locator('#inspectorContent').innerText();
     for(const expected of ['INSERTED','77 TRACKS × 26 SECTORS','256,256 BYTES','30h–36h','S80B v2 · CP/M 2.2','WELCOME.TXT','HELLO.COM','S80INFO.COM','A:','AUTOBOOT','MON O','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
+    await diskB.click();await page.waitForTimeout(80);inspector=await page.locator('#inspectorContent').innerText();
+    for(const expected of ['INSERTED','77 TRACKS × 26 SECTORS','256,256 BYTES','30h–36h','USER / WORK / INTERCHANGE','CLASSIC · CP/M DATA','B:','NOT AN AUTOBOOT SOURCE','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 
     await page.setViewportSize({width:1280,height:900});await page.waitForTimeout(180);
@@ -148,6 +196,6 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert.equal(await compactInspector.getByRole('button',{name:'EJECT',exact:true}).isVisible(),true);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
-    console.log('v0.0.9 Chromium CP/M autoboot + filesystem + cursor + beeper machine regression PASS');
+    console.log('v0.0.9 Chromium CP/M A:/B: dual-drive + filesystem + cursor + beeper machine regression PASS');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

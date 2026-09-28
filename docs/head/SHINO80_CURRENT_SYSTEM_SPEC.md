@@ -1,15 +1,18 @@
 # SHINO-80 Current Integrated System Specification
 
-Status: RELEASED BASELINE
-Updated: 2026-09-27 JST
-Released implementation baseline: `47f2d6e1870c21c7ac55ec47620594b4adb02217` / PR #47
+Status: CURRENT INTEGRATION BASELINE
+Updated: 2026-09-28 JST
+Latest reviewed storage implementation: Issue #54 / PR #55
+Review head: `3d492559c4765186e232cabefafa8c43a9ff814d`
+
+Live Git state wins over recorded SHAs. This document describes the reviewed
+PHASE 1 integrated machine; Human merge status must be checked from GitHub.
 
 ## Purpose
 
-This is the concise current-system specification for ordinary restart and
-future planning. Completed incremental phase specifications are preserved under
-`docs/history/`; they describe how the system arrived here, not unfinished
-work.
+This is the concise current-system specification for ordinary restart and future
+planning. Completed incremental phase specifications and superseded plans are
+preserved under history trees; they describe how the machine arrived here.
 
 ## Distribution
 
@@ -25,95 +28,154 @@ current feature set to the historical BASE-complete milestone.
 ## CPU
 
 - Z80 instruction families: BASE, CB, ED, DD, FD, DDCB, FDCB
-- flags: documented and implemented undocumented X/Y behavior
+- documented and implemented undocumented flag behavior
 - internal accuracy state: WZ, P, Q
-- interrupts: NMI and INT IM 0/1/2 at instruction boundaries
+- NMI and INT IM 0/1/2 at instruction boundaries
 - EI delay and HALT return behavior implemented
 - pinned external full-state baseline: `1,604,000 / 1,604,000 PASS`
-- independent interrupt/sequence and XY checks: PASS
-
-Accuracy is instruction-level, not electrical or pin-cycle-perfect. WAIT,
-BUSRQ, analogue/electrical contention, peripheral daisy-chain behavior and
-multi-byte device-fed IM0 streams remain outside this milestone.
+- instruction-level accuracy; not electrical or pin-cycle-perfect
 
 ## Memory and firmware
 
 - physical RAM: 64 KiB
-- RESET-visible firmware overlay: Boot/Recovery ROM 0000h–1FFFh plus Extension
-  ROM 2000h–3FFFh
+- RESET-visible firmware overlay: Boot/Recovery ROM 0000h–1FFFh plus Extension ROM 2000h–3FFFh
 - memory-control port: low I/O 00h
 - VRAM: C000h–C7CFh, 2,000 text cells
+- ROM Monitor: help, clear, dump, registers, disassembly, RAM boot proof and system-disk boot
 - RAM handoff trampoline: F800h–F802h
-- ROM BIOS stable jump table includes console, parsing, disassembly and RAM
-  handoff services
-- ROM Monitor supports help, clear, bounded dump, registers, disassembly, RAM
-  boot proof and system-disk boot
+- CP/M shared directory scratch buffer: FD00h–FD7Fh
 
 ## Display and input
 
 - DM-80 text display: 80 columns × 25 rows
 - logical raster: 640 × 400
 - native CG-ROM: 256 glyphs × 16 bytes = 4 KiB
-- native/integer enlargement: pixel-perfect
-- reduction/non-integer scaling: gentle antialiasing
-- scanline/phosphor: presentation layer only
 - keyboard controller: byte FIFO exposed through Bus-visible I/O
-- mobile keyboard mode keeps the DM-80 display visible above the OS keyboard
-- CBIOS console implements CR, LF, Backspace, Delete, BEL and real 80×25 scroll
+- CBIOS console: CR, LF, Backspace, Delete, BEL and 80×25 scroll
+- mobile keyboard mode keeps the DM-80 visible above the OS keyboard
 
-## Mass storage and CP/M
+## Mass storage controller
 
-- Virtual Disk A: 77 tracks × 26 sectors × 128 bytes = 256,256 bytes
-- Bus-visible PIO ports: 30h–36h
-- system image: S80B v2
-- RAM-resident original SHINO CBIOS with standard CP/M 2.2 entry order
-- CP/M 2.2 CCP at 9400h and BDOS at 9C00h, public BDOS entry 9C06h
-- TPA: 0100h–93FFh
-- writable A: starter filesystem with deterministic CP/M directory/extents
-- bundled original files: WELCOME.TXT, HELLO.COM, S80INFO.COM
-- supported resident CCP commands: DIR, TYPE, ERA, REN, SAVE, USER
-- page-local media survives RESET, POWER and WBOOT
-- while POWER is OFF, Human-visible desktop and compact Device inspectors can EJECT A: and REINSERT the exact retained medium; POWER ON media change is blocked
-- browser reload persistence, whole-disk host import/export and factory-media restore are not implemented
-- POWER followed by RUN, and machine RESET, automatically boot a mounted valid
-  S80B v2 A: medium without keyboard input
-- missing, unreadable or invalid boot media falls back to the ROM Monitor before
-  page-out; `MON O` remains the explicit retry path
-- the disk payload prints `SHINO-80 CP/M 2.2` through CBIOS before CCP enters A>
+SHINO-80 PHASE 1 uses **one block controller with two removable-media slots**.
 
-The CP/M CCP/BDOS redistribution permission, exact upstream origin, patches and
-hashes are retained under `third_party/cpm22/`. SHINO firmware, filesystem
-builder and starter files are original repository work.
+Shared low I/O:
+
+- 30h STATUS
+- 31h COMMAND
+- 32h DRIVE selector: 0=A:, 1=B:
+- 33h TRACK
+- 34h SECTOR
+- 35h DATA
+- 36h ERROR
+
+Both media currently use CLASSIC geometry:
+
+- 77 tracks
+- 26 sectors/track
+- 128 bytes/sector
+- 256,256 bytes total
+
+Controller selection/transfer state is shared; media bytes and write-protect
+state are independent per drive. Controller reset returns selection to A: but
+does not discard either medium.
+
+## CP/M drive roles
+
+### A: — BOOT / SYSTEM / TOOLS
+
+- deterministic S80B v2 system medium
+- SHINO loader, CBIOS, licensed CP/M 2.2 CCP/BDOS
+- bundled WELCOME.TXT, HELLO.COM, S80INFO.COM
+- the **only** ROM autoboot / `MON O` source
+
+### B: — USER / WORK / INTERCHANGE
+
+- blank writable CLASSIC work medium at page construction
+- E5h-initialized CP/M data medium
+- no S80B header, loader, CBIOS or operating-system payload
+- never probed as a boot source in PHASE 1
+
+CP/M can switch normally with `A>B:` and `B>A:`. A and B have independent
+filesystems.
+
+## CBIOS / WBOOT
+
+- RAM-resident original SHINO CBIOS with the standard CP/M 2.2 17-entry order
+- CBIOS size: 657 bytes inside the unchanged six-sector / 768-byte S80B v2 reservation
+- DPH_A and DPH_B are distinct 16-byte DPHs
+- A/B share one DPB because their media geometry is identical
+- A/B share DIRBUF FD00h–FD7Fh
+- A/B CSV and ALV storage are independent
+- SELDSK: C=0 -> A, C=1 -> B, C>=2 -> unsupported
+- READ/WRITE continue through CPU -> Bus -> block controller
+
+CP/M WBOOT always reloads the system from A: but preserves Page Zero 0004h so a
+warm boot initiated while B: is current returns to `B>`.
+
+ROM cold/autoboot paths explicitly initialize Page Zero 0004h to A:. Therefore:
+
+- POWER / UI RESET / `MON O` -> `A>`
+- CP/M WBOOT from B: -> `B>`
+
+## Removable-media lifecycle
+
+Both A and B have independent page-local host shelves.
+
+While POWER is OFF:
+
+- EJECT the target drive
+- retain the exact ejected bytes
+- INSERT EJECTED DISK back into the same drive
+
+While POWER is ON, replacement controls are disabled and handler-guarded.
+
+Media survives POWER, RESET and WBOOT inside the page. Browser reload
+persistence, whole-disk IMPORT/EXPORT and factory-media restore are not yet
+implemented.
+
+If A: is absent or invalid, ROM falls back to MON before page-out even when B:
+contains valid-looking data. B: is not a boot source.
+
+## CP/M environment
+
+- CCP 9400h
+- BDOS 9C00h, public entry 9C06h
+- TPA 0100h–93FFh
+- resident CCP commands: DIR, TYPE, ERA, REN, SAVE, USER
+- writable CP/M directory/extents on both drives
+- A starter files are original SHINO-80 repository work
+
+The CP/M CCP/BDOS redistribution permission, upstream origin, patches and hashes
+remain under `third_party/cpm22/`.
 
 ## Devices and observers
 
-- one-bit beeper: low I/O 40h; BEL triggers the machine device
+- one-bit beeper: low I/O 40h
 - Debugger/Inspector uses observer APIs and must not become an execution path
-- Bus trace uses bounded storage; visible observers avoid high-frequency DOM
-  updates
-- B: drive, mechanical FDC timing, UART, printer and physical display ports are
-  future work and have no invented current I/O allocation
+- Bus trace uses bounded storage
+- host media controls do not fabricate guest Bus events
+- mechanical FDC timing, UART, printer and physical display ports remain future work
 
-## Human acceptance
+## Verification
 
-Real iPhone/Edge review confirmed:
+Issue #54 / PR #55 reviewed evidence includes:
 
-- machine launch and mobile layout
-- MON O to CP/M
-- DIR, TYPE WELCOME.TXT, HELLO, S80INFO
-- Backspace/Delete line editing
-- 80×25 scrolling
-- SAVE 1 COPY.COM, copied COM execution and ERA COPY.COM
-- cursor and BEEP behavior
+- one controller / two independent media slots
+- A/B CBIOS SELDSK and Bus-visible READ/WRITE
+- B filesystem create/read and A/B isolation
+- B WBOOT -> B>
+- actual UI RESET -> ROM autoboot -> A>
+- B file survival across UI RESET and EJECT/REINSERT
+- A absent + B inserted -> MON fallback
+- compact 390×844, desktop 1280×900, compact-height 900×400
+- `pnpm test`, `pnpm run test:browser`, `git diff --check` PASS
 
-Issue #41 / PR #42 automatic POWER → RUN / RESET boot has automated,
-real-Chrome and Human Codex-preview coverage. Physical iPhone/Edge autoboot
-recheck is not recorded. Issue #46 / PR #47 DRIVE A EJECT / REINSERT has
-aggregate regression, visible-control Chrome coverage at 390×844 / 1280×900 /
-900×400 and Human interactive QA PASS.
+## Next storage phase
+
+PHASE 2 is **Whole Disk IMPORT + EXPORT** as one bounded feature. It is not yet
+implemented. See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
 
 ## Change rule
 
-Future work starts with one PLAN in `plan/head/`. Any CPU semantic change needs
-a new accuracy phase and matching oracle/regression evidence. Generated deploy
-HTML is never the authoring source.
+Generated deploy HTML is never the authoring source. One environment / one
+writer / one purpose branch. Human review controls merge and publication.

@@ -1,3 +1,5 @@
+> Archived 2026-09-28: superseded by the unified Disk Subsystem roadmap. Whole-disk IMPORT + EXPORT is now PHASE 2 and will be designed/implemented as one bounded feature. This file is historical evidence, not an active contract.
+
 # SHINO-80 DRIVE A Whole-Disk EXPORT v0.1 — Detailed Design
 
 Status: IMPLEMENTATION-READY DESIGN
