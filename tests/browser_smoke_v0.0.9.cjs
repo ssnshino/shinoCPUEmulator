@@ -4,10 +4,12 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {chromium}=require('playwright');
+const {buildSystemDisk}=require('../src/firmware/shino80/shino80-system-disk.js');
 
 const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'deploy','one_page_shino80_v0.0.9_z80_base_complete.html'),'utf8');
 const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const expectedFactoryImage=Buffer.from(buildSystemDisk().image);
 
 (async()=>{
   const browser=await chromium.launch({headless:true,executablePath,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
@@ -48,16 +50,47 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert((await compactInspector.innerText()).includes('INSERTED'));
     const compactEject=compactInspector.getByRole('button',{name:'EJECT',exact:true});
     const compactInsert=compactInspector.getByRole('button',{name:'INSERT EJECTED DISK',exact:true});
+    const compactExport=compactInspector.getByRole('button',{name:'EXPORT IMAGE',exact:true});
     assert.equal(await compactEject.isEnabled(),true);assert.equal(await compactInsert.isDisabled(),true);
+    assert.equal(await compactExport.isEnabled(),true);
+    await page.evaluate(()=>{
+      const NativeBlob=Blob,nativeRevoke=URL.revokeObjectURL.bind(URL);
+      globalThis.__driveAExportBlobType='';globalThis.__driveAExportRevokeCount=0;
+      globalThis.Blob=function(parts,options){globalThis.__driveAExportBlobType=options?.type||'';return new NativeBlob(parts,options);};
+      URL.revokeObjectURL=url=>{globalThis.__driveAExportRevokeCount++;nativeRevoke(url);};
+    });
+    const traceBeforeExport=await page.locator('#traceSummary').innerText();
+    const [insertedDownload]=await Promise.all([page.waitForEvent('download'),compactExport.click()]);
+    assert.equal(insertedDownload.suggestedFilename(),'SHINO80_DRIVE_A.s80d');
+    const insertedBytes=fs.readFileSync(await insertedDownload.path());
+    assert.equal(insertedBytes.length,256256);assert.deepEqual(insertedBytes,expectedFactoryImage);
+    assert.equal(await page.evaluate(()=>globalThis.__driveAExportBlobType),'application/octet-stream');
+    assert.equal(await page.evaluate(()=>globalThis.__driveAExportRevokeCount),0,'object URL must not be revoked synchronously');
+    assert((await compactInspector.innerText()).includes('INSERTED'));
+    assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeExport);
     const traceBeforeEject=await page.locator('#traceSummary').innerText();
     await compactEject.click();await page.waitForTimeout(80);
     assert((await compactInspector.innerText()).includes('EJECTED'));
     assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isEnabled(),true);
+    assert.equal(await compactExport.isEnabled(),true);
     assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeEject);
+    const traceBeforeShelfExport=await page.locator('#traceSummary').innerText();
+    const [ejectedDownload]=await Promise.all([page.waitForEvent('download'),compactExport.click()]);
+    assert.equal(ejectedDownload.suggestedFilename(),'SHINO80_DRIVE_A.s80d');
+    const ejectedBytes=fs.readFileSync(await ejectedDownload.path());
+    assert.deepEqual(ejectedBytes,insertedBytes);
+    assert((await compactInspector.innerText()).includes('EJECTED'));
+    assert.equal(await compactInsert.isEnabled(),true);
+    assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeShelfExport);
 
     await page.locator('#powerBtn').click();await page.waitForTimeout(100);
-    assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);
+    assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);assert.equal(await compactExport.isDisabled(),true);
     assert((await disk.innerText()).includes('EMPTY'));
+    const noPoweredDownload=page.waitForEvent('download',{timeout:300});
+    await compactExport.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+    await assert.rejects(noPoweredDownload,/Timeout/);
+    assert((await compactInspector.innerText()).includes('EJECTED'),'powered export handler must preserve ejected media');
+    assert.equal(await page.locator('#traceSummary').innerText(),traceBeforeShelfExport);
     await compactInsert.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
     assert((await compactInspector.innerText()).includes('EJECTED'),'powered action handler must reject reinsertion');
     await page.locator('#runPauseBtn').click();await page.waitForTimeout(900);await page.locator('#runPauseBtn').click();
@@ -140,14 +173,18 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert.equal(await desktopInspector.getByRole('button',{name:'EJECT',exact:true}).isVisible(),true);
     assert.equal(await desktopInspector.getByRole('button',{name:'EJECT',exact:true}).isDisabled(),true);
     assert.equal(await desktopInspector.getByRole('button',{name:'INSERT EJECTED DISK',exact:true}).isDisabled(),true);
+    assert.equal(await desktopInspector.getByRole('button',{name:'EXPORT IMAGE',exact:true}).isVisible(),true);
+    assert.equal(await desktopInspector.getByRole('button',{name:'EXPORT IMAGE',exact:true}).isDisabled(),true);
+    assert((await desktopInspector.innerText()).includes('EXPORT is read-only but POWER-OFF-only in v0.1.'));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 
     await page.setViewportSize({width:900,height:400});await page.waitForTimeout(180);
     assert.equal(await page.locator('#inspector').evaluate(element=>getComputedStyle(element).display),'none');
     assert.equal(await compactInspector.isVisible(),true);
     assert.equal(await compactInspector.getByRole('button',{name:'EJECT',exact:true}).isVisible(),true);
+    assert.equal(await compactInspector.getByRole('button',{name:'EXPORT IMAGE',exact:true}).isVisible(),true);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
-    console.log('v0.0.9 Chromium CP/M autoboot + filesystem + cursor + beeper machine regression PASS');
+    console.log('v0.0.9 Chromium DRIVE A export + CP/M machine regression PASS');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

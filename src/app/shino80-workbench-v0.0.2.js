@@ -14,6 +14,9 @@
   const systemDisk=buildSystemDisk();
   const diskA=new Shino80BlockDevice({image:systemDisk.image});
   let driveAEjectedMedia=null;
+  const DRIVE_A_EXPORT_FILENAME='SHINO80_DRIVE_A.s80d';
+  const DRIVE_A_EXPORT_MIME='application/octet-stream';
+  const DRIVE_A_EXPORT_REVOKE_MS=60000;
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -175,7 +178,8 @@
     const mediaState=diskA.mounted?'INSERTED':'EJECTED';
     const canEject=!ui.powered&&diskA.mounted&&driveAEjectedMedia===null;
     const canInsert=!ui.powered&&!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array;
-    return `<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div><div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive A media controls"><button type="button" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. POWER → RUN and RESET AUTOBOOT a valid A: medium. With A: empty, autoboot returns to ROM MON. MON O remains the manual retry path.</div>`;
+    const canExport=!ui.powered&&((diskA.mounted&&driveAEjectedMedia===null)||(!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array));
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div><div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h</b></div><div class="inspector-kv"><span>Selection</span><b>A:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div><div class="inspector-section disk-actions" aria-label="Drive A media controls"><button type="button" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button><button type="button" data-disk-action="export-image"${canExport?'':' disabled'}>EXPORT IMAGE</button></div><div class="inspector-section inspector-note">Media changes require POWER OFF. EXPORT is read-only but POWER-OFF-only in v0.1. POWER → RUN and RESET AUTOBOOT a valid A: medium. With A: empty, autoboot returns to ROM MON. MON O remains the manual retry path.</div>`;
   }
 
   function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
@@ -191,9 +195,27 @@
     diskA.mountImage(media);
     driveAEjectedMedia=null;refreshDevicePresentation();return true;
   }
+  function driveAExportImage(){
+    if(diskA.mounted&&driveAEjectedMedia===null)return diskA.exportImage();
+    if(!diskA.mounted&&driveAEjectedMedia instanceof Uint8Array)return driveAEjectedMedia.slice();
+    return null;
+  }
+  function exportDriveA(){
+    if(ui.powered)return false;
+    const image=driveAExportImage();
+    if(!(image instanceof Uint8Array)||image.length!==256256)return false;
+    if(typeof Blob!=='function'||typeof URL?.createObjectURL!=='function'||typeof URL?.revokeObjectURL!=='function')return false;
+    const blob=new Blob([image],{type:DRIVE_A_EXPORT_MIME});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=DRIVE_A_EXPORT_FILENAME;link.hidden=true;
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),DRIVE_A_EXPORT_REVOKE_MS);
+    return true;
+  }
   function handleDiskAction(action){
     if(action==='eject')ejectDriveA();
     else if(action==='insert-ejected')insertEjectedDriveA();
+    else if(action==='export-image')exportDriveA();
   }
 
   function renderInspector(){
