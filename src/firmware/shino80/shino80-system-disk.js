@@ -1,13 +1,14 @@
 (function(root,factory){
   const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const profiles=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-media-profiles.js'):root.SHINO_MEDIA_PROFILES;
   const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
   const cpm22=(typeof module==='object'&&module.exports)?require('./shino80-cpm22.js'):root.SHINO_CPM22;
   const filesystem=(typeof module==='object'&&module.exports)?require('./shino80-cpm-filesystem.js'):root.SHINO_CPM_FILESYSTEM;
   const starter=(typeof module==='object'&&module.exports)?require('./shino80-cpm-starter-files.js'):root.SHINO_CPM_STARTER_FILES;
-  const api=factory(block,cbios,cpm22,filesystem,starter);
+  const api=factory(block,profiles,cbios,cpm22,filesystem,starter);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_SYSTEM_DISK=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22,filesystem,starter){
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,profiles,cbios,cpm22,filesystem,starter){
   'use strict';
   const SYSTEM_DISK_MAGIC='S80B',SYSTEM_DISK_VERSION=2;
   const SYSTEM_HEADER_TRACK=0,SYSTEM_HEADER_SECTOR=1;
@@ -16,6 +17,11 @@
   const SYSTEM_CPM_TRACK=0,SYSTEM_CPM_SECTOR=9,SYSTEM_CPM_SECTORS=44;
   const SYSTEM_ENTRY=0x8000;
   const SYSTEM_STARTUP_TITLE='SHINO-80 CP/M 2.2\r\n';
+  const SYSTEM_DISK_V3_VERSION=3,SYSTEM_DISK_V3_PROFILE=profiles.MEDIA_PROFILE_2HD_JP;
+  const SYSTEM_DISK_V3_HEADER_LENGTH=0x40,SYSTEM_DISK_V3_SYSTEM_BYTES=0x2000;
+  const SYSTEM_DISK_V3_LOADER_OFFSET=0x40,SYSTEM_DISK_V3_LOADER_LENGTH=0x80;
+  const SYSTEM_DISK_V3_CBIOS_OFFSET=0x100,SYSTEM_DISK_V3_CBIOS_LENGTH=0x900;
+  const SYSTEM_DISK_V3_CCP_OFFSET=0x0A00,SYSTEM_DISK_V3_BDOS_OFFSET=0x1200;
   const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
   const mediaOffset=(track,sector)=>(track*block.BLOCK_SECTORS_PER_TRACK+(sector-1))*block.BLOCK_SECTOR_SIZE;
 
@@ -75,7 +81,32 @@
       cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
   }
 
+  function buildSystemPayloadV3(cbiosImage=cbios.buildCbiosV3()){
+    const output=new Uint8Array(SYSTEM_DISK_V3_LOADER_LENGTH);
+    output.set([0xF3,0x31,0x00,0xF0,0xC3,lo(cbiosImage.labels.CBIOS_COLD_START),hi(cbiosImage.labels.CBIOS_COLD_START)]);
+    return output;
+  }
+
+  function buildSystemHeaderV3(){
+    const header=new Uint8Array(SYSTEM_DISK_V3_HEADER_LENGTH),u16=(offset,value)=>{header[offset]=lo(value);header[offset+1]=hi(value);};
+    const u32=(offset,value)=>{header[offset]=value&255;header[offset+1]=(value>>>8)&255;header[offset+2]=(value>>>16)&255;header[offset+3]=(value>>>24)&255;};
+    header.set([...SYSTEM_DISK_MAGIC].map(char=>char.charCodeAt(0)),0);header[4]=SYSTEM_DISK_V3_VERSION;header[5]=SYSTEM_DISK_V3_HEADER_LENGTH;header[6]=SYSTEM_DISK_V3_PROFILE;header[7]=0;
+    u32(0x08,SYSTEM_DISK_V3_SYSTEM_BYTES);u32(0x0C,SYSTEM_DISK_V3_SYSTEM_BYTES);u32(0x10,SYSTEM_DISK_V3_LOADER_OFFSET);u16(0x14,SYSTEM_DISK_V3_LOADER_LENGTH);u16(0x16,SYSTEM_ENTRY);u16(0x18,SYSTEM_ENTRY);
+    u32(0x1A,SYSTEM_DISK_V3_CBIOS_OFFSET);u16(0x1E,SYSTEM_DISK_V3_CBIOS_LENGTH);u16(0x20,cbios.CBIOS3_ORG);u16(0x22,cbios.CBIOS3_ORG);
+    u32(0x24,SYSTEM_DISK_V3_CCP_OFFSET);u16(0x28,0x0800);u16(0x2A,cpm22.CPM22_CCP_ORIGIN);u32(0x2C,SYSTEM_DISK_V3_BDOS_OFFSET);u16(0x30,0x0E00);u16(0x32,cpm22.CPM22_BDOS_ORIGIN);
+    header[0x3F]=header.subarray(0,0x3F).reduce((sum,value)=>(sum+value)&255,0);return header;
+  }
+
+  function buildSystemDiskV3(){
+    const image=profiles.createBlankMediaImage(SYSTEM_DISK_V3_PROFILE),cbiosImage=cbios.buildCbiosV3(),cpmImage=cpm22.buildCpm22({biosOrigin:cbios.CBIOS3_ORG}),loader=buildSystemPayloadV3(cbiosImage),header=buildSystemHeaderV3();
+    if(cbiosImage.bytes.length!==SYSTEM_DISK_V3_CBIOS_LENGTH)throw new RangeError('S80B v3 CBIOS must be exactly 0900h bytes');
+    image.set(header,0);image.set(loader,SYSTEM_DISK_V3_LOADER_OFFSET);image.set(cbiosImage.bytes,SYSTEM_DISK_V3_CBIOS_OFFSET);image.set(cpmImage.ccp,SYSTEM_DISK_V3_CCP_OFFSET);image.set(cpmImage.bdos,SYSTEM_DISK_V3_BDOS_OFFSET);
+    const volume=filesystem.buildFilesystemForProfile(image,SYSTEM_DISK_V3_PROFILE,starter.buildStarterFiles());
+    return {image:volume.image,header,payload:loader,cbios:cbiosImage,cpm:cpmImage,files:volume.files,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_V3_VERSION,profileId:SYSTEM_DISK_V3_PROFILE,systemBytes:SYSTEM_DISK_V3_SYSTEM_BYTES,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
+  }
+
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
     SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,SYSTEM_STARTUP_TITLE,
-    mediaOffset,buildSystemPayload,buildSystemDisk};
+    SYSTEM_DISK_V3_VERSION,SYSTEM_DISK_V3_PROFILE,SYSTEM_DISK_V3_HEADER_LENGTH,SYSTEM_DISK_V3_SYSTEM_BYTES,SYSTEM_DISK_V3_LOADER_OFFSET,SYSTEM_DISK_V3_LOADER_LENGTH,SYSTEM_DISK_V3_CBIOS_OFFSET,SYSTEM_DISK_V3_CBIOS_LENGTH,SYSTEM_DISK_V3_CCP_OFFSET,SYSTEM_DISK_V3_BDOS_OFFSET,
+    mediaOffset,buildSystemPayload,buildSystemDisk,buildSystemPayloadV3,buildSystemHeaderV3,buildSystemDiskV3};
 });

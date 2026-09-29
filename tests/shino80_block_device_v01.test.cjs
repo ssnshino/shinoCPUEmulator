@@ -18,7 +18,7 @@ assert.equal(BLOCK_SECTORS_PER_TRACK,26);
 assert.equal(BLOCK_SECTOR_SIZE,128);
 assert.equal(BLOCK_DRIVE_COUNT,2);
 assert.equal(createBlankBlockImage().every(byte=>byte===BLOCK_BLANK_BYTE),true);
-assert.throws(()=>new Shino80BlockDevice({image:new Uint8Array(1)}),/exactly 256256 bytes/);
+assert.throws(()=>new Shino80BlockDevice({image:new Uint8Array(1)}),/Unsupported block image size 1 bytes/);
 assert.throws(()=>new Shino80BlockDevice({image:[]}),/Uint8Array/);
 
 function select(device,track,sector,drive=0){

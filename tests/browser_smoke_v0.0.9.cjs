@@ -60,7 +60,7 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert.equal(await compactExport.isEnabled(),true);assert.equal(await compactImport.isEnabled(),true);
     await diskB.click();await page.waitForTimeout(80);
     assert((await compactInspector.innerText()).includes('USER / WORK / INTERCHANGE'));
-    assert((await compactInspector.innerText()).includes('CLASSIC · CP/M DATA'));
+    assert((await compactInspector.innerText()).includes('00h CLASSIC'));
     assert((await compactInspector.innerText()).includes('NOT AN AUTOBOOT SOURCE'));
     assert.equal(await compactEject.isEnabled(),true);assert.equal(await compactInsert.isDisabled(),true);
 
@@ -180,9 +180,9 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert(diskAText.includes('VIRTUAL DISK A'));assert(diskAText.includes('READY'));
     assert(diskBText.includes('VIRTUAL DISK B'));assert(diskBText.includes('READY'));
     await diskA.click();await page.waitForTimeout(80);inspector=await page.locator('#inspectorContent').innerText();
-    for(const expected of ['INSERTED','77 TRACKS × 26 SECTORS','256,256 BYTES','30h–36h','S80B v2 · CP/M 2.2','WELCOME.TXT','HELLO.COM','S80INFO.COM','A:','AUTOBOOT','MON O','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
+    for(const expected of ['INSERTED','00h CLASSIC','77C × 1H × 26S','256,256 BYTES','30h–38h','S80B v2 / RAW · CP/M 2.2','A:','AUTOBOOT','MON O','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
     await diskB.click();await page.waitForTimeout(80);inspector=await page.locator('#inspectorContent').innerText();
-    for(const expected of ['INSERTED','77 TRACKS × 26 SECTORS','256,256 BYTES','30h–36h','USER / WORK / INTERCHANGE','CLASSIC · CP/M DATA','B:','NOT AN AUTOBOOT SOURCE','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
+    for(const expected of ['INSERTED','00h CLASSIC','77C × 1H × 26S','256,256 BYTES','30h–38h','USER / WORK / INTERCHANGE','RAW .s80d · CP/M DATA','B:','NOT AN AUTOBOOT SOURCE','IDLE'])assert(inspector.includes(expected),`${expected}\n${inspector}`);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 
     await page.setViewportSize({width:1280,height:900});await page.waitForTimeout(180);

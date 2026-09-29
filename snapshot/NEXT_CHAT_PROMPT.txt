@@ -3,27 +3,24 @@ SHINO-80をREADME.mdから正規restart順に再開してください。
 合言葉:
 「ごっごっごっごっ♪」
 
-最初にGitHubをfetchし、main HEAD、open PR/Issue、active PLANをlive確認してください。
+最初にGitHubをfetchし、main HEAD、purpose branch HEAD、open PR/Issue、active PLAN、Issue #59 comments一覧をlive確認してください。
 
-latest reviewed storage implementation:
-- Issue #56 / PR #57 — PHASE 2 Whole Disk IMPORT + EXPORT
-- reviewed main: 8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1
+active implementation:
+- Issue #59 PHASE 3 Multi-Profile FDD
+- branch feature/shino80-multi-profile-fdd-phase3-20260929
+- baseline c6e0e041370bd20b2a32fa10c218f4212c051fdf
+- PLAN plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md
+- normative spec docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md
+- latest direction comment 5892194891
 
-implemented:
-- A/B raw 256,256-byte .s80d IMPORT / EXPORT
-- INSERTED/EJECTED byte-exact EXPORT
-- POWER-OFF transactional IMPORT
-- one global pending transaction with CONFIRM/CANCEL
-- pending target EJECT/REINSERT blocked in UI and handlers
-- atomic failure semantics and no synthetic Bus I/O
-- A-only autoboot / B never autoboot unchanged
+implemented and focused-tested:
+- five native MediaProfiles and exact DPBs
+- 30h–38h controller with independent A:/B: profiles
+- profile-aware CBIOS v3, safe immediate RMW, CLASSIC compatibility
+- exact S80B v3 2HD-JP system disk and strict ROM v2/v3 boot/fallback
+- profile-aware CP/M filesystem and F400h BIOS relocation
+- all-profile raw .s80d IMPORT/EXPORT and profile-preserving shelves
+- Inspector profile/geometry/C/H/S
+- real Chromium all-profile round trips and S80B v3 boot to A>
 
-current active implementation PLAN:
-- none
-
-next roadmap candidate:
-- PHASE 3 CLASSIC + practical larger WORK media / multi-profile
-
-Do not begin PHASE 3 implementation until lounge/research/basic/detail/QA design
-is completed and Human explicitly selects it. Do not merge or publish without
-Human authorization.
+If Checkpoint F is not complete, run the documented full test/build/manual/browser/diff suite, sync hashes and closeout evidence, preserve one logical main-based commit, create the single PHASE 3 PR, then follow the already-authorized unlisted preview integration/deploy/smoke flow. Do not merge the SHINO PR; stop for Human Review only after the app is publicly testable at the unlisted preview URL.

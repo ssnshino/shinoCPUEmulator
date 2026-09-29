@@ -7,9 +7,9 @@ Firmware and ROM images owned by SHINO-80.
 - `shino80-system-rom.js` — 16 KiB firmware builder: fixed 8 KiB Boot/Recovery
   ROM plus 8 KiB Extension bank 0, with RESET/IPL, BIOS and Monitor
 - `shino80-cgrom.js` — fixed 4 KiB character-generator ROM
-- `shino80-cbios.js` — original RAM-resident CBIOS/WBOOT v0.2 image builder
+- `shino80-cbios.js` — compatible CLASSIC CBIOS plus profile-aware CBIOS v3 builder
 - `shino80-cpm22.js` — pinned license-audited CP/M 2.2 44K CCP/BDOS image
-- `shino80-system-disk.js` — original S80B v2 CP/M system-disk image builder
+- `shino80-system-disk.js` — compatible S80B v2 plus exact 2HD-JP S80B v3 CP/M system-disk builders
 
 The minimum BIOS currently provides:
 
@@ -35,7 +35,9 @@ the loaded CBIOS itself and HALTs. The restored payload reads the 44 CCP/BDOS
 system sectors and returns to the CP/M command processor. PHASE 1 adds DPH_A
 and DPH_B: both share the same DPB and FD00h DIRBUF, while CSV/ALV are per-drive.
 WBOOT preserves the current CP/M drive so B: returns to B>; ROM autoboot and
-MON O explicitly initialize the current drive to A:.
+MON O explicitly initialize the current drive to A:. CBIOS v3 at F400h selects
+one of five DPBs per drive, maps logical records onto C/H/S, drains full physical
+sectors and uses safe immediate read-modify-write for 512/1024-byte media.
 
 The current BIOS/MON executable remains in fixed ROM. Its compressed
 disassembler tables live in Extension bank 0 at 2000h. The machine provides

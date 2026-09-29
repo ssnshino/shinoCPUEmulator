@@ -719,17 +719,100 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 <script>(function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
-  root.SHINO_BLOCK_DEVICE=api;
+  root.SHINO_MEDIA_PROFILES=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  const MEDIA_PROFILE_CLASSIC=0x00;
+  const MEDIA_PROFILE_2HD_JP=0x01;
+  const MEDIA_PROFILE_2DD_720=0x02;
+  const MEDIA_PROFILE_2HD_AT_1200=0x03;
+  const MEDIA_PROFILE_2HD_1440=0x04;
+  const MEDIA_PROFILE_NONE=0xFF;
+  const LOGICAL_RECORD_SIZE=128;
+
+  function integer(name,value,{minimum=0}={}){
+    if(!Number.isInteger(value)||value<minimum)throw new RangeError(`${name} must be an integer >= ${minimum}`);
+    return value;
+  }
+
+  function calculateMediaProfile(definition){
+    const id=integer('id',definition.id),cylinders=integer('cylinders',definition.cylinders,{minimum:1});
+    const heads=integer('heads',definition.heads,{minimum:1});
+    const physicalSectorsPerTrack=integer('physicalSectorsPerTrack',definition.physicalSectorsPerTrack,{minimum:1});
+    const physicalSectorSize=integer('physicalSectorSize',definition.physicalSectorSize,{minimum:LOGICAL_RECORD_SIZE});
+    const allocationBlockSize=integer('allocationBlockSize',definition.allocationBlockSize,{minimum:1024});
+    const drm=integer('drm',definition.drm),off=integer('off',definition.off);
+    const al0=integer('al0',definition.al0),al1=integer('al1',definition.al1);
+    if(id>0xFE)throw new RangeError('id must fit the mounted profile range');
+    if(physicalSectorSize%LOGICAL_RECORD_SIZE!==0)throw new RangeError('physicalSectorSize must be a multiple of 128');
+    if(allocationBlockSize%LOGICAL_RECORD_SIZE!==0)throw new RangeError('allocationBlockSize must be a multiple of 128');
+    const recordsPerBlock=allocationBlockSize/LOGICAL_RECORD_SIZE,bsh=Math.log2(recordsPerBlock);
+    if(!Number.isInteger(bsh))throw new RangeError('allocationBlockSize / 128 must be a power of two');
+    const logicalTracks=cylinders*heads;
+    const logicalSectorsPerTrack=physicalSectorsPerTrack*(physicalSectorSize/LOGICAL_RECORD_SIZE);
+    const trackBytes=logicalSectorsPerTrack*LOGICAL_RECORD_SIZE;
+    const imageBytes=logicalTracks*trackBytes;
+    const reservedSystemBytes=off*trackBytes;
+    const allocationBlocks=Math.floor((imageBytes-reservedSystemBytes)/allocationBlockSize);
+    const directoryBytes=(drm+1)*32,directoryBlocks=Math.ceil(directoryBytes/allocationBlockSize);
+    if(allocationBlocks<=directoryBlocks)throw new RangeError('profile has no filesystem data blocks');
+    const dsm=allocationBlocks-1;
+    if(dsm>=256)throw new RangeError('PHASE 3 native profiles require one-byte allocation block numbers');
+    const dpb=Object.freeze({
+      spt:logicalSectorsPerTrack,bsh,blm:recordsPerBlock-1,exm:allocationBlockSize/1024-1,
+      dsm,drm,al0,al1,cks:(drm+1)/4,off
+    });
+    if(!Number.isInteger(dpb.exm)||!Number.isInteger(dpb.cks))throw new RangeError('DPB extent/checksum values must be integral');
+    return Object.freeze({
+      id,name:String(definition.name),cylinders,heads,physicalSectorsPerTrack,physicalSectorSize,
+      imageBytes,logicalTracks,logicalSectorsPerTrack,trackBytes,allocationBlockSize,
+      allocationBlocks,directoryBytes,directoryBlocks,reservedSystemBytes,
+      filesystemUsableBytes:(allocationBlocks-directoryBlocks)*allocationBlockSize,dpb
+    });
+  }
+
+  const MEDIA_PROFILES=Object.freeze([
+    calculateMediaProfile({id:MEDIA_PROFILE_CLASSIC,name:'CLASSIC',cylinders:77,heads:1,physicalSectorsPerTrack:26,physicalSectorSize:128,allocationBlockSize:1024,drm:63,al0:0xC0,al1:0,off:2}),
+    calculateMediaProfile({id:MEDIA_PROFILE_2HD_JP,name:'2HD-JP',cylinders:77,heads:2,physicalSectorsPerTrack:8,physicalSectorSize:1024,allocationBlockSize:8192,drm:255,al0:0x80,al1:0,off:1}),
+    calculateMediaProfile({id:MEDIA_PROFILE_2DD_720,name:'2DD-720',cylinders:80,heads:2,physicalSectorsPerTrack:9,physicalSectorSize:512,allocationBlockSize:4096,drm:127,al0:0x80,al1:0,off:2}),
+    calculateMediaProfile({id:MEDIA_PROFILE_2HD_AT_1200,name:'2HD-AT-1200',cylinders:80,heads:2,physicalSectorsPerTrack:15,physicalSectorSize:512,allocationBlockSize:8192,drm:255,al0:0x80,al1:0,off:1}),
+    calculateMediaProfile({id:MEDIA_PROFILE_2HD_1440,name:'2HD-1440',cylinders:80,heads:2,physicalSectorsPerTrack:18,physicalSectorSize:512,allocationBlockSize:8192,drm:255,al0:0x80,al1:0,off:1})
+  ]);
+  const profileById=new Map(MEDIA_PROFILES.map(profile=>[profile.id,profile]));
+
+  function mediaProfileById(id){return profileById.get(Number(id))||null;}
+  function mediaProfilesForImageLength(length){return MEDIA_PROFILES.filter(profile=>profile.imageBytes===Number(length));}
+  function mediaProfileForImageLength(length){const matches=mediaProfilesForImageLength(length);return matches.length===1?matches[0]:null;}
+  function createBlankMediaImage(profileId,{fill=0xE5}={}){
+    const profile=mediaProfileById(profileId);if(!profile)throw new RangeError(`Unknown media profile ${profileId}`);
+    const image=new Uint8Array(profile.imageBytes);image.fill(Number(fill)&0xFF);return image;
+  }
+
+  return {
+    MEDIA_PROFILE_CLASSIC,MEDIA_PROFILE_2HD_JP,MEDIA_PROFILE_2DD_720,MEDIA_PROFILE_2HD_AT_1200,MEDIA_PROFILE_2HD_1440,MEDIA_PROFILE_NONE,
+    LOGICAL_RECORD_SIZE,MEDIA_PROFILES,calculateMediaProfile,mediaProfileById,mediaProfilesForImageLength,mediaProfileForImageLength,createBlankMediaImage
+  };
+});
+</script>
+<script>(function(root,factory){
+  const profiles=(typeof module==='object'&&module.exports)?require('./shino80-media-profiles.js'):root.SHINO_MEDIA_PROFILES;
+  const api=factory(profiles);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  root.SHINO_BLOCK_DEVICE=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(profiles){
   'use strict';
 
   const BLOCK_STATUS_PORT=0x30;
   const BLOCK_COMMAND_PORT=0x31;
   const BLOCK_DRIVE_PORT=0x32;
   const BLOCK_TRACK_PORT=0x33;
+  const BLOCK_CYLINDER_PORT=BLOCK_TRACK_PORT;
   const BLOCK_SECTOR_PORT=0x34;
   const BLOCK_DATA_PORT=0x35;
   const BLOCK_ERROR_PORT=0x36;
+  const BLOCK_HEAD_PORT=0x37;
+  const BLOCK_MEDIA_PROFILE_PORT=0x38;
 
   const BLOCK_COMMAND_READ=0x01;
   const BLOCK_COMMAND_WRITE=0x02;
@@ -745,29 +828,31 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BLOCK_ERROR_NO_MEDIA=1;
   const BLOCK_ERROR_BAD_DRIVE=2;
   const BLOCK_ERROR_BAD_TRACK=3;
+  const BLOCK_ERROR_BAD_CYLINDER=BLOCK_ERROR_BAD_TRACK;
   const BLOCK_ERROR_BAD_SECTOR=4;
   const BLOCK_ERROR_WRITE_PROTECTED=5;
   const BLOCK_ERROR_PROTOCOL=6;
+  const BLOCK_ERROR_BAD_HEAD=7;
 
-  const BLOCK_TRACKS=77;
-  const BLOCK_SECTORS_PER_TRACK=26;
-  const BLOCK_SECTOR_SIZE=128;
-  const BLOCK_IMAGE_SIZE=BLOCK_TRACKS*BLOCK_SECTORS_PER_TRACK*BLOCK_SECTOR_SIZE;
+  const CLASSIC_PROFILE=profiles.mediaProfileById(profiles.MEDIA_PROFILE_CLASSIC);
+  const BLOCK_TRACKS=CLASSIC_PROFILE.cylinders;
+  const BLOCK_SECTORS_PER_TRACK=CLASSIC_PROFILE.physicalSectorsPerTrack;
+  const BLOCK_SECTOR_SIZE=CLASSIC_PROFILE.physicalSectorSize;
+  const BLOCK_IMAGE_SIZE=CLASSIC_PROFILE.imageBytes;
   const BLOCK_BLANK_BYTE=0xE5;
   const BLOCK_DRIVE_COUNT=2;
 
   function createBlankBlockImage(fill=BLOCK_BLANK_BYTE){
-    const image=new Uint8Array(BLOCK_IMAGE_SIZE);
-    image.fill(Number(fill)&0xFF);
-    return image;
+    return profiles.createBlankMediaImage(profiles.MEDIA_PROFILE_CLASSIC,{fill});
   }
 
   class Shino80BlockDevice {
     constructor({image=null,writeProtected=false}={}){
       this.id='SHINO80_BLOCK_DEVICE_A';
-      this.slots=Array.from({length:BLOCK_DRIVE_COUNT},()=>({medium:null,writeProtected:false}));
+      this.slots=Array.from({length:BLOCK_DRIVE_COUNT},()=>({medium:null,profileId:profiles.MEDIA_PROFILE_NONE,writeProtected:false}));
       this.drive=0;
       this.track=0;
+      this.head=0;
       this.sector=1;
       this.command=0;
       this.error=BLOCK_ERROR_NONE;
@@ -778,18 +863,32 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     }
 
     lowPort(port){return Number(port)&0xFF;}
-    handlesPort(port){const low=this.lowPort(port);return low>=BLOCK_STATUS_PORT&&low<=BLOCK_ERROR_PORT;}
+    handlesPort(port){const low=this.lowPort(port);return low>=BLOCK_STATUS_PORT&&low<=BLOCK_MEDIA_PROFILE_PORT;}
 
     validDrive(drive){return Number.isInteger(drive)&&drive>=0&&drive<BLOCK_DRIVE_COUNT;}
     slotAt(drive){return this.validDrive(drive)?this.slots[drive]:null;}
     selectedSlot(){return this.slotAt(this.drive);}
+    profileAt(drive){const slot=this.slotAt(drive);return slot?.medium?profiles.mediaProfileById(slot.profileId):null;}
+    selectedProfile(){return this.profileAt(this.drive);}
+    mediaProfileIdAt(drive){return this.profileAt(drive)?.id??profiles.MEDIA_PROFILE_NONE;}
 
-    mountImage(image,{drive=0,writeProtected=false}={}){
+    mountImage(image,{drive=0,writeProtected=false,profileId=null}={}){
       if(!(image instanceof Uint8Array))throw new TypeError('Block image must be a Uint8Array');
-      if(image.length!==BLOCK_IMAGE_SIZE)throw new RangeError(`Block image must be exactly ${BLOCK_IMAGE_SIZE} bytes`);
       const slot=this.slotAt(drive);
       if(!slot)throw new RangeError(`Block drive must be from 0 to ${BLOCK_DRIVE_COUNT-1}`);
+      const matches=profiles.mediaProfilesForImageLength(image.length);
+      let profile;
+      if(profileId===null){
+        if(matches.length===0)throw new RangeError(`Unsupported block image size ${image.length} bytes`);
+        if(matches.length!==1)throw new RangeError(`Ambiguous block image size ${image.length} bytes`);
+        profile=matches[0];
+      }else{
+        profile=profiles.mediaProfileById(profileId);
+        if(!profile)throw new RangeError(`Unknown media profile ${profileId}`);
+        if(profile.imageBytes!==image.length)throw new RangeError(`Profile ${profile.name} requires exactly ${profile.imageBytes} bytes`);
+      }
       slot.medium=new Uint8Array(image);
+      slot.profileId=profile.id;
       slot.writeProtected=Boolean(writeProtected);
       this.reset();
       return this;
@@ -800,6 +899,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(!slot)return null;
       const image=slot.medium?new Uint8Array(slot.medium):null;
       slot.medium=null;
+      slot.profileId=profiles.MEDIA_PROFILE_NONE;
       slot.writeProtected=false;
       this.reset();
       return image;
@@ -811,7 +911,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     get medium(){return this.slotAt(0).medium;}
     get writeProtected(){return this.writeProtectedAt(0);}
     get mounted(){return this.mountedAt(0);}
-    get transferRemaining(){return this.transferMode?BLOCK_SECTOR_SIZE-this.transferIndex:0;}
+    get transferRemaining(){return this.transferMode&&this.transferBuffer?this.transferBuffer.length-this.transferIndex:0;}
 
     status(){
       return (this.mountedAt(this.drive)?BLOCK_STATUS_READY:0)|
@@ -820,7 +920,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         (this.error!==BLOCK_ERROR_NONE?BLOCK_STATUS_ERROR:0);
     }
 
-    sectorOffset(){return (this.track*BLOCK_SECTORS_PER_TRACK+(this.sector-1))*BLOCK_SECTOR_SIZE;}
+    sectorOffset(){
+      const profile=this.selectedProfile();if(!profile)return null;
+      return (((this.track*profile.heads)+this.head)*profile.physicalSectorsPerTrack+(this.sector-1))*profile.physicalSectorSize;
+    }
 
     clearTransfer(){
       this.transferMode=null;
@@ -833,8 +936,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     validateSelection({write=false}={}){
       if(!this.validDrive(this.drive))return BLOCK_ERROR_BAD_DRIVE;
       if(!this.mountedAt(this.drive))return BLOCK_ERROR_NO_MEDIA;
-      if(this.track<0||this.track>=BLOCK_TRACKS)return BLOCK_ERROR_BAD_TRACK;
-      if(this.sector<1||this.sector>BLOCK_SECTORS_PER_TRACK)return BLOCK_ERROR_BAD_SECTOR;
+      const profile=this.selectedProfile();
+      if(this.track<0||this.track>=profile.cylinders)return BLOCK_ERROR_BAD_CYLINDER;
+      if(this.head<0||this.head>=profile.heads)return BLOCK_ERROR_BAD_HEAD;
+      if(this.sector<1||this.sector>profile.physicalSectorsPerTrack)return BLOCK_ERROR_BAD_SECTOR;
       if(write&&this.writeProtectedAt(this.drive))return BLOCK_ERROR_WRITE_PROTECTED;
       return BLOCK_ERROR_NONE;
     }
@@ -849,10 +954,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       const error=this.validateSelection({write:command===BLOCK_COMMAND_WRITE});
       if(error!==BLOCK_ERROR_NONE){this.fail(error);return;}
       this.transferMode=command===BLOCK_COMMAND_READ?'read':'write';
-      this.transferBuffer=new Uint8Array(BLOCK_SECTOR_SIZE);
+      this.transferBuffer=new Uint8Array(this.selectedProfile().physicalSectorSize);
       if(this.transferMode==='read'){
         const offset=this.sectorOffset(),slot=this.selectedSlot();
-        this.transferBuffer.set(slot.medium.subarray(offset,offset+BLOCK_SECTOR_SIZE));
+        this.transferBuffer.set(slot.medium.subarray(offset,offset+this.transferBuffer.length));
       }
     }
 
@@ -864,7 +969,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       const value=this.transferBuffer[this.transferIndex];
       if(consume){
         this.transferIndex++;
-        if(this.transferIndex===BLOCK_SECTOR_SIZE)this.clearTransfer();
+        if(this.transferIndex===this.transferBuffer.length)this.clearTransfer();
       }
       return value;
     }
@@ -872,7 +977,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     writeData(value){
       if(this.transferMode!=='write'||!this.transferBuffer){this.fail(BLOCK_ERROR_PROTOCOL);return;}
       this.transferBuffer[this.transferIndex++]=Number(value)&0xFF;
-      if(this.transferIndex===BLOCK_SECTOR_SIZE){
+      if(this.transferIndex===this.transferBuffer.length){
         this.selectedSlot().medium.set(this.transferBuffer,this.sectorOffset());
         this.clearTransfer();
       }
@@ -887,6 +992,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(low===BLOCK_SECTOR_PORT)return this.sector;
       if(low===BLOCK_DATA_PORT)return this.readData();
       if(low===BLOCK_ERROR_PORT)return this.error;
+      if(low===BLOCK_HEAD_PORT)return this.head;
+      if(low===BLOCK_MEDIA_PROFILE_PORT)return this.mediaProfileIdAt(this.drive);
       return 0xFF;
     }
 
@@ -898,6 +1005,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       if(low===BLOCK_SECTOR_PORT){this.clearTransfer();this.sector=data;return;}
       if(low===BLOCK_DATA_PORT){this.writeData(data);return;}
       if(low===BLOCK_ERROR_PORT&&data===0)this.error=BLOCK_ERROR_NONE;
+      if(low===BLOCK_HEAD_PORT){this.clearTransfer();this.head=data;}
     }
 
     debugPeekPort(port){
@@ -912,11 +1020,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(low===BLOCK_TRACK_PORT)this.track=data;
       else if(low===BLOCK_SECTOR_PORT)this.sector=data;
       else if(low===BLOCK_ERROR_PORT)this.error=data;
+      else if(low===BLOCK_HEAD_PORT)this.head=data;
     }
 
     reset(){
       this.drive=0;
       this.track=0;
+      this.head=0;
       this.sector=1;
       this.command=0;
       this.error=BLOCK_ERROR_NONE;
@@ -926,11 +1036,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   return {
     Shino80BlockDevice,createBlankBlockImage,
-    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_CYLINDER_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BLOCK_HEAD_PORT,BLOCK_MEDIA_PROFILE_PORT,
     BLOCK_COMMAND_READ,BLOCK_COMMAND_WRITE,BLOCK_COMMAND_RESET,
     BLOCK_STATUS_READY,BLOCK_STATUS_BUSY,BLOCK_STATUS_DRQ,BLOCK_STATUS_WRITE_PROTECT,BLOCK_STATUS_ERROR,
-    BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,
-    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE,BLOCK_DRIVE_COUNT
+    BLOCK_ERROR_NONE,BLOCK_ERROR_NO_MEDIA,BLOCK_ERROR_BAD_DRIVE,BLOCK_ERROR_BAD_TRACK,BLOCK_ERROR_BAD_CYLINDER,BLOCK_ERROR_BAD_SECTOR,BLOCK_ERROR_WRITE_PROTECTED,BLOCK_ERROR_PROTOCOL,BLOCK_ERROR_BAD_HEAD,
+    BLOCK_TRACKS,BLOCK_SECTORS_PER_TRACK,BLOCK_SECTOR_SIZE,BLOCK_IMAGE_SIZE,BLOCK_BLANK_BYTE,BLOCK_DRIVE_COUNT,
+    BLOCK_MEDIA_PROFILE_ID:profiles.MEDIA_PROFILE_CLASSIC
   };
 });
 </script>
@@ -960,6 +1071,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BLOCK_SECTOR_PORT=0x34;
   const BLOCK_DATA_PORT=0x35;
   const BLOCK_ERROR_PORT=0x36;
+  const BLOCK_HEAD_PORT=0x37;
+  const BLOCK_MEDIA_PROFILE_PORT=0x38;
   const BEEPER_PORT=0x40;
   const CBIOS_ENTRY_NAMES=Object.freeze([
     'BOOT','WBOOT','CONST','CONIN','CONOUT','LIST','PUNCH','READER','HOME',
@@ -969,6 +1082,29 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const DPB=Object.freeze({
     spt:26,bsh:3,blm:7,exm:0,dsm:242,drm:63,al0:0xC0,al1:0,cks:16,off:2
   });
+  const CBIOS3_ORG=0xF400;
+  const CBIOS3_EXECUTABLE_END=0xFA80;
+  const CBIOS3_IMAGE_END=0xFD00;
+  const CBIOS3_PHYSICAL_SCRATCH=0xE800;
+  const CBIOS3_DPH_A=0xFA80,CBIOS3_DPH_B=0xFA90;
+  const CBIOS3_DPB_BASE=0xFAA0;
+  const CBIOS3_CSV_A=0xFAF0,CBIOS3_CSV_B=0xFB30;
+  const CBIOS3_ALV_A=0xFB70,CBIOS3_ALV_B=0xFB90;
+  const CBIOS3_DEBLOCK_A=0xFBB0,CBIOS3_DEBLOCK_B=0xFBD0;
+  const CBIOS3_RMW=0xFBF0;
+  const CBIOS3_STATE=Object.freeze({
+    drive:CBIOS3_RMW,track:CBIOS3_RMW+1,sector:CBIOS3_RMW+3,dma:CBIOS3_RMW+5,
+    cursor:CBIOS3_RMW+7,column:CBIOS3_RMW+9,physicalSector:CBIOS3_RMW+10,
+    recordPointer:CBIOS3_RMW+11,transferPages:CBIOS3_RMW+13,savedDrive:CBIOS3_RMW+14,
+    systemRecords:CBIOS3_RMW+15
+  });
+  const DPB_PROFILES=Object.freeze([
+    Object.freeze({spt:26,bsh:3,blm:7,exm:0,dsm:242,drm:63,al0:0xC0,al1:0,cks:16,off:2}),
+    Object.freeze({spt:64,bsh:6,blm:63,exm:7,dsm:152,drm:255,al0:0x80,al1:0,cks:64,off:1}),
+    Object.freeze({spt:36,bsh:5,blm:31,exm:3,dsm:176,drm:127,al0:0x80,al1:0,cks:32,off:2}),
+    Object.freeze({spt:60,bsh:6,blm:63,exm:7,dsm:148,drm:255,al0:0x80,al1:0,cks:64,off:1}),
+    Object.freeze({spt:72,bsh:6,blm:63,exm:7,dsm:177,drm:255,al0:0x80,al1:0,cks:64,off:1})
+  ]);
 
   const lo=value=>Number(value)&0xFF;
   const hi=value=>(Number(value)>>8)&0xFF;
@@ -1149,13 +1285,144 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     };
   }
 
+  function buildCbiosV3(){
+    const a=createAssembler(CBIOS3_ORG);
+    const call=name=>a.absolute(0xCD,name),jp=name=>a.absolute(0xC3,name);
+    const jpZ=name=>a.absolute(0xCA,name),jpNZ=name=>a.absolute(0xC2,name);
+    const jpC=name=>a.absolute(0xDA,name),jpNC=name=>a.absolute(0xD2,name);
+    const ldAFrom=address=>a.word(0x3A,address),ldATo=address=>a.word(0x32,address);
+    const ldHLFrom=address=>a.word(0x2A,address),ldHLTo=address=>a.word(0x22,address);
+    const ldBCTo=address=>{a.emit(0xED,0x43,lo(address),hi(address));};
+
+    a.label('CBIOS_JUMP_TABLE');
+    for(const name of CBIOS_ENTRY_NAMES){a.label(`CBIOS_API_${name}`);jp(`CBIOS_${name}`);}
+
+    a.label('CBIOS_BOOT');call('CBIOS_INIT');a.emit(0xAF,0xC9);
+    a.label('CBIOS_COLD_START');
+    a.emit(0xF3);a.word(0x31,0xF000);call('CBIOS_INIT');a.emit(0xAF);ldATo(CBIOS3_STATE.savedDrive);call('CBIOS_SYSTEM_LOAD');a.emit(0xB7);jpNZ('CBIOS_WBOOT_FAIL');
+    a.word(0x21,TEXT_VRAM_BASE);a.emit(0xAF,0x77);a.word(0x11,TEXT_VRAM_BASE+1);a.word(0x01,TEXT_VRAM_END-TEXT_VRAM_BASE-1);a.emit(0xED,0xB0);
+    a.emit(0x3E,0xC3);a.word(0x32,0x0000);a.word(0x21,CBIOS3_ORG+3);a.word(0x22,0x0001);a.emit(0xAF);a.word(0x32,0x0003);a.emit(0x3E,0xC3);a.word(0x32,0x0005);a.word(0x21,0x9C06);a.word(0x22,0x0006);
+    a.absolute(0x21,'CBIOS_STARTUP_TITLE');call('CBIOS_PRINT_STRING');a.emit(0x0E,0x00);a.word(0xC3,0x9400);
+    a.label('CBIOS_WBOOT');
+    a.word(0x3A,0x0004);a.emit(0xE6,0x0F,0xF5); // preserve current drive across reload
+    call('CBIOS_INIT');call('CBIOS_SYSTEM_LOAD');a.emit(0xB7);jpNZ('CBIOS_WBOOT_FAIL');
+    a.emit(0xF1);ldATo(CBIOS3_STATE.savedDrive);a.word(0x32,0x0004);a.emit(0x4F);a.word(0xC3,0x9400);
+
+    a.label('CBIOS_SYSTEM_LOAD');a.emit(0x0E,0x00);call('CBIOS_SELDSK');a.emit(0x7C,0xB5);jpZ('CBIOS_SYSTEM_LOAD_FAIL');
+    a.word(0x01,0);call('CBIOS_SETTRK');a.word(0x01,21);call('CBIOS_SETSEC');a.word(0x01,0x9400);call('CBIOS_SETDMA');
+    a.emit(0x3E,44);ldATo(CBIOS3_STATE.systemRecords);
+    a.label('CBIOS_SYSTEM_LOAD_LOOP');call('CBIOS_READ');a.emit(0xB7);jpNZ('CBIOS_SYSTEM_LOAD_FAIL');
+    ldHLFrom(CBIOS3_STATE.dma);a.word(0x11,128);a.emit(0x19);ldHLTo(CBIOS3_STATE.dma);
+    ldHLFrom(CBIOS3_STATE.sector);a.emit(0x23);ldHLTo(CBIOS3_STATE.sector);
+    ldAFrom(CBIOS3_STATE.systemRecords);a.emit(0x3D);ldATo(CBIOS3_STATE.systemRecords);jpNZ('CBIOS_SYSTEM_LOAD_LOOP');a.emit(0xAF,0xC9);
+    a.label('CBIOS_SYSTEM_LOAD_FAIL');a.emit(0x3E,0x01,0xC9);
+
+    a.label('CBIOS_WBOOT_FAIL');a.absolute(0x21,'CBIOS_WBOOT_ERROR_TEXT');call('CBIOS_PRINT_STRING');a.emit(0xF3);
+    a.label('CBIOS_WBOOT_FAIL_HALT');a.emit(0x76);jp('CBIOS_WBOOT_FAIL_HALT');
+    a.label('CBIOS_PRINT_STRING');a.emit(0x7E,0xB7,0xC8,0xE5,0x4F);call('CBIOS_CONOUT');a.emit(0xE1,0x23);jp('CBIOS_PRINT_STRING');
+    a.label('CBIOS_WBOOT_ERROR_TEXT');a.emit(...[...'WBOOT DISK ERROR\r\n'].map(char=>char.charCodeAt(0)),0);
+    a.label('CBIOS_STARTUP_TITLE');a.emit(...[...'SHINO-80 CP/M 2.2\r\n'].map(char=>char.charCodeAt(0)),0);
+
+    a.label('CBIOS_INIT');
+    a.emit(0xAF);ldATo(CBIOS3_STATE.drive);ldATo(CBIOS3_STATE.track);ldATo(CBIOS3_STATE.track+1);
+    ldATo(CBIOS3_STATE.sector+1);ldATo(CBIOS3_STATE.column);a.emit(0x3C);ldATo(CBIOS3_STATE.sector);
+    a.word(0x21,CBIOS_DEFAULT_DMA);ldHLTo(CBIOS3_STATE.dma);a.word(0x21,TEXT_VRAM_BASE);ldHLTo(CBIOS3_STATE.cursor);
+    a.emit(0x3E,0xFF);ldATo(CBIOS3_DEBLOCK_A);ldATo(CBIOS3_DEBLOCK_B);a.emit(0xC9);
+
+    a.label('CBIOS_CONST');a.emit(0xAF,0xDB,KEY_STATUS_PORT,0xE6,0x01,0xC8,0x3E,0xFF,0xC9);
+    a.label('CBIOS_CONIN');a.label('CBIOS_CONIN_WAIT');call('CBIOS_CONST');a.emit(0xB7);jpZ('CBIOS_CONIN_WAIT');a.emit(0xAF,0xDB,KEY_DATA_PORT,0xE6,0x7F,0xC9);
+    a.label('CBIOS_CONOUT');
+    a.emit(0x79,0xFE,0x07);jpZ('CBIOS_CONOUT_BELL');a.emit(0xFE,0x0D);jpZ('CBIOS_CONOUT_CR');a.emit(0xFE,0x0A);jpZ('CBIOS_CONOUT_LF');
+    a.emit(0xFE,0x08);jpZ('CBIOS_CONOUT_BS');a.emit(0xFE,0x7F);jpZ('CBIOS_CONOUT_BS');
+    ldHLFrom(CBIOS3_STATE.cursor);a.emit(0x77,0x23);call('CBIOS_NORMALIZE_CURSOR');ldHLTo(CBIOS3_STATE.cursor);
+    ldAFrom(CBIOS3_STATE.column);a.emit(0x3C,0xFE,TEXT_COLS);jpC('CBIOS_CONOUT_STORE_COLUMN');a.emit(0xAF);
+    a.label('CBIOS_CONOUT_STORE_COLUMN');ldATo(CBIOS3_STATE.column);a.emit(0xC9);
+    a.label('CBIOS_CONOUT_BELL');a.emit(0xD3,BEEPER_PORT,0xC9);
+    a.label('CBIOS_CONOUT_CR');ldAFrom(CBIOS3_STATE.column);a.emit(0x5F,0x16,0x00);ldHLFrom(CBIOS3_STATE.cursor);a.emit(0xB7,0xED,0x52);ldHLTo(CBIOS3_STATE.cursor);a.emit(0xAF);ldATo(CBIOS3_STATE.column);a.emit(0xC9);
+    a.label('CBIOS_CONOUT_LF');ldHLFrom(CBIOS3_STATE.cursor);a.word(0x11,TEXT_COLS);a.emit(0x19);call('CBIOS_NORMALIZE_CURSOR');ldHLTo(CBIOS3_STATE.cursor);a.emit(0xC9);
+    a.label('CBIOS_CONOUT_BS');ldHLFrom(CBIOS3_STATE.cursor);a.emit(0x7C,0xFE,hi(TEXT_VRAM_BASE));jpNZ('CBIOS_CONOUT_BS_MOVE');a.emit(0x7D,0xB7,0xC8);
+    a.label('CBIOS_CONOUT_BS_MOVE');a.emit(0x2B);ldHLTo(CBIOS3_STATE.cursor);ldAFrom(CBIOS3_STATE.column);a.emit(0xB7);jpNZ('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3E,TEXT_COLS);
+    a.label('CBIOS_CONOUT_BS_COLUMN');a.emit(0x3D);ldATo(CBIOS3_STATE.column);a.emit(0xC9);
+    a.label('CBIOS_NORMALIZE_CURSOR');a.word(0x11,TEXT_VRAM_END);a.emit(0xB7,0xED,0x52);jpC('CBIOS_CURSOR_BELOW_END');call('CBIOS_SCROLL');a.emit(0xC9);
+    a.label('CBIOS_CURSOR_BELOW_END');a.emit(0x19,0xC9);
+    a.label('CBIOS_SCROLL');a.word(0x21,TEXT_VRAM_BASE+TEXT_COLS);a.word(0x11,TEXT_VRAM_BASE);a.word(0x01,(TEXT_VRAM_END-TEXT_VRAM_BASE)-TEXT_COLS);a.emit(0xED,0xB0);
+    a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xAF,0x77);a.word(0x11,TEXT_VRAM_END-TEXT_COLS+1);a.word(0x01,TEXT_COLS-1);a.emit(0xED,0xB0);a.word(0x21,TEXT_VRAM_END-TEXT_COLS);a.emit(0xC9);
+    a.label('CBIOS_LIST');a.emit(0xC9);a.label('CBIOS_PUNCH');a.emit(0xC9);a.label('CBIOS_READER');a.emit(0x3E,0x1A,0xC9);
+    a.label('CBIOS_HOME');a.word(0x01,0);jp('CBIOS_SETTRK');
+
+    a.label('CBIOS_SELDSK');
+    a.emit(0x79,0xFE,0x02);jpNC('CBIOS_SELDSK_INVALID');ldATo(CBIOS3_STATE.drive);a.emit(0xD3,BLOCK_DRIVE_PORT,0xAF,0xDB,BLOCK_MEDIA_PROFILE_PORT,0xFE,0x05);jpNC('CBIOS_SELDSK_INVALID');
+    a.emit(0x47);ldAFrom(CBIOS3_STATE.drive);a.emit(0xB7);jpNZ('CBIOS_SELDSK_STORE_B');a.emit(0x78);ldATo(CBIOS3_DEBLOCK_A);jp('CBIOS_SELDSK_DPB');
+    a.label('CBIOS_SELDSK_STORE_B');a.emit(0x78);ldATo(CBIOS3_DEBLOCK_B);
+    a.label('CBIOS_SELDSK_DPB');a.emit(0x78,0x6F,0x26,0x00,0x29,0x29,0x29,0x29);a.word(0x11,CBIOS3_DPB_BASE);a.emit(0x19,0xEB);
+    ldAFrom(CBIOS3_STATE.drive);a.emit(0xB7);jpNZ('CBIOS_SELDSK_DPH_B');a.word(0x21,CBIOS3_DPH_A+10);a.emit(0x73,0x23,0x72);a.word(0x21,CBIOS3_DPH_A);a.emit(0xC9);
+    a.label('CBIOS_SELDSK_DPH_B');a.word(0x21,CBIOS3_DPH_B+10);a.emit(0x73,0x23,0x72);a.word(0x21,CBIOS3_DPH_B);a.emit(0xC9);
+    a.label('CBIOS_SELDSK_INVALID');a.word(0x21,0);a.emit(0xC9);
+
+    a.label('CBIOS_SETTRK');ldBCTo(CBIOS3_STATE.track);a.emit(0xC9);
+    a.label('CBIOS_SETSEC');ldBCTo(CBIOS3_STATE.sector);a.emit(0xC9);
+    a.label('CBIOS_SETDMA');ldBCTo(CBIOS3_STATE.dma);a.emit(0xC9);
+
+    a.label('CBIOS_PROFILE');ldAFrom(CBIOS3_STATE.drive);a.emit(0xB7);jpNZ('CBIOS_PROFILE_B');ldAFrom(CBIOS3_DEBLOCK_A);a.emit(0xC9);
+    a.label('CBIOS_PROFILE_B');ldAFrom(CBIOS3_DEBLOCK_B);a.emit(0xC9);
+
+    a.label('CBIOS_PREPARE');
+    ldAFrom(CBIOS3_STATE.drive);a.emit(0xD3,BLOCK_DRIVE_PORT);call('CBIOS_PROFILE');a.emit(0xFE,0x05);jpNC('CBIOS_IO_FAIL');a.emit(0x47);
+    ldAFrom(CBIOS3_STATE.track+1);a.emit(0xB7);jpNZ('CBIOS_IO_FAIL');ldAFrom(CBIOS3_STATE.track);a.emit(0x4F);a.emit(0x78,0xB7);jpZ('CBIOS_PREPARE_CLASSIC');
+    a.emit(0x79,0xE6,0x01,0xD3,BLOCK_HEAD_PORT,0x79,0xCB,0x3F,0xD3,BLOCK_TRACK_PORT);jp('CBIOS_PREPARE_SECTOR');
+    a.label('CBIOS_PREPARE_CLASSIC');a.emit(0xAF,0xD3,BLOCK_HEAD_PORT,0x79,0xD3,BLOCK_TRACK_PORT);
+    a.label('CBIOS_PREPARE_SECTOR');ldAFrom(CBIOS3_STATE.sector+1);a.emit(0xB7);jpNZ('CBIOS_IO_FAIL');ldAFrom(CBIOS3_STATE.sector);a.emit(0x3D,0x4F);a.word(0x21,CBIOS3_PHYSICAL_SCRATCH);ldHLTo(CBIOS3_STATE.recordPointer);
+    a.emit(0x78,0xB7);jpZ('CBIOS_PREPARE_RATIO1');a.emit(0xFE,0x01);jpZ('CBIOS_PREPARE_RATIO8');
+    a.label('CBIOS_PREPARE_RATIO4');a.emit(0x79,0xE6,0x03);call('CBIOS_RECORD_POINTER');a.emit(0x79,0x0F,0x0F,0xE6,0x3F,0x3C,0xD3,BLOCK_SECTOR_PORT,0x3E,0x02);ldATo(CBIOS3_STATE.transferPages);a.emit(0xAF,0xC9);
+    a.label('CBIOS_PREPARE_RATIO8');a.emit(0x79,0xE6,0x07);call('CBIOS_RECORD_POINTER');a.emit(0x79,0x0F,0x0F,0x0F,0xE6,0x1F,0x3C,0xD3,BLOCK_SECTOR_PORT,0x3E,0x04);ldATo(CBIOS3_STATE.transferPages);a.emit(0xAF,0xC9);
+    a.label('CBIOS_PREPARE_RATIO1');a.emit(0x79,0x3C,0xD3,BLOCK_SECTOR_PORT,0xAF);ldATo(CBIOS3_STATE.transferPages);a.emit(0xAF,0xC9);
+    a.label('CBIOS_RECORD_POINTER');a.emit(0x6F,0x26,0x00,0x29,0x29,0x29,0x29,0x29,0x29,0x29);a.word(0x11,CBIOS3_PHYSICAL_SCRATCH);a.emit(0x19);ldHLTo(CBIOS3_STATE.recordPointer);a.emit(0xC9);
+
+    a.label('CBIOS_ISSUE');a.emit(0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);jpNZ('CBIOS_IO_FAIL');a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);jpZ('CBIOS_IO_FAIL');a.emit(0xAF,0xC9);
+    a.label('CBIOS_READ_PHYSICAL');call('CBIOS_PREPARE');a.emit(0xB7,0xC0,0x3E,0x01);call('CBIOS_ISSUE');a.emit(0xB7,0xC0);a.word(0x21,CBIOS3_PHYSICAL_SCRATCH);ldAFrom(CBIOS3_STATE.transferPages);a.emit(0xB7);jpZ('CBIOS_READ_128');
+    a.emit(0x57,0x0E,BLOCK_DATA_PORT);a.label('CBIOS_READ_PAGE');a.emit(0x06,0x00,0xED,0xB2,0x15);jpNZ('CBIOS_READ_PAGE');a.emit(0xAF,0xC9);
+    a.label('CBIOS_READ_128');a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0xAF,0xC9);
+    a.label('CBIOS_WRITE_PHYSICAL');a.emit(0x3E,0x02);call('CBIOS_ISSUE');a.emit(0xB7,0xC0);a.word(0x21,CBIOS3_PHYSICAL_SCRATCH);ldAFrom(CBIOS3_STATE.transferPages);a.emit(0xB7);jpZ('CBIOS_WRITE_128');
+    a.emit(0x57,0x0E,BLOCK_DATA_PORT);a.label('CBIOS_WRITE_PAGE');a.emit(0x06,0x00,0xED,0xB3,0x15);jpNZ('CBIOS_WRITE_PAGE');a.emit(0xAF,0xC9);
+    a.label('CBIOS_WRITE_128');a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB3,0xAF,0xC9);
+    a.label('CBIOS_IO_FAIL');a.emit(0x3E,0x01,0xC9);
+
+    a.label('CBIOS_READ');call('CBIOS_READ_PHYSICAL');a.emit(0xB7,0xC0);ldHLFrom(CBIOS3_STATE.recordPointer);a.emit(0xEB);ldHLFrom(CBIOS3_STATE.dma);a.emit(0x01,0x80,0x00,0xEB,0xED,0xB0,0xAF,0xC9);
+    a.label('CBIOS_WRITE');call('CBIOS_READ_PHYSICAL');a.emit(0xB7,0xC0);ldHLFrom(CBIOS3_STATE.recordPointer);a.emit(0xEB);ldHLFrom(CBIOS3_STATE.dma);a.emit(0x01,0x80,0x00,0xED,0xB0);jp('CBIOS_WRITE_PHYSICAL');
+    a.label('CBIOS_LISTST');a.emit(0x3E,0xFF,0xC9);
+    a.label('CBIOS_SECTRAN');a.emit(0x7A,0xB3);jpNZ('CBIOS_SECTRAN_TABLE');a.emit(0x60,0x69,0x23,0xC9);a.label('CBIOS_SECTRAN_TABLE');a.emit(0xEB,0x09,0x6E,0x26,0x00,0x23,0xC9);
+
+    const assembled=a.resolve();
+    if(assembled.end>CBIOS3_EXECUTABLE_END)throw new RangeError(`CBIOS v3 executable crosses FA7Fh: ${assembled.end.toString(16)}`);
+    const bytes=new Uint8Array(CBIOS3_IMAGE_END-CBIOS3_ORG);bytes.set(assembled.bytes);
+    const labels={...assembled.labels,
+      CBIOS_DPH_A:CBIOS3_DPH_A,CBIOS_DPH_B:CBIOS3_DPH_B,CBIOS_DPB:CBIOS3_DPB_BASE,
+      CBIOS_CSV_A:CBIOS3_CSV_A,CBIOS_CSV_B:CBIOS3_CSV_B,CBIOS_ALV_A:CBIOS3_ALV_A,CBIOS_ALV_B:CBIOS3_ALV_B,
+      CBIOS_SELECTED_DRIVE:CBIOS3_STATE.drive,CBIOS_SELECTED_TRACK:CBIOS3_STATE.track,CBIOS_SELECTED_TRACK_HI:CBIOS3_STATE.track+1,
+      CBIOS_SELECTED_SECTOR:CBIOS3_STATE.sector,CBIOS_SELECTED_SECTOR_HI:CBIOS3_STATE.sector+1,CBIOS_DMA:CBIOS3_STATE.dma,
+      CBIOS_CURSOR:CBIOS3_STATE.cursor,CBIOS_COLUMN:CBIOS3_STATE.column
+    };
+    const writeWord=(address,value)=>{const offset=address-CBIOS3_ORG;bytes[offset]=lo(value);bytes[offset+1]=hi(value);};
+    const writeDph=(address,dpbAddress,csv,alv)=>{writeWord(address+8,CBIOS_DIRBUF);writeWord(address+10,dpbAddress);writeWord(address+12,csv);writeWord(address+14,alv);};
+    writeDph(CBIOS3_DPH_A,CBIOS3_DPB_BASE,CBIOS3_CSV_A,CBIOS3_ALV_A);writeDph(CBIOS3_DPH_B,CBIOS3_DPB_BASE,CBIOS3_CSV_B,CBIOS3_ALV_B);
+    DPB_PROFILES.forEach((dpb,index)=>{
+      const offset=CBIOS3_DPB_BASE-CBIOS3_ORG+index*16;
+      bytes.set([lo(dpb.spt),hi(dpb.spt),dpb.bsh,dpb.blm,dpb.exm,lo(dpb.dsm),hi(dpb.dsm),lo(dpb.drm),hi(dpb.drm),dpb.al0,dpb.al1,lo(dpb.cks),hi(dpb.cks),lo(dpb.off),hi(dpb.off),0],offset);
+    });
+    bytes[CBIOS3_DEBLOCK_A-CBIOS3_ORG]=0xFF;bytes[CBIOS3_DEBLOCK_B-CBIOS3_ORG]=0xFF;
+    bytes[CBIOS3_STATE.sector-CBIOS3_ORG]=1;writeWord(CBIOS3_STATE.dma,CBIOS_DEFAULT_DMA);writeWord(CBIOS3_STATE.cursor,TEXT_VRAM_BASE);
+    return {bytes,origin:CBIOS3_ORG,end:CBIOS3_IMAGE_END,executableEnd:assembled.end,labels:Object.freeze(labels),meta:Object.freeze({entryCount:CBIOS_ENTRY_NAMES.length,entrySize:CBIOS_ENTRY_SIZE,defaultDma:CBIOS_DEFAULT_DMA,dirbuf:CBIOS_DIRBUF,dpbs:DPB_PROFILES,physicalScratch:CBIOS3_PHYSICAL_SCRATCH})};
+  }
+
   return {
-    CBIOS_ORG,CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,CBIOS_DIRBUF,
+    CBIOS_ORG,CBIOS3_ORG,CBIOS3_EXECUTABLE_END,CBIOS3_IMAGE_END,CBIOS3_PHYSICAL_SCRATCH,CBIOS3_DPH_A,CBIOS3_DPH_B,CBIOS3_DPB_BASE,CBIOS3_CSV_A,CBIOS3_CSV_B,CBIOS3_ALV_A,CBIOS3_ALV_B,CBIOS3_DEBLOCK_A,CBIOS3_DEBLOCK_B,CBIOS3_RMW,CBIOS3_STATE,
+    CBIOS_ENTRY_SIZE,CBIOS_ENTRY_NAMES,CBIOS_DEFAULT_DMA,CBIOS_DIRBUF,
     CBIOS_SYSTEM_TRACK,CBIOS_SYSTEM_SECTOR,CBIOS_SYSTEM_ENTRY,DPB,
+    DPB_PROFILES,
     TEXT_VRAM_BASE,TEXT_VRAM_END,TEXT_COLS,
     KEY_DATA_PORT,KEY_STATUS_PORT,
-    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BEEPER_PORT,
-    buildCbios
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BLOCK_HEAD_PORT,BLOCK_MEDIA_PROFILE_PORT,BEEPER_PORT,
+    buildCbios,buildCbiosV3
   };
 });
 </script>
@@ -1175,6 +1442,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const CPM22_BDOS_ENTRY=CPM22_BDOS_ORIGIN+6;
   const CPM22_CCP_SHA256='759a93d5642445d5985fc340954c217e831d364600f063c6648f8303a4c827af';
   const CPM22_BDOS_SHA256='6496c9e8d3508b1d8132add59affb8d1237c7f7b5278fae2f93308cdddf2dcab';
+  const CPM22_BIOS_ORIGIN=0xFA00;
+  const CPM22_BIOS_OPERANDS=Object.freeze([0x0104,0x012B,0x0131,0x0139,0x0156,0x015F,0x01AA,0x01AF,0x02CF,0x02DB,0x02DE,0x02E1,0x02E8,0x035E,0x03A2,0x03B3,0x03B9,0x041B,0x0437,0x043C,0x05E7]);
   const CCP_BASE64='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';
   const BDOS_BASE64='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';
 
@@ -1185,31 +1454,39 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     return bytes;
   }
 
-  function buildCpm22(){
+  function buildCpm22({biosOrigin=CPM22_BIOS_ORIGIN}={}){
     const ccp=decodeBase64(CCP_BASE64),bdos=decodeBase64(BDOS_BASE64);
     if(ccp.length!==0x800||bdos.length!==0xE00)throw new Error('CP/M 2.2 44K image length mismatch');
+    const delta=Number(biosOrigin)-CPM22_BIOS_ORIGIN;
+    if(!Number.isInteger(delta)||biosOrigin<0||biosOrigin+0x32>0xFFFF)throw new RangeError('CP/M BIOS origin outside address space');
+    for(const operand of CPM22_BIOS_OPERANDS){
+      const original=bdos[operand]|(bdos[operand+1]<<8),relocated=original+delta;
+      if(original<CPM22_BIOS_ORIGIN||original>CPM22_BIOS_ORIGIN+0x32)throw new Error(`CP/M BIOS relocation fixture mismatch at ${operand.toString(16)}`);
+      bdos[operand]=relocated&255;bdos[operand+1]=(relocated>>8)&255;
+    }
     return {ccp,bdos,meta:Object.freeze({
       sourceRepository:CPM22_SOURCE_REPOSITORY,sourceCommit:CPM22_SOURCE_COMMIT,
       assemblerRepository:CPM22_ASSEMBLER_REPOSITORY,assemblerCommit:CPM22_ASSEMBLER_COMMIT,
-      ccpOrigin:CPM22_CCP_ORIGIN,bdosOrigin:CPM22_BDOS_ORIGIN,bdosEntry:CPM22_BDOS_ENTRY,
+      ccpOrigin:CPM22_CCP_ORIGIN,bdosOrigin:CPM22_BDOS_ORIGIN,bdosEntry:CPM22_BDOS_ENTRY,biosOrigin,
       ccpSha256:CPM22_CCP_SHA256,bdosSha256:CPM22_BDOS_SHA256
     })};
   }
 
   return {
     CPM22_SOURCE_REPOSITORY,CPM22_SOURCE_COMMIT,CPM22_ASSEMBLER_REPOSITORY,CPM22_ASSEMBLER_COMMIT,
-    CPM22_CCP_ORIGIN,CPM22_BDOS_ORIGIN,CPM22_BDOS_ENTRY,CPM22_CCP_SHA256,CPM22_BDOS_SHA256,
+    CPM22_CCP_ORIGIN,CPM22_BDOS_ORIGIN,CPM22_BDOS_ENTRY,CPM22_CCP_SHA256,CPM22_BDOS_SHA256,CPM22_BIOS_ORIGIN,CPM22_BIOS_OPERANDS,
     buildCpm22
   };
 });
 </script>
 <script>(function(root,factory){
   const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const profiles=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-media-profiles.js'):root.SHINO_MEDIA_PROFILES;
   const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
-  const api=factory(block,cbios);
+  const api=factory(block,profiles,cbios);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_CPM_FILESYSTEM=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios){
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,profiles,cbios){
   'use strict';
 
   const CPM_DIRECTORY_ENTRY_SIZE=32;
@@ -1226,6 +1503,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const CPM_TOTAL_BLOCKS=dpb.dsm+1;
   const CPM_FILESYSTEM_OFFSET=dpb.off*dpb.spt*block.BLOCK_SECTOR_SIZE;
   const allowedPart=/^[A-Z0-9$#@!%&'()\-^_{}~]+$/;
+
+  function filesystemLayout(profileId=profiles.MEDIA_PROFILE_CLASSIC){
+    const profile=profiles.mediaProfileById(profileId);if(!profile)throw new RangeError(`Unknown media profile ${profileId}`);
+    const profileDpb=profile.dpb,blockSize=CPM_RECORD_SIZE*(1<<profileDpb.bsh);
+    const directoryEntries=profileDpb.drm+1,directoryBytes=directoryEntries*CPM_DIRECTORY_ENTRY_SIZE;
+    const directoryBlocks=Math.ceil(directoryBytes/blockSize);
+    return Object.freeze({profile,dpb:profileDpb,blockSize,directoryEntries,directoryBytes,directoryBlocks,firstDataBlock:directoryBlocks,totalBlocks:profileDpb.dsm+1,filesystemOffset:profile.reservedSystemBytes});
+  }
 
   function normalizeName(value){
     const source=String(value??'').trim().toUpperCase();
@@ -1245,11 +1530,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     throw new TypeError('CP/M file bytes must be Uint8Array, array or ASCII string');
   }
 
-  function dataOffset(allocationBlock){
+  function dataOffsetForProfile(profileId,allocationBlock){
+    const layout=filesystemLayout(profileId);
     const number=Number(allocationBlock);
-    if(!Number.isInteger(number)||number<0||number>=CPM_TOTAL_BLOCKS)throw new RangeError(`Invalid CP/M allocation block ${allocationBlock}`);
-    return CPM_FILESYSTEM_OFFSET+number*CPM_BLOCK_SIZE;
+    if(!Number.isInteger(number)||number<0||number>=layout.totalBlocks)throw new RangeError(`Invalid CP/M allocation block ${allocationBlock}`);
+    return layout.filesystemOffset+number*layout.blockSize;
   }
+  function dataOffset(allocationBlock){return dataOffsetForProfile(profiles.MEDIA_PROFILE_CLASSIC,allocationBlock);}
 
   function writeName(entry,normalized){
     entry.fill(0x20,1,12);
@@ -1257,11 +1544,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     for(let index=0;index<normalized.extension.length;index++)entry[9+index]=normalized.extension.charCodeAt(index);
   }
 
-  function buildFilesystem(image,files){
-    if(!(image instanceof Uint8Array)||image.length!==block.BLOCK_IMAGE_SIZE)throw new RangeError(`CP/M image must be ${block.BLOCK_IMAGE_SIZE} bytes`);
+  function buildFilesystemForProfile(image,profileId,files){
+    const layout=filesystemLayout(profileId);
+    if(!(image instanceof Uint8Array)||image.length!==layout.profile.imageBytes)throw new RangeError(`CP/M ${layout.profile.name} image must be ${layout.profile.imageBytes} bytes`);
     if(!Array.isArray(files))throw new TypeError('CP/M files must be an array');
-    const output=new Uint8Array(image);output.fill(block.BLOCK_BLANK_BYTE,CPM_FILESYSTEM_OFFSET);
-    let directoryIndex=0,nextBlock=CPM_FIRST_DATA_BLOCK;
+    const output=new Uint8Array(image);output.fill(block.BLOCK_BLANK_BYTE,layout.filesystemOffset);
+    let directoryIndex=0,nextBlock=layout.firstDataBlock;
     const installed=[],seen=new Set();
     for(const source of files){
       const normalized=normalizeName(source.name);
@@ -1270,32 +1558,34 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),extentCount=Math.max(1,Math.ceil(records/CPM_EXTENT_RECORDS));
       const fileBlocks=[];
       for(let extentNumber=0;extentNumber<extentCount;extentNumber++){
-        if(directoryIndex>=CPM_DIRECTORY_ENTRIES)throw new RangeError('CP/M directory is full');
+        if(directoryIndex>=layout.directoryEntries)throw new RangeError('CP/M directory is full');
         const firstRecord=extentNumber*CPM_EXTENT_RECORDS;
         const extentRecords=Math.min(CPM_EXTENT_RECORDS,Math.max(0,records-firstRecord));
-        const blockCount=Math.ceil(extentRecords/(CPM_BLOCK_SIZE/CPM_RECORD_SIZE));
-        if(nextBlock+blockCount>CPM_TOTAL_BLOCKS)throw new RangeError(`CP/M disk is full while adding ${normalized.full}`);
+        const blockCount=Math.ceil(extentRecords/(layout.blockSize/CPM_RECORD_SIZE));
+        if(nextBlock+blockCount>layout.totalBlocks)throw new RangeError(`CP/M disk is full while adding ${normalized.full}`);
         const entry=new Uint8Array(CPM_DIRECTORY_ENTRY_SIZE),user=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
         if(!Number.isInteger(user)||user<0||user>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);entry[0]=user;
         writeName(entry,normalized);entry[12]=extentNumber&0x1F;entry[13]=0;entry[14]=(extentNumber>>5)&0x3F;entry[15]=extentRecords;
         for(let index=0;index<blockCount;index++){
           const allocationBlock=nextBlock++;entry[16+index]=allocationBlock;fileBlocks.push(allocationBlock);
-          const target=dataOffset(allocationBlock);output.fill(padding,target,target+CPM_BLOCK_SIZE);
-          const sourceOffset=(firstRecord*CPM_RECORD_SIZE)+(index*CPM_BLOCK_SIZE);
-          output.set(bytes.slice(sourceOffset,sourceOffset+CPM_BLOCK_SIZE),target);
+          const target=dataOffsetForProfile(profileId,allocationBlock);output.fill(padding,target,target+layout.blockSize);
+          const sourceOffset=(firstRecord*CPM_RECORD_SIZE)+(index*layout.blockSize);
+          output.set(bytes.slice(sourceOffset,sourceOffset+layout.blockSize),target);
         }
-        output.set(entry,CPM_FILESYSTEM_OFFSET+directoryIndex*CPM_DIRECTORY_ENTRY_SIZE);directoryIndex++;
+        output.set(entry,layout.filesystemOffset+directoryIndex*CPM_DIRECTORY_ENTRY_SIZE);directoryIndex++;
       }
       installed.push(Object.freeze({name:normalized.full,user:source.user??CPM_USER_DEFAULT,size:bytes.length,records,blocks:Object.freeze(fileBlocks),extents:extentCount}));
     }
     return {image:output,files:Object.freeze(installed),directoryEntries:directoryIndex,nextFreeBlock:nextBlock};
   }
+  function buildFilesystem(image,files){return buildFilesystemForProfile(image,profiles.MEDIA_PROFILE_CLASSIC,files);}
 
-  function readDirectory(image){
-    if(!(image instanceof Uint8Array)||image.length!==block.BLOCK_IMAGE_SIZE)throw new RangeError(`CP/M image must be ${block.BLOCK_IMAGE_SIZE} bytes`);
+  function readDirectoryForProfile(image,profileId){
+    const layout=filesystemLayout(profileId);
+    if(!(image instanceof Uint8Array)||image.length!==layout.profile.imageBytes)throw new RangeError(`CP/M ${layout.profile.name} image must be ${layout.profile.imageBytes} bytes`);
     const entries=[];
-    for(let index=0;index<CPM_DIRECTORY_ENTRIES;index++){
-      const offset=CPM_FILESYSTEM_OFFSET+index*CPM_DIRECTORY_ENTRY_SIZE,user=image[offset];if(user===block.BLOCK_BLANK_BYTE)continue;
+    for(let index=0;index<layout.directoryEntries;index++){
+      const offset=layout.filesystemOffset+index*CPM_DIRECTORY_ENTRY_SIZE,user=image[offset];if(user===block.BLOCK_BLANK_BYTE)continue;
       const clean=(start,length)=>String.fromCharCode(...image.slice(offset+start,offset+start+length).map(value=>value&0x7F)).trimEnd();
       const name=clean(1,8),extension=clean(9,3),blocks=[];
       for(let pointer=0;pointer<16;pointer++){const value=image[offset+16+pointer];if(value)blocks.push(value);}
@@ -1303,11 +1593,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     }
     return Object.freeze(entries);
   }
+  function readDirectory(image){return readDirectoryForProfile(image,profiles.MEDIA_PROFILE_CLASSIC);}
 
   return {
     CPM_DIRECTORY_ENTRY_SIZE,CPM_RECORD_SIZE,CPM_EXTENT_RECORDS,CPM_TEXT_EOF,CPM_USER_DEFAULT,
     CPM_BLOCK_SIZE,CPM_DIRECTORY_ENTRIES,CPM_DIRECTORY_BYTES,CPM_DIRECTORY_BLOCKS,CPM_FIRST_DATA_BLOCK,CPM_TOTAL_BLOCKS,CPM_FILESYSTEM_OFFSET,
-    normalizeName,dataOffset,buildFilesystem,readDirectory
+    filesystemLayout,normalizeName,dataOffset,dataOffsetForProfile,buildFilesystem,buildFilesystemForProfile,readDirectory,readDirectoryForProfile
   };
 });
 </script>
@@ -1356,14 +1647,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </script>
 <script>(function(root,factory){
   const block=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-block-device.js'):root.SHINO_BLOCK_DEVICE;
+  const profiles=(typeof module==='object'&&module.exports)?require('../../devices/shino80/shino80-media-profiles.js'):root.SHINO_MEDIA_PROFILES;
   const cbios=(typeof module==='object'&&module.exports)?require('./shino80-cbios.js'):root.SHINO_CBIOS;
   const cpm22=(typeof module==='object'&&module.exports)?require('./shino80-cpm22.js'):root.SHINO_CPM22;
   const filesystem=(typeof module==='object'&&module.exports)?require('./shino80-cpm-filesystem.js'):root.SHINO_CPM_FILESYSTEM;
   const starter=(typeof module==='object'&&module.exports)?require('./shino80-cpm-starter-files.js'):root.SHINO_CPM_STARTER_FILES;
-  const api=factory(block,cbios,cpm22,filesystem,starter);
+  const api=factory(block,profiles,cbios,cpm22,filesystem,starter);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.SHINO_SYSTEM_DISK=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(block,cbios,cpm22,filesystem,starter){
+})(typeof globalThis!=='undefined'?globalThis:this,function(block,profiles,cbios,cpm22,filesystem,starter){
   'use strict';
   const SYSTEM_DISK_MAGIC='S80B',SYSTEM_DISK_VERSION=2;
   const SYSTEM_HEADER_TRACK=0,SYSTEM_HEADER_SECTOR=1;
@@ -1372,6 +1664,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const SYSTEM_CPM_TRACK=0,SYSTEM_CPM_SECTOR=9,SYSTEM_CPM_SECTORS=44;
   const SYSTEM_ENTRY=0x8000;
   const SYSTEM_STARTUP_TITLE='SHINO-80 CP/M 2.2\r\n';
+  const SYSTEM_DISK_V3_VERSION=3,SYSTEM_DISK_V3_PROFILE=profiles.MEDIA_PROFILE_2HD_JP;
+  const SYSTEM_DISK_V3_HEADER_LENGTH=0x40,SYSTEM_DISK_V3_SYSTEM_BYTES=0x2000;
+  const SYSTEM_DISK_V3_LOADER_OFFSET=0x40,SYSTEM_DISK_V3_LOADER_LENGTH=0x80;
+  const SYSTEM_DISK_V3_CBIOS_OFFSET=0x100,SYSTEM_DISK_V3_CBIOS_LENGTH=0x900;
+  const SYSTEM_DISK_V3_CCP_OFFSET=0x0A00,SYSTEM_DISK_V3_BDOS_OFFSET=0x1200;
   const lo=value=>Number(value)&0xFF,hi=value=>(Number(value)>>8)&0xFF;
   const mediaOffset=(track,sector)=>(track*block.BLOCK_SECTORS_PER_TRACK+(sector-1))*block.BLOCK_SECTOR_SIZE;
 
@@ -1431,9 +1728,34 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       cpmTrack:SYSTEM_CPM_TRACK,cpmSector:SYSTEM_CPM_SECTOR,cpmSectors:SYSTEM_CPM_SECTORS,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
   }
 
+  function buildSystemPayloadV3(cbiosImage=cbios.buildCbiosV3()){
+    const output=new Uint8Array(SYSTEM_DISK_V3_LOADER_LENGTH);
+    output.set([0xF3,0x31,0x00,0xF0,0xC3,lo(cbiosImage.labels.CBIOS_COLD_START),hi(cbiosImage.labels.CBIOS_COLD_START)]);
+    return output;
+  }
+
+  function buildSystemHeaderV3(){
+    const header=new Uint8Array(SYSTEM_DISK_V3_HEADER_LENGTH),u16=(offset,value)=>{header[offset]=lo(value);header[offset+1]=hi(value);};
+    const u32=(offset,value)=>{header[offset]=value&255;header[offset+1]=(value>>>8)&255;header[offset+2]=(value>>>16)&255;header[offset+3]=(value>>>24)&255;};
+    header.set([...SYSTEM_DISK_MAGIC].map(char=>char.charCodeAt(0)),0);header[4]=SYSTEM_DISK_V3_VERSION;header[5]=SYSTEM_DISK_V3_HEADER_LENGTH;header[6]=SYSTEM_DISK_V3_PROFILE;header[7]=0;
+    u32(0x08,SYSTEM_DISK_V3_SYSTEM_BYTES);u32(0x0C,SYSTEM_DISK_V3_SYSTEM_BYTES);u32(0x10,SYSTEM_DISK_V3_LOADER_OFFSET);u16(0x14,SYSTEM_DISK_V3_LOADER_LENGTH);u16(0x16,SYSTEM_ENTRY);u16(0x18,SYSTEM_ENTRY);
+    u32(0x1A,SYSTEM_DISK_V3_CBIOS_OFFSET);u16(0x1E,SYSTEM_DISK_V3_CBIOS_LENGTH);u16(0x20,cbios.CBIOS3_ORG);u16(0x22,cbios.CBIOS3_ORG);
+    u32(0x24,SYSTEM_DISK_V3_CCP_OFFSET);u16(0x28,0x0800);u16(0x2A,cpm22.CPM22_CCP_ORIGIN);u32(0x2C,SYSTEM_DISK_V3_BDOS_OFFSET);u16(0x30,0x0E00);u16(0x32,cpm22.CPM22_BDOS_ORIGIN);
+    header[0x3F]=header.subarray(0,0x3F).reduce((sum,value)=>(sum+value)&255,0);return header;
+  }
+
+  function buildSystemDiskV3(){
+    const image=profiles.createBlankMediaImage(SYSTEM_DISK_V3_PROFILE),cbiosImage=cbios.buildCbiosV3(),cpmImage=cpm22.buildCpm22({biosOrigin:cbios.CBIOS3_ORG}),loader=buildSystemPayloadV3(cbiosImage),header=buildSystemHeaderV3();
+    if(cbiosImage.bytes.length!==SYSTEM_DISK_V3_CBIOS_LENGTH)throw new RangeError('S80B v3 CBIOS must be exactly 0900h bytes');
+    image.set(header,0);image.set(loader,SYSTEM_DISK_V3_LOADER_OFFSET);image.set(cbiosImage.bytes,SYSTEM_DISK_V3_CBIOS_OFFSET);image.set(cpmImage.ccp,SYSTEM_DISK_V3_CCP_OFFSET);image.set(cpmImage.bdos,SYSTEM_DISK_V3_BDOS_OFFSET);
+    const volume=filesystem.buildFilesystemForProfile(image,SYSTEM_DISK_V3_PROFILE,starter.buildStarterFiles());
+    return {image:volume.image,header,payload:loader,cbios:cbiosImage,cpm:cpmImage,files:volume.files,meta:Object.freeze({magic:SYSTEM_DISK_MAGIC,version:SYSTEM_DISK_V3_VERSION,profileId:SYSTEM_DISK_V3_PROFILE,systemBytes:SYSTEM_DISK_V3_SYSTEM_BYTES,entry:SYSTEM_ENTRY,fileCount:volume.files.length})};
+  }
+
   return {SYSTEM_DISK_MAGIC,SYSTEM_DISK_VERSION,SYSTEM_HEADER_TRACK,SYSTEM_HEADER_SECTOR,SYSTEM_PAYLOAD_TRACK,SYSTEM_PAYLOAD_SECTOR,
     SYSTEM_CBIOS_TRACK,SYSTEM_CBIOS_SECTOR,SYSTEM_CBIOS_SECTORS,SYSTEM_CPM_TRACK,SYSTEM_CPM_SECTOR,SYSTEM_CPM_SECTORS,SYSTEM_ENTRY,SYSTEM_STARTUP_TITLE,
-    mediaOffset,buildSystemPayload,buildSystemDisk};
+    SYSTEM_DISK_V3_VERSION,SYSTEM_DISK_V3_PROFILE,SYSTEM_DISK_V3_HEADER_LENGTH,SYSTEM_DISK_V3_SYSTEM_BYTES,SYSTEM_DISK_V3_LOADER_OFFSET,SYSTEM_DISK_V3_LOADER_LENGTH,SYSTEM_DISK_V3_CBIOS_OFFSET,SYSTEM_DISK_V3_CBIOS_LENGTH,SYSTEM_DISK_V3_CCP_OFFSET,SYSTEM_DISK_V3_BDOS_OFFSET,
+    mediaOffset,buildSystemPayload,buildSystemDisk,buildSystemPayloadV3,buildSystemHeaderV3,buildSystemDiskV3};
 });
 </script>
 <script>(function(root,factory){
@@ -2834,6 +3156,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const BLOCK_SECTOR_PORT=0x34;
   const BLOCK_DATA_PORT=0x35;
   const BLOCK_ERROR_PORT=0x36;
+  const BLOCK_HEAD_PORT=0x37;
+  const BLOCK_MEDIA_PROFILE_PORT=0x38;
   const BEEPER_PORT=0x40;
   const MEMORY_CONTROL_PORT=0x00;
   const MEMORY_CONTROL_LOW_RAM=0x01;
@@ -2842,6 +3166,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const RAM_HANDOFF_DEMO_ENTRY=0x8000;
   const RAM_HANDOFF_SIGNATURE=0xE180;
   const DISK_BOOT_HEADER=0xE300;
+  const DISK_BOOT_V3_SCRATCH=0xE800;
   const MON_BUFFER=0xE100;
   const MON_CONTEXT=0xE140;
   const MON_RANGE_START=0xE158;
@@ -3429,6 +3754,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
 
     a.label('DISK_BOOT_ATTEMPT');
+    a.emit(0xAF,0xD3,BLOCK_DRIVE_PORT,0xDB,BLOCK_MEDIA_PROFILE_PORT,0xB7);a.absolute(0xCA,'DISK_BOOT_V2');
+    a.emit(0xFE,0x01);a.absolute(0xCA,'DISK_BOOT_V3');jp('DISK_BOOT_ATTEMPT_FAIL');
+
+    a.label('DISK_BOOT_V2');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
     for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,128,0,145,2,151]){
@@ -3442,6 +3771,31 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.emit(0xAF);word(0x32,0x0004); // ROM cold/autoboot paths always enter CCP on A:
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
+    // S80B v3 uses the native 2HD-JP 1024-byte physical sector geometry.
+    // The complete fixed header is compared before any RAM handoff state is
+    // changed. Sector 1 contains the header, loader, and first 0300h CBIOS
+    // bytes; sectors 2-3 complete the exact 0900h CBIOS image.
+    a.label('DISK_BOOT_V3');
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    a.ldHLLabel('DISK_BOOT_V3_HEADER_EXPECTED');a.emit(0xEB);word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x06,0x40);
+    a.label('DISK_BOOT_V3_HEADER_LOOP');a.emit(0x1A,0xBE);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x13,0x23);jr(0x10,'DISK_BOOT_V3_HEADER_LOOP');
+    word(0x21,DISK_BOOT_V3_SCRATCH+0x40);word(0x11,0x8000);word(0x01,0x0080);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH+0x100);word(0x11,0xF400);word(0x01,0x0300);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,2);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    word(0x21,DISK_BOOT_V3_SCRATCH);word(0x11,0xF700);word(0x01,0x0400);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,3);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    word(0x21,DISK_BOOT_V3_SCRATCH);word(0x11,0xFB00);word(0x01,0x0200);a.emit(0xED,0xB0);
+    a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
+    a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xF403);word(0x22,0x0001);a.emit(0xAF);word(0x32,0x0004);
+    word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
+
+    a.label('DISK_BOOT_V3_HEADER_EXPECTED');a.emit(
+      0x53,0x38,0x30,0x42,0x03,0x40,0x01,0x00,0x00,0x20,0x00,0x00,0x00,0x20,0x00,0x00,
+      0x40,0x00,0x00,0x00,0x80,0x00,0x00,0x80,0x00,0x80,0x00,0x01,0x00,0x00,0x00,0x09,
+      0x00,0xF4,0x00,0xF4,0x00,0x0A,0x00,0x00,0x00,0x08,0x00,0x94,0x00,0x12,0x00,0x00,
+      0x00,0x0E,0x00,0x9C,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x95
+    );
+
     a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
     a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
 
@@ -3451,6 +3805,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
     a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0x37,0xC9); // INIR / SCF / RET
     a.label('DISK_BOOT_READ_FAIL');a.emit(0xB7,0xC9); // OR A clears carry
+
+    a.label('DISK_BOOT_READ_SECTOR_V3');
+    a.emit(0x57,0xAF,0xD3,BLOCK_DRIVE_PORT,0xD3,BLOCK_TRACK_PORT,0xD3,BLOCK_HEAD_PORT,0x7A,0xD3,BLOCK_SECTOR_PORT);
+    a.emit(0x3E,1,0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);a.absolute(0xC2,'DISK_BOOT_READ_FAIL');
+    a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
+    a.emit(0x16,0x04,0x0E,BLOCK_DATA_PORT);a.label('DISK_BOOT_READ_V3_PAGE');a.emit(0x06,0x00,0xED,0xB2,0x15);a.absolute(0xC2,'DISK_BOOT_READ_V3_PAGE');a.emit(0x37,0xC9);
 
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
@@ -3475,7 +3835,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         testPageInstructions,
         clearPageInstructions,
         bootTextBytes:24,
-        instructionsBeforeLoop:14123
+        instructionsBeforeLoop:14113
       })
     };
   }
@@ -3485,9 +3845,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
     KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
-    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BEEPER_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BLOCK_HEAD_PORT,BLOCK_MEDIA_PROFILE_PORT,BEEPER_PORT,
     RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
-    DISK_BOOT_HEADER,
+    DISK_BOOT_HEADER,DISK_BOOT_V3_SCRATCH,
     buildSystemRom
   };
 });
@@ -3637,7 +3997,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Shino80Beeper,BEEPER_PORT}=globalThis.SHINO_BEEPER;
-  const {Shino80BlockDevice,createBlankBlockImage,BLOCK_IMAGE_SIZE}=globalThis.SHINO_BLOCK_DEVICE;
+  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
+  const {MEDIA_PROFILES,MEDIA_PROFILE_CLASSIC,MEDIA_PROFILE_2HD_JP,mediaProfileById,mediaProfilesForImageLength}=globalThis.SHINO_MEDIA_PROFILES;
+  const {CBIOS3_STATE}=globalThis.SHINO_CBIOS;
   const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
@@ -3649,7 +4011,6 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   diskA.mountImage(createBlankBlockImage(),{drive:1});
   const driveEjectedMedia=[null,null];
   const diskMediaMessage=['',''];
-  const DISK_IMAGE_SIZE=BLOCK_IMAGE_SIZE;
   let diskImportOperation=null;
   let pendingDiskImport=null;
   const systemRom=buildSystemRom();
@@ -3699,8 +4060,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · S80B v2',state:'ONLINE'},
-    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · CLASSIC',state:'ONLINE'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · MULTI-PROFILE',state:'ONLINE'},
+    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · MULTI-PROFILE',state:'ONLINE'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
@@ -3814,37 +4175,40 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   function diskInspectorHtml(drive){
     const letter=drive===0?'A':'B',mounted=diskA.mountedAt(drive),ownership=diskOwnership(drive),mediaState=ownership==='empty'?'EMPTY':ownership.toUpperCase();
+    const media=canonicalDiskMedia(drive),profile=media?mediaProfileById(media.profileId):null;
     const targetImportPending=pendingDiskImport?.drive===drive;
     const canEject=!ui.powered&&!targetImportPending&&mounted&&driveEjectedMedia[drive]===null;
-    const canInsert=!ui.powered&&!targetImportPending&&!mounted&&driveEjectedMedia[drive] instanceof Uint8Array;
+    const canInsert=!ui.powered&&!targetImportPending&&!mounted&&isMediaBundle(driveEjectedMedia[drive]);
     const canExport=!ui.powered&&ownership!=='empty'&&ownership!=='invalid';
     const canImport=!ui.powered&&!pendingDiskImport&&!diskImportOperation;
     const role=drive===0?'SYSTEM / TOOLS':'USER / WORK / INTERCHANGE';
     const details=drive===0
-      ?`<div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div>`
-      :'<div class="inspector-kv"><span>Format</span><b>CLASSIC · CP/M DATA</b></div><div class="inspector-kv"><span>Initial state</span><b>BLANK · E5h</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
+      ?`<div class="inspector-kv"><span>Format</span><b>${profile?.id===MEDIA_PROFILE_2HD_JP?'S80B v3':'S80B v2 / RAW'} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div>`
+      :'<div class="inspector-kv"><span>Format</span><b>RAW .s80d · CP/M DATA</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
     const note=drive===0?'A: is the only POWER → RUN / RESET AUTOBOOT source. With A: empty, autoboot returns to ROM MON. MON O remains the manual A: retry path.':'B: is an independent writable work disk and is never an autoboot source.';
     const pending=pendingDiskImport&&pendingDiskImport.drive===drive
-      ?`<div class="inspector-section disk-import-pending" role="status"><div class="inspector-kv"><span>IMPORT PENDING</span><b>DRIVE ${letter}:</b></div><div class="inspector-kv"><span>Current state</span><b>${pendingDiskImport.ownership.toUpperCase()}</b></div><div class="inspector-kv"><span>File</span><b>${escapeHtml(pendingDiskImport.fileName)}</b></div><div class="inspector-kv"><span>Bytes</span><b>${pendingDiskImport.bytes.length.toLocaleString('en-US')}</b></div>${drive===0?'<div class="inspector-note disk-import-warning">Bootability is not checked during IMPORT. An unbootable A: image falls back to ROM MON on the next boot.</div>':''}<div class="disk-actions"><button type="button" data-disk-drive="${drive}" data-disk-action="confirm-import"${ui.powered?' disabled':''}>CONFIRM IMPORT</button><button type="button" data-disk-drive="${drive}" data-disk-action="cancel-import">CANCEL</button></div></div>`
+      ?`<div class="inspector-section disk-import-pending" role="status"><div class="inspector-kv"><span>IMPORT PENDING</span><b>DRIVE ${letter}:</b></div><div class="inspector-kv"><span>Current state</span><b>${pendingDiskImport.ownership.toUpperCase()}</b></div><div class="inspector-kv"><span>File</span><b>${escapeHtml(pendingDiskImport.fileName)}</b></div><div class="inspector-kv"><span>Profile</span><b>${hex(pendingDiskImport.profileId)}h ${escapeHtml(pendingDiskImport.profile.name)}</b></div><div class="inspector-kv"><span>Geometry</span><b>${pendingDiskImport.profile.cylinders}C × ${pendingDiskImport.profile.heads}H × ${pendingDiskImport.profile.physicalSectorsPerTrack}S</b></div><div class="inspector-kv"><span>Bytes</span><b>${pendingDiskImport.bytes.length.toLocaleString('en-US')}</b></div>${drive===0?'<div class="inspector-note disk-import-warning">Bootability is not checked during IMPORT. An unbootable A: image falls back to ROM MON on the next boot.</div>':''}<div class="disk-actions"><button type="button" data-disk-drive="${drive}" data-disk-action="confirm-import"${ui.powered?' disabled':''}>CONFIRM IMPORT</button><button type="button" data-disk-drive="${drive}" data-disk-action="cancel-import">CANCEL</button></div></div>`
       :(pendingDiskImport?`<div class="inspector-section inspector-note">IMPORT PENDING FOR DRIVE ${pendingDiskImport.drive===0?'A':'B'}. Finish or cancel it before starting another IMPORT.</div>`:'');
     const message=diskMediaMessage[drive]?`<div class="inspector-section inspector-note disk-media-message" role="status">${escapeHtml(diskMediaMessage[drive])}</div>`:'';
-    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtectedAt(drive)?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div>${pending}<div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button><button type="button" data-disk-drive="${drive}" data-disk-action="export"${canExport?'':' disabled'}>EXPORT DISK IMAGE</button><button type="button" data-disk-drive="${drive}" data-disk-action="import"${canImport?'':' disabled'}>IMPORT / REPLACE DISK IMAGE</button></div>${message}<div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Profile</span><b>${profile?hex(profile.id)+'h '+escapeHtml(profile.name):'FFh NONE'}</b></div><div class="inspector-kv"><span>Geometry</span><b>${profile?profile.cylinders+'C × '+profile.heads+'H × '+profile.physicalSectorsPerTrack+'S':'—'}</b></div><div class="inspector-kv"><span>Physical sector</span><b>${profile?profile.physicalSectorSize.toLocaleString('en-US')+' BYTES':'—'}</b></div><div class="inspector-kv"><span>Image</span><b>${profile?profile.imageBytes.toLocaleString('en-US')+' BYTES':'—'}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–38h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:C${diskA.track}/H${diskA.head}/S${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${media?.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div>${pending}<div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button><button type="button" data-disk-drive="${drive}" data-disk-action="export"${canExport?'':' disabled'}>EXPORT DISK IMAGE</button><button type="button" data-disk-drive="${drive}" data-disk-action="import"${canImport?'':' disabled'}>IMPORT / REPLACE DISK IMAGE</button></div>${message}<div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
   }
 
   function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
+  function isMediaBundle(value){return Boolean(value&&value.bytes instanceof Uint8Array&&mediaProfileById(value.profileId)&&typeof value.writeProtected==='boolean');}
   function diskOwnership(drive){
-    const mounted=diskA.mountedAt(drive),shelved=driveEjectedMedia[drive] instanceof Uint8Array;
+    const mounted=diskA.mountedAt(drive),shelved=isMediaBundle(driveEjectedMedia[drive]);
     if(mounted&&!shelved)return 'inserted';
     if(!mounted&&shelved)return 'ejected';
     if(!mounted&&!shelved)return 'empty';
     return 'invalid';
   }
-  function canonicalDiskImage(drive){
+  function canonicalDiskMedia(drive){
     const ownership=diskOwnership(drive);
-    if(ownership==='inserted')return diskA.exportImage({drive});
-    if(ownership==='ejected')return new Uint8Array(driveEjectedMedia[drive]);
+    if(ownership==='inserted')return {bytes:diskA.exportImage({drive}),profileId:diskA.mediaProfileIdAt(drive),writeProtected:diskA.writeProtectedAt(drive)};
+    if(ownership==='ejected'){const media=driveEjectedMedia[drive];return {bytes:new Uint8Array(media.bytes),profileId:media.profileId,writeProtected:media.writeProtected};}
     return null;
   }
+  function canonicalDiskImage(drive){return canonicalDiskMedia(drive)?.bytes||null;}
   function clearImportOperation(){
     diskImportOperation=null;
     const input=queryOne('#diskImageInput');if(input)input.value='';
@@ -3855,7 +4219,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
   function exportDiskImage(drive){
     if(ui.powered)return false;
-    const bytes=canonicalDiskImage(drive);if(!(bytes instanceof Uint8Array)||bytes.length!==DISK_IMAGE_SIZE)return false;
+    const media=canonicalDiskMedia(drive),bytes=media?.bytes;if(!(bytes instanceof Uint8Array)||!mediaProfileById(media.profileId))return false;
     const letter=drive===0?'A':'B',blob=new Blob([new Uint8Array(bytes)],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
     anchor.href=url;anchor.download=`SHINO80_DRIVE_${letter}.s80d`;anchor.hidden=true;document.body.appendChild(anchor);anchor.click();anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);diskMediaMessage[drive]=`EXPORT READY: ${anchor.download} · ${bytes.length.toLocaleString('en-US')} BYTES`;refreshDevicePresentation();return true;
@@ -3874,9 +4238,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     try{
       const buffer=await file.arrayBuffer();
       if(diskImportOperation!==operation||ui.powered){if(diskImportOperation===operation)clearImportOperation();refreshDevicePresentation();return false;}
-      if(buffer.byteLength!==DISK_IMAGE_SIZE){diskMediaMessage[drive]=`IMPORT REJECTED: EXPECTED ${DISK_IMAGE_SIZE.toLocaleString('en-US')} BYTES, GOT ${buffer.byteLength.toLocaleString('en-US')}.`;clearImportOperation();refreshDevicePresentation();return false;}
+      const matches=mediaProfilesForImageLength(buffer.byteLength);
+      if(matches.length===0){diskMediaMessage[drive]=`IMPORT REJECTED — UNSUPPORTED MEDIA SIZE: ${buffer.byteLength.toLocaleString('en-US')} BYTES`;clearImportOperation();refreshDevicePresentation();return false;}
+      if(matches.length!==1){diskMediaMessage[drive]=`IMPORT REJECTED — AMBIGUOUS MEDIA SIZE: ${buffer.byteLength.toLocaleString('en-US')} BYTES`;clearImportOperation();refreshDevicePresentation();return false;}
       if(diskOwnership(drive)!==ownership){diskMediaMessage[drive]='IMPORT REJECTED: MEDIA OWNERSHIP CHANGED WHILE READING.';clearImportOperation();refreshDevicePresentation();return false;}
-      pendingDiskImport={drive,ownership,fileName:file.name||`SHINO80_DRIVE_${drive===0?'A':'B'}.s80d`,bytes:new Uint8Array(buffer)};
+      const current=canonicalDiskMedia(drive);
+      pendingDiskImport={drive,ownership,fileName:file.name||`SHINO80_DRIVE_${drive===0?'A':'B'}.s80d`,bytes:new Uint8Array(buffer),profileId:matches[0].id,profile:matches[0],writeProtected:current?.writeProtected||false};
       clearImportOperation();diskMediaMessage[drive]='';refreshDevicePresentation();return true;
     }catch(_error){
       if(diskImportOperation===operation){diskMediaMessage[drive]='IMPORT REJECTED: FILE READ FAILED.';clearImportOperation();refreshDevicePresentation();}
@@ -3887,10 +4254,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const pending=pendingDiskImport;
     if(!pending||pending.drive!==drive)return false;
     if(ui.powered){clearPendingImport('IMPORT CANCELED: POWER MUST REMAIN OFF.',drive);refreshDevicePresentation();return false;}
-    if(pending.bytes.length!==DISK_IMAGE_SIZE||diskOwnership(drive)!==pending.ownership){clearPendingImport('IMPORT CANCELED: MEDIA OWNERSHIP CHANGED.',drive);refreshDevicePresentation();return false;}
+    const profile=mediaProfileById(pending.profileId);
+    if(!profile||pending.bytes.length!==profile.imageBytes||diskOwnership(drive)!==pending.ownership){clearPendingImport('IMPORT CANCELED: MEDIA OWNERSHIP CHANGED.',drive);refreshDevicePresentation();return false;}
     const bytes=new Uint8Array(pending.bytes);
-    if(pending.ownership==='ejected')driveEjectedMedia[drive]=bytes;
-    else {diskA.mountImage(bytes,{drive});driveEjectedMedia[drive]=null;}
+    if(pending.ownership==='ejected')driveEjectedMedia[drive]={bytes,profileId:profile.id,writeProtected:pending.writeProtected};
+    else {diskA.mountImage(bytes,{drive,profileId:profile.id,writeProtected:pending.writeProtected});driveEjectedMedia[drive]=null;}
     clearPendingImport(`IMPORT COMPLETE: DRIVE ${drive===0?'A':'B'} · ${bytes.length.toLocaleString('en-US')} BYTES`,drive);refreshDevicePresentation();return true;
   }
   function cancelDiskImport(drive){
@@ -3899,14 +4267,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   }
   function ejectDrive(drive){
     if(ui.powered||pendingDiskImport?.drive===drive||!diskA.mountedAt(drive)||driveEjectedMedia[drive]!==null)return false;
-    const media=diskA.eject({drive});
+    const profileId=diskA.mediaProfileIdAt(drive),writeProtected=diskA.writeProtectedAt(drive),media=diskA.eject({drive});
     if(!(media instanceof Uint8Array))return false;
-    driveEjectedMedia[drive]=media;refreshDevicePresentation();return true;
+    driveEjectedMedia[drive]={bytes:media,profileId,writeProtected};refreshDevicePresentation();return true;
   }
   function insertEjectedDrive(drive){
-    if(ui.powered||pendingDiskImport?.drive===drive||diskA.mountedAt(drive)||!(driveEjectedMedia[drive] instanceof Uint8Array))return false;
+    if(ui.powered||pendingDiskImport?.drive===drive||diskA.mountedAt(drive)||!isMediaBundle(driveEjectedMedia[drive]))return false;
     const media=driveEjectedMedia[drive];
-    diskA.mountImage(media,{drive});
+    diskA.mountImage(media.bytes,{drive,profileId:media.profileId,writeProtected:media.writeProtected});
     driveEjectedMedia[drive]=null;refreshDevicePresentation();return true;
   }
   function handleDiskAction(action,drive){
@@ -3945,7 +4313,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   function render(){
     if(ui.view==='display'){
       syncDisplayGeometry();
-      const pointer=memory.lowRamEnabled?systemDisk.cbios.labels.CBIOS_CURSOR:systemRom.meta.biosWorkCursor;
+      const pointer=memory.lowRamEnabled?(diskA.mediaProfileIdAt(0)===MEDIA_PROFILE_2HD_JP?CBIOS3_STATE.cursor:systemDisk.cbios.labels.CBIOS_CURSOR):systemRom.meta.biosWorkCursor;
       const cursorAddress=bus.debugPeek(pointer)|(bus.debugPeek(pointer+1)<<8);
       const cursorVisible=ui.powered&&(Math.floor(cpu.state.tStates/2000000)&1)===0;
       video.render({cursorAddress,cursorVisible});

@@ -77,7 +77,7 @@ const IMAGE_SIZE=256256;
     exported=await exportImage();assert.deepEqual(exported.bytes,patternImage);
 
     await chooseImport(Buffer.alloc(100),'wrong-size.bin');await waitText('IMPORT REJECTED');
-    assert((await inspector.innerText()).includes('EXPECTED 256,256 BYTES'));exported=await exportImage();assert.deepEqual(exported.bytes,patternImage);
+    assert((await inspector.innerText()).includes('UNSUPPORTED MEDIA SIZE: 100 BYTES'));exported=await exportImage();assert.deepEqual(exported.bytes,patternImage);
 
     await page.evaluate(()=>{globalThis.__s80RealArrayBuffer=File.prototype.arrayBuffer;File.prototype.arrayBuffer=()=>Promise.reject(new Error('test read failure'));});
     await chooseImport(blankImage,'read-failure.s80d');await waitText('FILE READ FAILED');
