@@ -1,62 +1,48 @@
-# LAST RUN — 2026-09-28 PHASE 1 A:/B: DUAL DRIVE REVIEW
+# LAST RUN — 2026-09-29 PHASE 2 WHOLE DISK IMPORT + EXPORT
+
+## Contract
+
+- Issue #56
+- branch `feature/shino80-whole-disk-import-export-phase2-20260929`
+- baseline `ff04df719e19d517faeea26e09cfbc912bb2cd18`
+- one bounded A/B IMPORT + EXPORT feature; no EXPORT-only split
 
 ## Implementation
 
-Issue #54 / PR #55 implements SHINO-80 Disk Subsystem PHASE 1.
+Disk Inspector now owns host whole-medium interchange while preserving the
+existing guest path CPU -> Bus -> controller -> media.
 
-Reviewed implementation commit:
+- one hidden file input fixes the target drive before file selection
+- `.s80d` is raw 256,256-byte payload, MIME `application/octet-stream`
+- EXPORT uses Blob/object URL/download anchor and a defensive source copy
+- IMPORT performs full async read, exact-size validation, pending preview and
+  explicit confirmation
+- one pending transaction exists across the workbench
+- target EJECT / REINSERT is UI-disabled and handler-rejected while pending
+- confirmation rechecks POWER, target ownership and byte length
+- mounted and shelved media retain their ownership state after replacement
+- POWER ON invalidates pending/read state immediately
 
-`3d492559c4765186e232cabefafa8c43a9ff814d`
+CPU, Bus, block-device API, ROM, CBIOS, CP/M and disk geometry are unchanged.
 
-Human merge status must be checked from live Git.
+## Automated acceptance
 
-## Reviewed behavior
+The real-Chromium PHASE 2 regression covers:
 
-- one controller / two removable-media slots
-- 32h drive selector: 0=A:, 1=B:
-- A: S80B v2 BOOT / SYSTEM / TOOLS
-- B: blank CLASSIC USER / WORK / INTERCHANGE
-- A-only ROM autoboot
-- A/B DPH with shared DPB and FD00h DIRBUF
-- independent CSV/ALV
-- CBIOS 657 / 768 bytes
-- system payload 128 / 128 bytes
-- B: real CCP filesystem create/read
-- A/B filesystem isolation
-- WBOOT from B -> B>
-- actual UI RESET -> A>, B bytes preserved
-- A/B EJECT / REINSERT SAME MEDIA
-- A absent + B inserted -> ROM MON
+- A/B suggested filenames and exact 256,256-byte downloads
+- INSERTED/EJECTED export and import
+- pre-confirm medium immutability
+- cancel, invalid-size, read-failure, ownership-change and POWER cancellation
+- single-pending across A/B while other-drive EXPORT remains available
+- no synthetic Bus trace events
+- B: `WORK.COM` guest creation -> EXPORT -> replacement -> IMPORT -> DIR restore
+- nonbootable A: -> ROM MON and exact system-image restore -> A>
+- 390x844, 1280x900 and 900x400 overflow/action visibility
 
-## Review correction
+Full command evidence and artifact hashes are recorded in
+`working-logs/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_WORKLOG.md`.
 
-Initial PR tests falsely modeled UI RESET with a full RAM clear. PM/PL/SE review
-caught the mismatch. The implementation was corrected so ROM A-only boot
-explicitly initializes Page Zero 0004h, and the tests now exercise the actual
-reset path and real browser RESET control.
+## State
 
-## Verification
-
-- `pnpm run test:block` PASS
-- `pnpm run test:cbios` PASS
-- `pnpm run test:system-disk` PASS
-- `pnpm run test:wboot` PASS
-- `pnpm run test:cpm22` PASS
-- `pnpm run test:cpmfs` PASS
-- `pnpm test` PASS
-- `pnpm run test:browser` PASS
-- `git diff --check` PASS
-- browser QA: 390×844 / 1280×900 / 900×400
-
-## Documentation closeout
-
-Current spec, removable-media roadmap, FDD notes, Technical Manual source,
-online/offline generated manual and restart snapshot set are synchronized to
-the PHASE 1 reviewed state before Human merge.
-
-Superseded EXPORT-only PLAN/basic/detailed design are archived under
-`*/history/2026-09-28/`.
-
-## Next
-
-After Human merge, PHASE 2 is Whole Disk IMPORT + EXPORT as one bounded feature.
+Implementation, regression and documentation are synchronized on the purpose
+branch. PR is for Human Review only. No merge and no public preview publication.

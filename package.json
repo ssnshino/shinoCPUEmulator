@@ -13,7 +13,7 @@
     "test:phase1b": "node tests/z80_phase1b_inc_dec_flags.test.cjs",
     "test:source": "node tests/v0.0.9_static.test.cjs",
     "test:artifact": "node tests/v0.0.9_artifact.test.cjs",
-    "test:browser": "node tests/browser_smoke_v0.0.9.cjs",
+    "test:browser": "node tests/browser_smoke_v0.0.9.cjs && node tests/shino80_whole_disk_import_export_phase2.test.cjs",
     "test": "pnpm run test:nop && pnpm run test:phase1a && pnpm run test:phase1b && pnpm run test:phase1c && pnpm run test:phase1d && pnpm run test:phase1e && pnpm run test:phase1f && pnpm run test:phase1g && pnpm run test:phase1h && pnpm run test:phase1i && pnpm run test:phase1j && pnpm run test:phase2a && pnpm run test:phase2a1 && pnpm run test:bios && pnpm run test:keyboard && pnpm run test:block && pnpm run test:cbios && pnpm run test:system-disk && pnpm run test:wboot && pnpm run test:cpm22 && pnpm run test:cpmfs && pnpm run test:cursor-beep && pnpm run test:source && pnpm run build && pnpm run test:artifact && pnpm run test:manual",
     "test:phase1c": "node tests/z80_phase1c_control_flow.test.cjs",
     "test:phase1d": "node tests/z80_phase1d_call_ret_stack.test.cjs",

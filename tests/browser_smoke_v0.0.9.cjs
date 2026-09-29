@@ -54,7 +54,10 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     assert((await compactInspector.innerText()).includes('SYSTEM / TOOLS'));assert((await compactInspector.innerText()).includes('INSERTED'));
     const compactEject=compactInspector.getByRole('button',{name:'EJECT',exact:true});
     const compactInsert=compactInspector.getByRole('button',{name:'INSERT EJECTED DISK',exact:true});
+    const compactExport=compactInspector.getByRole('button',{name:'EXPORT DISK IMAGE',exact:true});
+    const compactImport=compactInspector.getByRole('button',{name:'IMPORT / REPLACE DISK IMAGE',exact:true});
     assert.equal(await compactEject.isEnabled(),true);assert.equal(await compactInsert.isDisabled(),true);
+    assert.equal(await compactExport.isEnabled(),true);assert.equal(await compactImport.isEnabled(),true);
     await diskB.click();await page.waitForTimeout(80);
     assert((await compactInspector.innerText()).includes('USER / WORK / INTERCHANGE'));
     assert((await compactInspector.innerText()).includes('CLASSIC · CP/M DATA'));
@@ -64,6 +67,7 @@ const executablePath=process.env.CHROMIUM_PATH||'/Applications/Google Chrome.app
     // Boot from A:, switch through the real CCP to blank B:, and create WORK.COM.
     await page.locator('#powerBtn').click();await page.waitForTimeout(100);
     assert.equal(await compactEject.isDisabled(),true);assert.equal(await compactInsert.isDisabled(),true);
+    assert.equal(await compactExport.isDisabled(),true);assert.equal(await compactImport.isDisabled(),true);
     await compactEject.evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
     assert((await compactInspector.innerText()).includes('INSERTED'),'powered B handler must reject eject');
     await page.locator('#runPauseBtn').click();await page.waitForTimeout(1200);

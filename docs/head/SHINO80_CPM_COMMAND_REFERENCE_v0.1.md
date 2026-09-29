@@ -124,9 +124,16 @@ POWER ON:
 Mounted media survives RESET, POWER cycling inside the page, and CP/M warm boot.
 It does not survive closing/reloading the browser page yet.
 
+While POWER is OFF, Disk Inspector can `EXPORT DISK IMAGE` for either A/B from
+INSERTED or EJECTED state. The raw `.s80d` file is exactly 256,256 bytes.
+`IMPORT / REPLACE DISK IMAGE` reads and validates the whole file, then waits for
+`CONFIRM IMPORT`; until confirmation the existing medium is unchanged. A:
+bootability is checked only by the real ROM on the next boot, not by the host UI.
+While confirmation is pending, EJECT / INSERT EJECTED DISK for that target drive
+is disabled; the other drive remains available except for starting another import.
+
 ## Not included yet
 
-- whole-disk IMPORT / EXPORT
 - browser-reload persistence
 - larger WORK media profiles
 - factory restore

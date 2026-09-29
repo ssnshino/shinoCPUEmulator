@@ -1,7 +1,7 @@
 # SHINO-80 FDD / DISK Design Notes v0.1
 
 Status: CURRENT DESIGN NOTES
-Updated: 2026-09-28 JST
+Updated: 2026-09-29 JST
 
 ## Purpose
 
@@ -124,12 +124,20 @@ host shelf / import-export / persistence
 
 Browser reload persistence is not yet implemented.
 
-## 8. Next phase
+## 8. Whole-disk host interchange
 
-PHASE 2 combines whole-disk IMPORT and EXPORT. Do not revive the old
-EXPORT-only implementation split.
+Issue #56 implements PHASE 2 IMPORT + EXPORT without changing the block-device
+API or guest I/O path.
 
-Larger work-media profiles belong to PHASE 3.
+- `.s80d` is a raw 256,256-byte CLASSIC medium
+- INSERTED owner is the block slot; EJECTED owner is the matching host shelf
+- EXPORT takes a defensive copy from the current owner
+- IMPORT is a POWER-OFF-only transaction with a single pending confirmation
+- commit preserves INSERTED/EJECTED state and rejects changed ownership
+- host-side code does not parse CP/M, repair boot sectors or emit Bus traffic
+
+Browser reload persistence remains out of scope. Larger work-media profiles
+belong to PHASE 3.
 
 ## 9. Design invariants
 
