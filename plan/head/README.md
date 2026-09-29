@@ -2,16 +2,13 @@
 
 Active plan:
 
-- `SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_PLAN.md`
-  - Issue #56
-  - purpose branch `feature/shino80-whole-disk-import-export-phase2-20260929`
-  - Whole Disk IMPORT + EXPORT for A:/B:
-  - live main baseline at plan start: `ff04df719e19d517faeea26e09cfbc912bb2cd18`
-  - implementation/automated QA complete; Human Review pending
+- none
 
-PHASE 1 A:/B: Dual Drive is implemented/reviewed in Issue #54 / PR #55.
-The superseded EXPORT-only PLAN remains under
-`plan/history/2026-09-28/`.
+PHASE 2 Whole Disk IMPORT + EXPORT is implemented/reviewed in Issue #56 / PR #57.
+Reviewed main merge: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`.
+
+The completed PHASE 2 PLAN is archived under
+`plan/history/2026-09-29/`.
 
 Only one active implementation PLAN may exist at a time. Completed or
 superseded plans belong under `plan/history/`.

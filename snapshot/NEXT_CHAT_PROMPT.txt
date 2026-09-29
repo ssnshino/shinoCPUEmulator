@@ -3,23 +3,27 @@ SHINO-80をREADME.mdから正規restart順に再開してください。
 合言葉:
 「ごっごっごっごっ♪」
 
-最初にGitHubをfetchし、Issue #56、purpose branch、open PR、dirty stateを
-live確認してください。
+最初にGitHubをfetchし、main HEAD、open PR/Issue、active PLANをlive確認してください。
 
-reviewed baseline:
-- main ff04df719e19d517faeea26e09cfbc912bb2cd18
-- Issue #54 / PR #55 PHASE 1 A:/B: Dual Drive
+latest reviewed storage implementation:
+- Issue #56 / PR #57 — PHASE 2 Whole Disk IMPORT + EXPORT
+- reviewed main: 8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1
 
-active candidate:
-- Issue #56 PHASE 2 Whole Disk IMPORT + EXPORT
-- feature/shino80-whole-disk-import-export-phase2-20260929
-
-candidate behavior:
-- A/B raw 256,256-byte .s80d EXPORT from INSERTED/EJECTED
-- POWER-OFF transactional IMPORT with one global pending transaction
-- explicit CONFIRM/CANCEL and atomic no-op failures
-- ownership-state preservation and no synthetic Bus I/O
+implemented:
+- A/B raw 256,256-byte .s80d IMPORT / EXPORT
+- INSERTED/EJECTED byte-exact EXPORT
+- POWER-OFF transactional IMPORT
+- one global pending transaction with CONFIRM/CANCEL
+- pending target EJECT/REINSERT blocked in UI and handlers
+- atomic failure semantics and no synthetic Bus I/O
 - A-only autoboot / B never autoboot unchanged
 
-PR review commentsがあれば同じbranch/PRで修正・再検証してください。
-Humanの明示GOなしにmerge、PHASE 3着手、公開preview反映をしないでください。
+current active implementation PLAN:
+- none
+
+next roadmap candidate:
+- PHASE 3 CLASSIC + practical larger WORK media / multi-profile
+
+Do not begin PHASE 3 implementation until lounge/research/basic/detail/QA design
+is completed and Human explicitly selects it. Do not merge or publish without
+Human authorization.

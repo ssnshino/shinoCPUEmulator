@@ -1,48 +1,41 @@
-# LAST RUN — 2026-09-29 PHASE 2 WHOLE DISK IMPORT + EXPORT
+# LAST RUN — 2026-09-29 PHASE 2 MERGE CLOSEOUT
 
-## Contract
+## Completed
 
-- Issue #56
-- branch `feature/shino80-whole-disk-import-export-phase2-20260929`
-- baseline `ff04df719e19d517faeea26e09cfbc912bb2cd18`
-- one bounded A/B IMPORT + EXPORT feature; no EXPORT-only split
+- Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
+- PR #57 — merged by explicit Human GO
+- reviewed main merge: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
+- source branch: `feature/shino80-whole-disk-import-export-phase2-20260929`
+- baseline: `ff04df719e19d517faeea26e09cfbc912bb2cd18`
 
-## Implementation
+## Delivered behavior
 
-Disk Inspector now owns host whole-medium interchange while preserving the
-existing guest path CPU -> Bus -> controller -> media.
+- A/B raw 256,256-byte `.s80d` EXPORT
+- INSERTED/EJECTED byte-exact source handling
+- POWER-OFF transactional IMPORT
+- one global pending import, explicit CONFIRM/CANCEL
+- target EJECT/REINSERT blocked while pending
+- async-read ownership revalidation
+- invalid/read-failed/canceled/ownership-changed/POWER paths are atomic no-ops
+- B: `WORK.COM` guest-visible EXPORT/IMPORT round-trip
+- nonbootable A: reaches ROM MON; exact system image restores A> autoboot
+- no synthetic Bus events
+- responsive browser coverage at 390x844, 1280x900, 900x400
 
-- one hidden file input fixes the target drive before file selection
-- `.s80d` is raw 256,256-byte payload, MIME `application/octet-stream`
-- EXPORT uses Blob/object URL/download anchor and a defensive source copy
-- IMPORT performs full async read, exact-size validation, pending preview and
-  explicit confirmation
-- one pending transaction exists across the workbench
-- target EJECT / REINSERT is UI-disabled and handler-rejected while pending
-- confirmation rechecks POWER, target ownership and byte length
-- mounted and shelved media retain their ownership state after replacement
-- POWER ON invalidates pending/read state immediately
+## Verification evidence
 
-CPU, Bus, block-device API, ROM, CBIOS, CP/M and disk geometry are unchanged.
+PR/worklog recorded PASS for:
 
-## Automated acceptance
+- `pnpm test`
+- `pnpm run build`
+- `pnpm run build:manual`
+- `pnpm run test:browser`
+- `git diff --check`
 
-The real-Chromium PHASE 2 regression covers:
+GitHub Actions status was not attached to PR #57; these are the reviewed local
+execution records in the PR/worklog.
 
-- A/B suggested filenames and exact 256,256-byte downloads
-- INSERTED/EJECTED export and import
-- pre-confirm medium immutability
-- cancel, invalid-size, read-failure, ownership-change and POWER cancellation
-- single-pending across A/B while other-drive EXPORT remains available
-- no synthetic Bus trace events
-- B: `WORK.COM` guest creation -> EXPORT -> replacement -> IMPORT -> DIR restore
-- nonbootable A: -> ROM MON and exact system-image restore -> A>
-- 390x844, 1280x900 and 900x400 overflow/action visibility
+## Closeout
 
-Full command evidence and artifact hashes are recorded in
-`working-logs/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_WORKLOG.md`.
-
-## State
-
-Implementation, regression and documentation are synchronized on the purpose
-branch. PR is for Human Review only. No merge and no public preview publication.
+PHASE 2 PLAN/worklog moved to history. There is no active implementation PLAN.
+Public/unlisted preview publication remains a separate Human-authorized step.
