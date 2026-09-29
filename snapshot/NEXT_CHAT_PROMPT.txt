@@ -1,44 +1,25 @@
-SHINO-80を再開してください。
+SHINO-80をREADME.mdから正規restart順に再開してください。
 
 合言葉:
 「ごっごっごっごっ♪」
 
-README.mdから正規restart順を読み、GitHubをfetchしてlive stateを確認してください。
+最初にGitHubをfetchし、Issue #56、purpose branch、open PR、dirty stateを
+live確認してください。
 
-latest reviewed storage implementation:
-- Issue #54 / PR #55 — PHASE 1 A:/B: Dual Drive
-- reviewed implementation commit: 3d492559c4765186e232cabefafa8c43a9ff814d
-- merge statusはlive Gitを確認
+reviewed baseline:
+- main ff04df719e19d517faeea26e09cfbc912bb2cd18
+- Issue #54 / PR #55 PHASE 1 A:/B: Dual Drive
 
-reviewed storage behavior:
-- one controller / ports 30h–36h
-- 32h selector 0=A: / 1=B:
-- A: BOOT / SYSTEM / TOOLS / S80B v2 autoboot
-- B: USER / WORK / INTERCHANGE / blank CLASSIC work disk
-- AだけがROM autoboot source
-- A/B independent filesystem
-- A/B POWER-OFF EJECT / REINSERT SAME MEDIA
-- CP/M WBOOT from B: は B> 維持
-- UI RESETはROM autobootへ戻り A>
-- B media bytesはRESET後も保持
-- A absent + B insertedでもBからbootせずMON fallback
+active candidate:
+- Issue #56 PHASE 2 Whole Disk IMPORT + EXPORT
+- feature/shino80-whole-disk-import-export-phase2-20260929
 
-not implemented:
-- whole-disk IMPORT / EXPORT
-- 720KiB/multi-profile
-- browser reload persistence
-- factory restore
-- C:/D: additional drives
+candidate behavior:
+- A/B raw 256,256-byte .s80d EXPORT from INSERTED/EJECTED
+- POWER-OFF transactional IMPORT with one global pending transaction
+- explicit CONFIRM/CANCEL and atomic no-op failures
+- ownership-state preservation and no synthetic Bus I/O
+- A-only autoboot / B never autoboot unchanged
 
-current design entry:
-- docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md
-- docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md
-- docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md
-- docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md
-
-next:
-PHASE 1がlive mainへmerge済みなら、PHASE 2 Whole Disk IMPORT + EXPORT の
-詳細設計だけを開始してください。EXPORT-onlyへ再分割しないでください。
-
-未決事項は談話室で揉み、repoへ小刻みPRを作らないでください。
-Humanの明示GOなしにmerge/publishしないでください。
+PR review commentsがあれば同じbranch/PRで修正・再検証してください。
+Humanの明示GOなしにmerge、PHASE 3着手、公開preview反映をしないでください。

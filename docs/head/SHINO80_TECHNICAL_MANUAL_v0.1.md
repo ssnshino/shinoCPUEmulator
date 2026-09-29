@@ -1,9 +1,9 @@
 # SHINO-80 Technical Manual v0.1
 
 Status: CURRENT INTEGRATION REFERENCE
-Updated: 2026-09-28 JST
-Reviewed implementation: Issue #54 / PR #55
-Code reference commit: `3d492559c4765186e232cabefafa8c43a9ff814d`
+Updated: 2026-09-29 JST
+Reviewed baseline: Issue #54 / PR #55 / main `ff04df719e19d517faeea26e09cfbc912bb2cd18`
+Active candidate: Issue #56 / PHASE 2 Whole Disk IMPORT + EXPORT
 
 ## Deliverable and authority
 
@@ -38,6 +38,9 @@ Do not hand-edit the generated HTML.
 - DPH_A / DPH_B, shared DPB / FD00h DIRBUF, independent CSV / ALV
 - CBIOS 657 bytes inside the existing 768-byte S80B v2 reservation
 - WBOOT B: preservation versus ROM/UI RESET A: initialization
+- A/B raw 256,256-byte `.s80d` EXPORT from INSERTED/EJECTED state
+- transactional POWER-OFF IMPORT with single pending confirmation and atomic no-op failures
+- pending target EJECT / REINSERT disabled in both UI and handlers
 - CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled A: programs
 - source hashes and external references
 
@@ -47,15 +50,15 @@ Do not hand-edit the generated HTML.
 - instruction-level, not electrical/pin-cycle-perfect
 - block controller is PIO, not a mechanical FDD/FDC
 - B: is implemented but is not a boot source in PHASE 1
-- browser-reload persistence, whole-disk IMPORT/EXPORT and factory-media restore are not implemented
+- browser-reload persistence and factory-media restore are not implemented
 - larger media profiles are not implemented
 - UART and printer remain future work
 - reserved BIOS vectors are not implemented drivers or interrupt handlers
 
 ## Storage roadmap relationship
 
-PHASE 1 is the reviewed dual-drive implementation.
-PHASE 2 is Whole Disk IMPORT + EXPORT as one bounded feature.
+PHASE 1 is the reviewed dual-drive implementation. Issue #56 is the active
+PHASE 2 Whole Disk IMPORT + EXPORT candidate awaiting Human Review.
 
 See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
 

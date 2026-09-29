@@ -1,63 +1,62 @@
 # CURRENT SNAPSHOT — SHINO-80
 
-Updated: 2026-09-28 JST
+Updated: 2026-09-29 JST
 
 ## Live-state rule
 
 Always fetch GitHub first. Recorded SHAs are evidence, not authority.
 
-Latest reviewed storage implementation:
+Reviewed baseline:
 
-- Issue #54
-- PR #55
-- reviewed implementation commit: `3d492559c4765186e232cabefafa8c43a9ff814d`
-- Human merge status: determine from live Git
+- Issue #54 / PR #55
+- reviewed `main`: `ff04df719e19d517faeea26e09cfbc912bb2cd18`
 
-## Current completed/reviewed machine
+Active candidate:
 
-- Z80 instruction-level milestone complete
-- external full-state oracle: `1,604,000 / 1,604,000 PASS`
-- BIOS/MON v0.3
-- pageable 64 KiB RAM
-- DM-80 80×25 / 640×400
-- Keyboard + one-bit beeper
-- licensed CP/M 2.2
-- one block controller on 30h–36h
-- A: BOOT / SYSTEM / TOOLS
-- B: USER / WORK / INTERCHANGE
-- A/B CLASSIC 256,256-byte removable media
-- A-only S80B v2 autoboot
-- independent A/B page-local EJECT / REINSERT shelves
-- B writable filesystem and A/B isolation
-- WBOOT from B returns to B
-- UI RESET returns through ROM autoboot to A while B media survives
+- Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
+- purpose branch: `feature/shino80-whole-disk-import-export-phase2-20260929`
+- Human Review pending; do not merge without explicit Human GO
 
-## Current removable-media state
+## Current machine
 
-Implemented/reviewed:
+- Z80 external full-state oracle: `1,604,000 / 1,604,000 PASS`
+- BIOS/MON v0.3, pageable 64 KiB RAM, DM-80, Keyboard, beeper
+- licensed CP/M 2.2 with writable A:/B: filesystems
+- one controller on 30h–36h; selector 32h 0=A / 1=B
+- A: BOOT / SYSTEM / TOOLS and only ROM autoboot source
+- B: USER / WORK / INTERCHANGE and never autoboot
+- independent A/B CLASSIC 256,256-byte removable media and shelves
 
-- A/B drive select through port 32h
-- A/B independent media and write-protect state
-- POWER-OFF EJECT / REINSERT SAME MEDIA on both drives
-- POWER-ON replacement guard
-- A no-media MON fallback
-- B is not a boot source
-- B file survival across WBOOT, UI RESET and media cycle
+## PHASE 2 candidate behavior
+
+- A/B raw 256,256-byte `.s80d` EXPORT
+- byte-exact export from INSERTED block slot or EJECTED host shelf
+- A/B IMPORT with full-read + exact-size validation
+- one global pending transaction and explicit CONFIRM / CANCEL
+- pending target EJECT / REINSERT disabled in UI and handler paths
+- confirmation rechecks POWER OFF, target, ownership and size
+- INSERTED remains INSERTED; EJECTED remains EJECTED
+- invalid size, read failure, cancel, ownership change and POWER ON are atomic no-ops
+- POWER ON immediately discards pending import
+- host actions emit no synthetic Bus I/O
+- A import does not preflight bootability; invalid boot reaches ROM MON
+- B remains nonbootable
 
 Not implemented:
 
-- whole-disk IMPORT / EXPORT
-- larger media profiles
-- browser reload persistence
-- factory restore
-- guest eject
-- C:/D: additional drives
+- browser reload persistence / media library
+- factory restore / recent media
+- larger/multi-profile media
+- C:/D:
+- individual CP/M file bridge
+- foreign legacy CP/M geometry autodetection
 
-## Current design entry
+## Current entries
 
+- `plan/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_PLAN.md`
+- `working-logs/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_WORKLOG.md`
 - `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
-- `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
 - `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
 
 ## Resume contract
@@ -67,8 +66,5 @@ then fetch live Git state. Live Git wins.
 
 ## Next
 
-After PHASE 1 is merged/released, design PHASE 2 only:
-
-**Whole Disk IMPORT + EXPORT**
-
-Do not split EXPORT and IMPORT into separate implementation phases again.
+Review Issue #56 candidate and its PR. Do not begin PHASE 3, merge, or publish
+without Human authorization.

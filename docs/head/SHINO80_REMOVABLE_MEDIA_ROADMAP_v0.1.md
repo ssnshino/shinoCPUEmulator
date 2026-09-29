@@ -1,7 +1,7 @@
 # SHINO-80 Disk Subsystem Roadmap v0.1
 
 Status: CURRENT DESIGN ROADMAP
-Updated: 2026-09-28 JST
+Updated: 2026-09-29 JST
 Author: 戸澤 / ChatGPT
 
 ## Purpose
@@ -51,7 +51,7 @@ Completion criterion:
 
 `A> -> B: -> B> -> write/read files -> A/B isolation -> WBOOT/RESET/media-cycle persistence`
 
-## PHASE 2 — Whole Disk IMPORT + EXPORT — NEXT
+## PHASE 2 — Whole Disk IMPORT + EXPORT — IMPLEMENTED / HUMAN REVIEW PENDING
 
 IMPORT and EXPORT are one bounded host-media feature, not separate implementation
 phases.
@@ -62,22 +62,18 @@ Goal:
 - later import the whole medium and continue work
 - support the A/B dual-drive model without bypassing guest I/O
 
-Design topics to resolve in PHASE 2 only:
+Issue #56 candidate resolves the PHASE 2 contract:
 
-- A/B target selection
-- POWER-OFF safety rule
-- inserted/ejected shelf ownership semantics
-- exact filename / extension
-- transactional import validation
-- replacement confirmation
-- browser/mobile save behavior
-
-Baseline direction:
-
-- standard browser File API / Blob mechanisms
-- invalid import must be atomic no-op
-- host actions must not fabricate Bus I/O
-- no File System Access API dependency for the baseline
+- A/B `.s80d` payload is raw 256,256 bytes with no wrapper/compression
+- both INSERTED and EJECTED canonical owners can export byte-exact copies
+- IMPORT is POWER-OFF-only and uses read -> validate -> pending -> confirm
+- one workbench-wide pending import; the other drive remains usable except for
+  starting another import
+- confirm revalidates target ownership and commits only once
+- invalid/read-failed/canceled/changed/powered transactions are atomic no-ops
+- standard File/Blob/object-URL browser mechanisms; no File System Access API
+- host actions do not fabricate Bus I/O
+- A remains the only autoboot source; imported A media is not host-validated
 
 The superseded EXPORT-only PLAN/basic/detailed design are archived under
 `*/history/2026-09-28/`. Their useful browser-download research remains
@@ -190,4 +186,5 @@ For each PHASE:
 - 2026-09-28 — replaced obsolete R1–R6 split with PHASE 0–5 completion roadmap
 - 2026-09-28 — PHASE 1 A:/B: Dual Drive reviewed in Issue #54 / PR #55
 - 2026-09-28 — EXPORT-only Issue #51 / PR #52 superseded; IMPORT+EXPORT unified as PHASE 2
+- 2026-09-29 — Issue #56 PHASE 2 implementation candidate completed for Human Review
 - 2026-09-27 — DRIVE A EJECT / REINSERT SAME MEDIA released

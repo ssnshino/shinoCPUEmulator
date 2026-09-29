@@ -1,12 +1,12 @@
 # SHINO-80 Current Integrated System Specification
 
 Status: CURRENT INTEGRATION BASELINE
-Updated: 2026-09-28 JST
-Latest reviewed storage implementation: Issue #54 / PR #55
-Review head: `3d492559c4765186e232cabefafa8c43a9ff814d`
+Updated: 2026-09-29 JST
+Latest reviewed storage implementation: Issue #54 / PR #55 / main `ff04df719e19d517faeea26e09cfbc912bb2cd18`
+Active candidate: Issue #56 / PHASE 2 Whole Disk IMPORT + EXPORT
 
 Live Git state wins over recorded SHAs. This document describes the reviewed
-PHASE 1 integrated machine; Human merge status must be checked from GitHub.
+PHASE 1 reviewed machine plus the Issue #56 candidate behavior on its purpose branch.
 
 ## Purpose
 
@@ -130,8 +130,27 @@ While POWER is OFF:
 While POWER is ON, replacement controls are disabled and handler-guarded.
 
 Media survives POWER, RESET and WBOOT inside the page. Browser reload
-persistence, whole-disk IMPORT/EXPORT and factory-media restore are not yet
-implemented.
+persistence and factory-media restore are not implemented.
+
+## Whole-disk host interchange — PHASE 2 candidate
+
+While POWER is OFF, each A/B canonical medium can be exported as a raw
+256,256-byte `.s80d` file from either INSERTED or EJECTED state. Export uses a
+defensive copy and changes neither ownership nor guest/controller/Bus state.
+
+IMPORT reads the entire file and accepts it only when its byte length is
+exactly 256,256. A valid file becomes a single global pending transaction;
+existing media is not changed until explicit `CONFIRM IMPORT`. Confirmation
+rechecks POWER OFF, target drive, byte length and the expected INSERTED / EJECTED
+/ EMPTY ownership state. Invalid size, read failure, CANCEL, ownership change
+and POWER ON are atomic no-ops. POWER ON immediately discards pending state.
+While pending, the target drive's EJECT / REINSERT actions are disabled in the
+UI and rejected by their handlers; the other drive remains independently usable.
+
+INSERTED replacement stays INSERTED. EJECTED shelf replacement stays EJECTED.
+Only a genuinely empty drive mounts an imported image directly. A: import does
+not inspect or repair bootability; an unbootable image reaches ROM MON on the
+next boot. B: remains unable to autoboot.
 
 If A: is absent or invalid, ROM falls back to MON before page-out even when B:
 contains valid-looking data. B: is not a boot source.
@@ -172,8 +191,8 @@ Issue #54 / PR #55 reviewed evidence includes:
 
 ## Next storage phase
 
-PHASE 2 is **Whole Disk IMPORT + EXPORT** as one bounded feature. It is not yet
-implemented. See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
+Issue #56 implements PHASE 2 as the current Human-review candidate. After
+merge, the next bounded design phase is PHASE 3 practical WORK media / multi-profile.
 
 ## Change rule
 

@@ -42,6 +42,13 @@ READ/WRITE/error paths and the original RAM boot proof.
 - v0.0.9_static.test.cjs
 - v0.0.9_artifact.test.cjs
 - browser_smoke_v0.0.9.cjs
+- shino80_whole_disk_import_export_phase2.test.cjs
+
+The PHASE 2 Chromium regression verifies A/B byte-exact `.s80d` downloads,
+INSERTED/EJECTED ownership, transactional confirm/cancel, invalid/read-failed/
+ownership-changed/POWER-on atomic no-op paths, the global single-pending rule,
+ROM MON fallback for an unbootable A:, system-image recovery, and a real CP/M
+`WORK.COM` B: export/import round trip.
 
 Run the deterministic suite:
 ```bash

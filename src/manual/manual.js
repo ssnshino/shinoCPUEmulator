@@ -98,12 +98,24 @@ function cgrom(id){
 }
 function sources(){main.innerHTML=`<article class="article">${title('資料・精度・再生成','実装から採取した情報と、外部の検証根拠を区別します。')}<div class="notice">ソース基準: ${esc(data.baseline)}。本書v0.1はこの実装状態を読むための独立HTMLです。</div><h2>作り方</h2><p>命令名・長さ・T-statesはdecoderから採取。日本語の動作・フラグ説明は別の解説データ。実行例は固定した初期状態でCPUを1命令だけ動かしたものです。マップ・字形・BIOS入口は現行ソースに基づきます。ROM内DISASM_ONEも同じdecoderから圧縮表を生成し、CPU上の全1,780標準形照合テストを行います。</p><p>一覧には別名や未使用EDを含む1,780エンコーディングがあります。任意長の接頭辞列を全列挙したものでも、1,780種類の独立した機能でもありません。</p><h2>CPU検証の記録</h2><p>released PHASE 1J記録: 外部oracle 1,604,000ケース PASS / Failure 0。BASE 252k、CB 256k、ED 80k、DD/FD各252k、DDCB/FDCB各256k。命令一覧の全1780項目に1000ケースずつの外部検証があるという意味ではありません。</p><p>命令単位のNMOS寄りモデルです。WAIT/BUSRQ、電気的競合、完全なピンサイクル再現、CPU個体差、IM0の外部複数バイト命令ストリームは保証対象外。非公式命令やY/X/WZ/P/Qを他の実機へ移植するときは差異に注意してください。</p><h2>一次資料・検証データ</h2><ul><li><a href="https://www.zilog.com/docs/z80/um0080.pdf" target="_blank" rel="noopener">Zilog Z80 CPU User Manual</a> — 公式命令とアーキテクチャ</li><li><a href="https://github.com/hoglet67/Z80Decoder/wiki/Undocumented-Flags" target="_blank" rel="noopener">Z80Decoder: Undocumented Flags</a> — ハードウェア観測に基づく非公式フラグ</li><li><a href="https://github.com/SingleStepTests/z80/tree/ebe1875d48f374bcfd4b505d8eb8ee751568b5f7" target="_blank" rel="noopener">SingleStepTests/z80 · 固定oracle revision</a></li></ul><p class="note">外部リンクを開く場合だけネットワークが必要です。本書の検索・図・字形はオフラインで利用できます。Zilog公式マニュアルの転載ではなく、SHINO-80向けに作成した実装解説です。</p><h2>ソースの指紋</h2>${Object.entries(data.sources).map(([p,h])=>`<p class="source-path"><a href="https://github.com/ssnshino/shinoCPUEmulator/blob/${data.revision}/${p}" target="_blank" rel="noopener">${p}</a><br>SHA-256 ${h}</p>`).join('')}<h2>再生成</h2><pre>pnpm run build:manual
 pnpm run test:manual</pre><p>src/manual と scripts/build-technical-manual.cjs が正本。deployのHTMLは生成物です。CPU・ROMの機能追加とは独立しています。</p></article>`;}
+function applyPhase2Copy(section){
+ if(section==='map')main.innerHTML=main.innerHTML
+  .replace('POWER OFF時はA/BそれぞれをDevice InspectorからEJECTでき、drive別page-local shelfへexact mediumを保持してINSERT EJECTED DISKで戻せます。','POWER OFF時はA/BそれぞれをEJECT/REINSERTでき、INSERTED/EJECTEDのcanonical mediumをraw 256,256-byte .s80dへEXPORTし、transactional IMPORTで同じ所有状態のまま置換できます。')
+  .replace('browser reload persistence、whole-disk host import/export、factory restoreは未実装です。','IMPORTはbyte lengthだけを検証し、bootabilityやCP/M内容を修復しません。browser reload persistenceとfactory restoreは未実装です。');
+ if(section==='bios')main.innerHTML=main.innerHTML
+  .replace('A:/B: removable media PHASE 1','A:/B: removable media + PHASE 2 host interchange')
+  .replace('guest eject、host import/export、factory restore、browser reload persistenceは未実装です。','EXPORT DISK IMAGEはINSERTED/EJECTEDいずれからもraw .s80dを保存します。IMPORT / REPLACE DISK IMAGEは全量読込とサイズ検証後にpendingを表示し、CONFIRM IMPORTまでは既存mediumを変更しません。factory restoreとbrowser reload persistenceは未実装です。')
+  .replace('browser終了後も残すhost persistenceとfile import/exportは未実装です。','whole-disk .s80d IMPORT / EXPORTは対応済みですが、browser終了後の自動host persistenceとindividual file bridgeは未実装です。');
+ if(section==='cpm')main.innerHTML=main.innerHTML
+  .replace('現在はbrowser pageの再読込み・終了を越えては保持されません。whole-disk host IMPORT / EXPORT、factory restoreも未実装です。','Disk Inspectorからraw 256,256-byte .s80dをEXPORTし、後でIMPORTしてguest-visible filesystemを復元できます。IMPORTは明示CONFIRMまで既存mediumを変更しません。browser pageの再読込み・終了を越える自動保存は未実装です。')
+  .replace('host persistence、larger media profile','automatic host persistence、individual file bridge、factory restore、larger media profile');
+}
 let previous='';
 function route(){
  const [raw,id]=(location.hash.slice(1)||'reference').split('/');const section=['reference','system','map','bios','cpm','cgrom','sources'].includes(raw)?raw:'reference';
  document.querySelectorAll('nav a').forEach(a=>{if(a.hash==='#'+section)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  if(section==='reference'&&previous==='reference'&&main.querySelector('#detail')){if(data.instructions.some(i=>i.id===id))state.id=id;main.querySelectorAll('.row').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===state.id)));detail();if(innerWidth<=1000&&id)main.querySelector('#detail').scrollIntoView({block:'start'});}
- else ({reference:()=>reference(id),system:()=>system(id),map:maps,bios,cpm,cgrom:()=>cgrom(id),sources})[section]();
+ else {({reference:()=>reference(id),system:()=>system(id),map:maps,bios,cpm,cgrom:()=>cgrom(id),sources})[section]();applyPhase2Copy(section);}
  if(previous&&previous!==section)window.scrollTo(0,0);
  if(section==='system'&&id){const sectionDetail=main.querySelector('.component-detail');sectionDetail.insertAdjacentHTML('beforeend','<a href="#system">図の先頭へ戻る</a>');sectionDetail.scrollIntoView({block:'start'});}
  else if(section==='system')window.scrollTo(0,0);
