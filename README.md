@@ -21,8 +21,7 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- latest reviewed storage implementation: Issue #54 / PR #55（`main` merge `ff04df719e19d517faeea26e09cfbc912bb2cd18`）
-- active candidate: Issue #56 / `feature/shino80-whole-disk-import-export-phase2-20260929`
+- latest reviewed storage implementation: Issue #56 / PR #57（`main` merge `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`）
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -43,7 +42,7 @@
 - Virtual Disk A/B、SHINO CBIOS、WBOOT、licensed CP/M 2.2
 - mounted valid S80B v2 mediaのPOWER → RUN / RESET autoboot、失敗時ROM MON fallback、manual `MON O`
 - POWER OFF時のDRIVE A/B `EJECT` / `INSERT EJECTED DISK`、independent exact-medium shelves、compact/desktop両UI対応
-- candidate PHASE 2: A/B whole-disk `.s80d` IMPORT / EXPORT、transactional confirmation、INSERTED/EJECTED round-trip
+- A/B whole-disk `.s80d` IMPORT / EXPORT、transactional confirmation、INSERTED/EJECTED round-trip
 - writable starter filesystem
   - `WELCOME.TXT`
   - `HELLO.COM`
@@ -78,9 +77,7 @@ autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallba
 - project concept: `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 
-`plan/head/`には実行中のPLANだけを置く。現在のactive implementation PLANは
-`plan/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_PLAN.md`。Issue #56 candidateが
-Human mergeされた後、対応するPLAN/worklogをhistoryへ閉じる。
+`plan/head/`には実行中のPLANだけを置く。現在activeなimplementation PLANはない。完了したPHASE 2 PLAN/worklogは`*/history/2026-09-29/`へ閉じている。
 
 ## 開発と検証
 
@@ -121,11 +118,10 @@ pnpm run test:browser
 
 Disk SubsystemはPHASE 0–5で完成ラインを固定している。
 
-1. Issue #56 Human Review: PHASE 2 Whole Disk IMPORT + EXPORT
-2. PHASE 3: CLASSIC + practical larger WORK media / multi-profile
-3. PHASE 4: CP/M compatibility + filesystem regression
-4. PHASE 5: daily development environment
-5. PHASE 5以降: Advanced Storage
+1. PHASE 3: CLASSIC + practical larger WORK media / multi-profile
+2. PHASE 4: CP/M compatibility + filesystem regression
+3. PHASE 5: daily development environment
+4. PHASE 5以降: Advanced Storage
 
 EXPORT-only / IMPORT-onlyへ再分割しない。未決事項は談話室で揉み、実装単位が
 固まるまでrepositoryへ小刻みな設計PRを作らない。

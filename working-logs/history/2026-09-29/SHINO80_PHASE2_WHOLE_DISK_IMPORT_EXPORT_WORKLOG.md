@@ -8,7 +8,7 @@ Purpose branch: `feature/shino80-whole-disk-import-export-phase2-20260929`
 
 Reviewed `main` baseline: `ff04df719e19d517faeea26e09cfbc912bb2cd18`
 
-Status: IMPLEMENTED / AUTOMATED QA PASS / HUMAN REVIEW PENDING
+Status: COMPLETED / REVIEWED / MERGED
 
 PR #57 review follow-up: target-drive EJECT / REINSERT is now disabled in the
 rendered UI and rejected by both handlers while confirmation is pending. The
@@ -110,6 +110,4 @@ Not included:
 - CPU / Bus / ROM / CBIOS / CP/M semantic changes
 - public/unlisted preview publication
 
-The purpose branch is to be presented as one logical commit above reviewed
-`main`. Human Review controls merge. Publication is a separate repository and
-separate Human GO.
+PR #57 was merged by explicit Human GO as reviewed `main` commit `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`. Issue #56 closed completed. Publication remains a separate repository and separate Human GO.

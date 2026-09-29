@@ -9,31 +9,33 @@ Updated: 2026-09-29 JST
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `plan/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_PLAN.md`
-7. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
-8. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
-9. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
-10. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
-11. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
-12. `working-logs/head/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_WORKLOG.md`
+6. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
+7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
+8. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
+9. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
+10. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
 
-## Current candidate
+## Latest reviewed implementation
 
 - Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
-- branch `feature/shino80-whole-disk-import-export-phase2-20260929`
-- baseline/main `ff04df719e19d517faeea26e09cfbc912bb2cd18`
-- status: implementation complete, Human Review pending
+- PR #57 — merged
+- reviewed main: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
+- active implementation PLAN: none
+
+## Completed evidence
+
+- `plan/history/2026-09-29/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_PLAN.md`
+- `working-logs/history/2026-09-29/SHINO80_PHASE2_WHOLE_DISK_IMPORT_EXPORT_WORKLOG.md`
 
 ## Generated artifacts
 
 - `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - `deploy/shino80_technical_manual_v0.1.html`
 
-## Non-targets
+## Next boundary
 
-PHASE 3 larger media, browser persistence, factory restore, C:/D:, individual
-file bridge, foreign geometry import, CPU/ROM/CBIOS changes and public
-publication remain outside Issue #56.
+PHASE 3 design is the next roadmap candidate. No PHASE 3 implementation until
+design/research is complete and Human selects it. Publication remains separate.
 
 ## Validation rule
 
