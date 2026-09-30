@@ -21,13 +21,10 @@
 
 - GitHub repository: `ssnshino/shinoCPUEmulator`
 - reviewed default branch: `main`
-- latest reviewed storage implementation: Issue #56 / PR #57（implementation merge `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`）
-- PHASE 3 live main baseline: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
-- active implementation Issue: #59
-- purpose branch: `feature/shino80-multi-profile-fdd-phase3-20260929`
-- active PLAN: `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
-- normative PHASE 3 spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
-- current status: PHASE 3 C–E implemented / full automated + Chromium QA PASS / PR preparation in progress
+- latest reviewed storage implementation: Issue #59 / PR #60（merge `682a9196f3726ad49d745b8373c22ffab5366cc3`）
+- completed PHASE 3 contract: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
+- demo software disk: PR #61（merge `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`）
+- active implementation PLAN: none
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -98,8 +95,6 @@ pnpm run test:demo-disk
 
 - current integrated machine: `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - PHASE 3 normative implementation contract: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
-- active PHASE 3 PLAN: `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
-- active PHASE 3 worklog: `working-logs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_WORKLOG.md`
 - CP/M command reference: `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
 - Technical Manual contract: `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
 - source/deploy layout: `docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md`
@@ -108,7 +103,7 @@ pnpm run test:demo-disk
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 - demo software disk: `docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`
 
-`plan/head/`には実行中のPLANだけを置く。現在のactive implementation PLANは`plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`。Issue #59の実装前レビュー6項目はIssue本文・PLAN・normative specへ反映済み。Checkpoint A–Eを実装し、全5媒体、S80B v3、CBIOS、host UXをfocused unit/Chromiumで検証済み。Checkpoint FのPR・preview closeoutを進行中。完了したPHASE 2 PLAN/worklogは`*/history/2026-09-29/`へ閉じている。
+`plan/head/`には実行中のPLANだけを置く。現在activeなimplementation PLANはない。PHASE 3 PLAN/worklogは`*/history/2026-09-30/`へ閉じている。
 
 ## 開発と検証
 
@@ -149,13 +144,9 @@ pnpm run test:browser
 
 Disk SubsystemはPHASE 0–5で完成ラインを固定している。
 
-1. PHASE 3 CLOSEOUT: Multi-Profile FDD — CLASSIC + 2HD/2DD native media
-   - five native profiles: CLASSIC / 2HD-JP / 2DD-720 / 2HD-AT-1200 / 2HD-1440
-   - A/B both multi-profile
-   - Checkpoints A–E implemented and verified; Checkpoint F PR/preview closeout in progress
-2. PHASE 4: CP/M compatibility + filesystem regression / foreign media
-3. PHASE 5: daily development environment
-4. PHASE 5以降: Advanced Storage
+1. PHASE 4: CP/M compatibility + filesystem regression / foreign media
+2. PHASE 5: daily development environment
+3. PHASE 5以降: Advanced Storage
 
 EXPORT-only / IMPORT-onlyへ再分割しない。未決事項は談話室で揉み、実装単位が
 固まるまでrepositoryへ小刻みな設計PRを作らない。
