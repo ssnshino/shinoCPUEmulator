@@ -74,6 +74,26 @@ autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallba
 
 公開正本は`ssnshino/shinomiya-daihanten-content`のreview済み`master`。SHINO-80側で生成物を更新しただけでは公開されない。content側へ正確なsource commitとhashを記録して取り込み、Human-authorized merge後に自動デプロイとpublic smokeを確認する。
 
+## Demo software disk
+
+標準S80B v2 / CLASSIC環境のB:へIMPORTして実行できる、オリジナルCOM
+program入りdata diskを`software/demo-disk/`に収録している。
+
+- `BALLS.COM` — 6個のglyphが画面端で反射し、`C`で終了
+- `MONX.COM` — dump/edit/fill/move/search/goを備えた拡張monitor
+- `BEEP.COM` / `ABOUT.COM`
+- ready-to-import `SHINO80_DEMOS_CLASSIC_256K.s80d`
+- byte-exact builderとreal CPU / CCP / BDOS / CBIOS integration test
+
+入口は`software/demo-disk/README.md`、設計・試作経緯・QA記録は
+`docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`。imageは外部assemblerや
+第三者binaryを使わず、次で再生成・検証できる。
+
+```bash
+pnpm run build:demo-disk
+pnpm run test:demo-disk
+```
+
 ## 現行文書
 
 - current integrated machine: `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
@@ -86,6 +106,7 @@ autoboot再確認は未記録。PR #47のPOWER-OFF EJECT → no-media MON fallba
 - UI design: `docs/head/SHINO_80_UI_DESIGN_STANDARD_v0.1.md`
 - project concept: `docs/head/ONE_PAGE_Z80_COMPUTER_PROJECT_CONCEPT_v0.1.md`
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
+- demo software disk: `docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`
 
 `plan/head/`には実行中のPLANだけを置く。現在のactive implementation PLANは`plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`。Issue #59の実装前レビュー6項目はIssue本文・PLAN・normative specへ反映済み。Checkpoint A–Eを実装し、全5媒体、S80B v3、CBIOS、host UXをfocused unit/Chromiumで検証済み。Checkpoint FのPR・preview closeoutを進行中。完了したPHASE 2 PLAN/worklogは`*/history/2026-09-29/`へ閉じている。
 
