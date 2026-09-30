@@ -8,11 +8,11 @@ Always fetch GitHub first. Recorded SHAs are evidence, not authority.
 
 Latest reviewed storage implementation:
 
-- Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
-- PR #57 — merged
-- reviewed implementation merge: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
-- PHASE 3 baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
-- active Issue #59 / branch `feature/shino80-multi-profile-fdd-phase3-20260929`
+- Issue #59 — PHASE 3 Multi-Profile FDD
+- PR #60 — merged
+- reviewed merge: `682a9196f3726ad49d745b8373c22ffab5366cc3`
+- demo software disk PR #61 — merged
+- current main after demo merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
 
 ## Current machine
 
@@ -43,7 +43,7 @@ Not implemented on reviewed main:
 - individual CP/M file bridge
 - foreign legacy CP/M geometry autodetection
 
-## PHASE 3 active candidate
+## PHASE 3 completed
 
 Issue comments #5886687192 / #5886783128 / #5886824325 have been incorporated into Issue #59, the active PLAN and `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`. The six pre-implementation specification areas are frozen.
 
@@ -59,8 +59,6 @@ closeout verification and generated artifact hashes are recorded in the active w
 
 ## Current entries
 
-- `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
-- `working-logs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_WORKLOG.md`
 - `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 - `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
@@ -76,4 +74,4 @@ then fetch live Git state. Live Git wins.
 
 ## Next
 
-PHASE 3 implementation is complete through Checkpoint E. Resume at Checkpoint F closeout: full verification, one logical commit, PR, then the Human-authorized unlisted preview flow. Do not merge the SHINO PR without Human Review.
+No active implementation PLAN. The next roadmap phase is PHASE 4 CP/M compatibility / foreign-media interoperability. Do not start it without Human selection. Do not publish without Human authorization.
