@@ -1,14 +1,14 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm');
 const f='deploy/one_page_shino80_v0.0.9_z80_base_complete.html',h=fs.readFileSync(f,'utf8');
-for(const m of ['/*__CSS__*/','/*__MEMORY__*/','/*__BUS__*/','/*__KEYBOARD__*/','/*__BEEPER__*/','/*__BLOCK_DEVICE__*/','/*__CBIOS__*/','/*__CPM22__*/','/*__CPM_FILESYSTEM__*/','/*__CPM_STARTER_FILES__*/','/*__SYSTEM_DISK__*/','/*__FLAGS__*/','/*__DECODER__*/','/*__CPU__*/','/*__CGROM__*/','/*__SYSTEM_ROM__*/','/*__VIDEO__*/','/*__APP__*/'])if(h.includes(m))throw Error('unresolved '+m);
+for(const m of ['/*__CSS__*/','/*__MEMORY__*/','/*__BUS__*/','/*__KEYBOARD__*/','/*__BEEPER__*/','/*__MEDIA_PROFILES__*/','/*__BLOCK_DEVICE__*/','/*__CBIOS__*/','/*__CPM22__*/','/*__CPM_FILESYSTEM__*/','/*__CPM_STARTER_FILES__*/','/*__SYSTEM_DISK__*/','/*__FLAGS__*/','/*__DECODER__*/','/*__CPU__*/','/*__CGROM__*/','/*__SYSTEM_ROM__*/','/*__VIDEO__*/','/*__APP__*/'])if(h.includes(m))throw Error('unresolved '+m);
 for(const id of ['powerBtn','crtCanvas','crtViewport','displayDevice','keyboardCapture','diskImageInput','statusPc','statusR','statusT','statusLast','statusVideo','runPauseBtn','stepBtn','moreMenu','referenceLink'])if(!h.includes(`id="${id}"`))throw Error('missing DOM id '+id);
 if(!h.includes('Z80 BASE COMPLETE v0.0.9'))throw Error('BASE COMPLETE banner missing');
 if(!h.includes('BASE 252/252 ONLINE'))throw Error('CPU inspector BASE status missing');
 if(!h.includes('DM-80')||!h.includes('SHINOMIYA')||!h.includes('GREEN MONO DIGITAL DISPLAY'))throw Error('display identity missing');
-if(!h.includes('VIRTUAL DISK A')||!h.includes('SYSTEM / TOOLS · CP/M 2.2 · S80B v2'))throw Error('Virtual Disk A CP/M identity missing');
-if(!h.includes('VIRTUAL DISK B')||!h.includes('USER / WORK / INTERCHANGE · CLASSIC'))throw Error('Virtual Disk B CP/M identity missing');
-for(const text of ['EXPORT DISK IMAGE','IMPORT / REPLACE DISK IMAGE','CONFIRM IMPORT','application/octet-stream'])if(!h.includes(text))throw Error('PHASE 2 disk image UI missing: '+text);
+if(!h.includes('VIRTUAL DISK A')||!h.includes('SYSTEM / TOOLS · CP/M 2.2 · MULTI-PROFILE'))throw Error('Virtual Disk A CP/M identity missing');
+if(!h.includes('VIRTUAL DISK B')||!h.includes('USER / WORK / INTERCHANGE · MULTI-PROFILE'))throw Error('Virtual Disk B CP/M identity missing');
+for(const text of ['EXPORT DISK IMAGE','IMPORT / REPLACE DISK IMAGE','CONFIRM IMPORT','application/octet-stream','IMPORT REJECTED — UNSUPPORTED MEDIA SIZE','30h–38h'])if(!h.includes(text))throw Error('PHASE 3 disk image UI missing: '+text);
 for(const name of ['WELCOME.TXT','HELLO.COM','S80INFO.COM'])if(!h.includes(name))throw Error('CP/M starter file missing: '+name);
 if(!h.includes('ONE-BIT BEEPER')||!h.includes('BEEP TEST')||!h.includes('BEL · I/O 40h'))throw Error('beeper UI missing');
 if(!h.includes('https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-reference.html')||!h.includes('Z80 · BIOS · WIRING'))throw Error('public reference link missing');
@@ -18,7 +18,7 @@ for(const match of h.matchAll(/<link\b[^>]*\bhref=["']?([^"' >]+)/gi))if(!match[
 if(/\bprompt\s*\(/.test(h))throw Error('browser prompt() must not be used');
 if(/\b(?:window\.)?confirm\s*\(/.test(h))throw Error('browser confirm() must not be used');
 const scripts=[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
-if(scripts.length!==17)throw Error('inline script count '+scripts.length);
+if(scripts.length!==18)throw Error('inline script count '+scripts.length);
 scripts.forEach((m,i)=>new vm.Script(m[1],{filename:'inline-'+i}));
 if(!h.trimEnd().endsWith('</html>'))throw Error('truncated html');
 console.log('v0.0.9 artifact static PASS',Buffer.byteLength(h),'bytes');

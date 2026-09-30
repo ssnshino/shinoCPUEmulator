@@ -1,12 +1,14 @@
 # SHINO-80 Current Integrated System Specification
 
 Status: CURRENT INTEGRATION BASELINE
-Updated: 2026-09-29 JST
-Latest reviewed storage implementation: Issue #54 / PR #55 / main `ff04df719e19d517faeea26e09cfbc912bb2cd18`
-Active candidate: Issue #56 / PHASE 2 Whole Disk IMPORT + EXPORT
+Updated: 2026-09-30 JST
+Latest reviewed storage implementation: Issue #56 / PR #57 / implementation merge `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
+PHASE 3 baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
+Active candidate: Issue #59 / PHASE 3 Multi-Profile FDD
+Purpose branch: `feature/shino80-multi-profile-fdd-phase3-20260929`
+Normative spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 
-Live Git state wins over recorded SHAs. This document describes the reviewed
-PHASE 1 reviewed machine plus the Issue #56 candidate behavior on its purpose branch.
+Live Git state wins over recorded SHAs. This document preserves the reviewed PHASE 2 machine and records the active PHASE 3 candidate. Checkpoints A–E are implemented and verified; PR/preview closeout is active.
 
 ## Purpose
 
@@ -56,7 +58,7 @@ current feature set to the historical BASE-complete milestone.
 
 ## Mass storage controller
 
-SHINO-80 PHASE 1 uses **one block controller with two removable-media slots**.
+SHINO-80 uses **one block controller with two removable-media slots**.
 
 Shared low I/O:
 
@@ -67,13 +69,12 @@ Shared low I/O:
 - 34h SECTOR
 - 35h DATA
 - 36h ERROR
+- 37h HEAD
+- 38h MEDIA_PROFILE (read-only)
 
-Both media currently use CLASSIC geometry:
-
-- 77 tracks
-- 26 sectors/track
-- 128 bytes/sector
-- 256,256 bytes total
+Each slot independently accepts CLASSIC, 2HD-JP, 2DD-720, 2HD-AT-1200 or
+2HD-1440 raw media. Geometry and physical transfer size come from the mounted
+profile; transfers are exactly 128, 512 or 1,024 bytes.
 
 Controller selection/transfer state is shared; media bytes and write-protect
 state are independent per drive. Controller reset returns selection to A: but
@@ -132,14 +133,14 @@ While POWER is ON, replacement controls are disabled and handler-guarded.
 Media survives POWER, RESET and WBOOT inside the page. Browser reload
 persistence and factory-media restore are not implemented.
 
-## Whole-disk host interchange — PHASE 2 candidate
+## Whole-disk host interchange — PHASE 3 candidate
 
-While POWER is OFF, each A/B canonical medium can be exported as a raw
-256,256-byte `.s80d` file from either INSERTED or EJECTED state. Export uses a
+While POWER is OFF, each A/B canonical medium can be exported as a raw `.s80d`
+file from either INSERTED or EJECTED state. Export uses a
 defensive copy and changes neither ownership nor guest/controller/Bus state.
 
-IMPORT reads the entire file and accepts it only when its byte length is
-exactly 256,256. A valid file becomes a single global pending transaction;
+IMPORT reads the entire file and maps the five exact native byte lengths to one
+unambiguous profile. A valid file becomes a single global pending transaction;
 existing media is not changed until explicit `CONFIRM IMPORT`. Confirmation
 rechecks POWER OFF, target drive, byte length and the expected INSERTED / EJECTED
 / EMPTY ownership state. Invalid size, read failure, CANCEL, ownership change
@@ -154,6 +155,35 @@ next boot. B: remains unable to autoboot.
 
 If A: is absent or invalid, ROM falls back to MON before page-out even when B:
 contains valid-looking data. B: is not a boot source.
+
+## PHASE 3 frozen contract and Checkpoints A/B
+
+Issue #59 has a repository-complete implementation contract in
+`docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`.
+
+Frozen native profiles:
+
+- 00h CLASSIC — 77/1/26/128
+- 01h 2HD-JP — 77/2/8/1024
+- 02h 2DD-720 — 80/2/9/512
+- 03h 2HD-AT-1200 — 80/2/15/512
+- 04h 2HD-1440 — 80/2/18/512
+
+The frozen contract defines all five DPBs, 30h–38h controller semantics and
+error codes, the exact S80B v3 64-byte header, the exact E800h–FD7Fh high-RAM
+map, host raw `.s80d` profile UX, and profile-aware SELDSK / blocking / RMW /
+WBOOT behavior.
+
+CLASSIC S80B v2 and CLASSIC 30h–36h behavior remain unchanged. A: stays the
+only autoboot source; B: never autoboots. The Checkpoint A profile model and
+contract fixtures are implemented and passing. Checkpoint B activates native
+profiles independently on A:/B:, HEAD 37h, read-only MEDIA_PROFILE 38h,
+profile-derived CHS offsets, and exact 128/512/1024-byte physical transfers.
+Checkpoint C implements profile-aware SELDSK, five DPBs, logical-to-physical
+mapping and safe immediate RMW. Checkpoint D implements the exact S80B v3
+2HD-JP image and ROM v2/v3 boot paths while retaining S80B v2. Checkpoint E
+implements profile-preserving host shelves, all-profile IMPORT/EXPORT and the
+geometry/CHS Inspector.
 
 ## CP/M environment
 
@@ -191,8 +221,9 @@ Issue #54 / PR #55 reviewed evidence includes:
 
 ## Next storage phase
 
-Issue #56 implements PHASE 2 as the current Human-review candidate. After
-merge, the next bounded design phase is PHASE 3 practical WORK media / multi-profile.
+Issue #59 PHASE 3 is active. Checkpoints A/B and the fixture gate are implemented
+with focused and full regression evidence. Checkpoints C/D remain unstarted and
+require a separate Human instruction; this Checkpoint B task stops here.
 
 ## Change rule
 

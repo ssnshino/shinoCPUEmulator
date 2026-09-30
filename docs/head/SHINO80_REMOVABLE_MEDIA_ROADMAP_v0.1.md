@@ -51,7 +51,7 @@ Completion criterion:
 
 `A> -> B: -> B> -> write/read files -> A/B isolation -> WBOOT/RESET/media-cycle persistence`
 
-## PHASE 2 — Whole Disk IMPORT + EXPORT — IMPLEMENTED / HUMAN REVIEW PENDING
+## PHASE 2 — Whole Disk IMPORT + EXPORT — IMPLEMENTED / REVIEWED
 
 IMPORT and EXPORT are one bounded host-media feature, not separate implementation
 phases.
@@ -79,24 +79,33 @@ The superseded EXPORT-only PLAN/basic/detailed design are archived under
 `*/history/2026-09-28/`. Their useful browser-download research remains
 available as input, not as an active implementation contract.
 
-## PHASE 3 — Practical Work Media / Multi-profile
+## PHASE 3 — Multi-Profile FDD — ACTIVE / CHECKPOINT A COMPLETE
 
-Keep CLASSIC 256,256-byte media supported and add one practical larger work
-profile.
+Issue #59 / `feature/shino80-multi-profile-fdd-phase3-20260929`.
 
-Current leading candidate:
+Normative contract:
+`docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`.
 
-- CLASSIC: 256,256 bytes
-- WORK: 720 KiB class
+The earlier 720 KiB-only candidate is superseded. PHASE 3 now keeps CLASSIC as
+a permanent compatibility profile and adds a real-FDD-oriented native profile
+architecture:
 
-This phase owns:
+- 00h CLASSIC — 77/1/26/128
+- 01h 2HD-JP — 77/2/8/1024
+- 02h 2DD-720 — 80/2/9/512
+- 03h 2HD-AT-1200 — 80/2/15/512
+- 04h 2HD-1440 — 80/2/18/512
 
-- final larger-media geometry
-- drive/media-profile responsibility split
-- profile/header/container decisions
-- mixed-profile A/B behavior
+A:/B: both become multi-profile. Boot acceptance is required for CLASSIC and
+2HD-JP; all five are native data/work media. CP/M keeps 128-byte logical
+records and CBIOS owns blocking/deblocking.
 
-Do not add 2HD/1.2 MB merely to make the matrix look complete.
+The pre-implementation review froze the five DPBs, ports 30h–38h semantics,
+S80B v3 header, high-RAM map, host profile UX and profile-aware SELDSK
+contract. Checkpoint A, the contract fixture gate and Checkpoint B multi-profile
+controller I/O are implemented; CBIOS/filesystem/host runtime work has not started.
+
+D88/DCP/FDI and foreign CP/M compatibility remain PHASE 4.
 
 ## PHASE 4 — CP/M Compatibility + Filesystem Regression
 
@@ -151,7 +160,6 @@ Not completion blockers:
 - media library / recent disks
 - factory restore / blank-disk wizard
 - additional C:/D: drives
-- 2HD profiles
 - HDD / RAM disk
 - host individual-file bridge
 - network drive
@@ -182,6 +190,10 @@ For each PHASE:
 7. only then design the next PHASE
 
 ## Update history
+
+- 2026-09-29 — Issue #59 PHASE 3 Checkpoint A + DPB/header/RAM fixtures implemented
+- 2026-09-29 — Issue #59 PHASE 3 Checkpoint B controller multi-profile I/O implemented and verified
+- 2026-09-29 — Issue #59 PHASE 3 contract frozen after pre-implementation review
 
 - 2026-09-28 — replaced obsolete R1–R6 split with PHASE 0–5 completion roadmap
 - 2026-09-28 — PHASE 1 A:/B: Dual Drive reviewed in Issue #54 / PR #55

@@ -26,6 +26,8 @@
   const BLOCK_SECTOR_PORT=0x34;
   const BLOCK_DATA_PORT=0x35;
   const BLOCK_ERROR_PORT=0x36;
+  const BLOCK_HEAD_PORT=0x37;
+  const BLOCK_MEDIA_PROFILE_PORT=0x38;
   const BEEPER_PORT=0x40;
   const MEMORY_CONTROL_PORT=0x00;
   const MEMORY_CONTROL_LOW_RAM=0x01;
@@ -34,6 +36,7 @@
   const RAM_HANDOFF_DEMO_ENTRY=0x8000;
   const RAM_HANDOFF_SIGNATURE=0xE180;
   const DISK_BOOT_HEADER=0xE300;
+  const DISK_BOOT_V3_SCRATCH=0xE800;
   const MON_BUFFER=0xE100;
   const MON_CONTEXT=0xE140;
   const MON_RANGE_START=0xE158;
@@ -621,6 +624,10 @@
     a.ldHLLabel('DISK_BOOT_ERROR_TEXT');call('BIOS_PRINT_STRING');jp('MONITOR_PROMPT');
 
     a.label('DISK_BOOT_ATTEMPT');
+    a.emit(0xAF,0xD3,BLOCK_DRIVE_PORT,0xDB,BLOCK_MEDIA_PROFILE_PORT,0xB7);a.absolute(0xCA,'DISK_BOOT_V2');
+    a.emit(0xFE,0x01);a.absolute(0xCA,'DISK_BOOT_V3');jp('DISK_BOOT_ATTEMPT_FAIL');
+
+    a.label('DISK_BOOT_V2');
     word(0x21,DISK_BOOT_HEADER);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
     word(0x21,DISK_BOOT_HEADER);
     for(const expected of [0x53,0x38,0x30,0x42,2,2,3,6,0,0x80,0,0xFA,128,0,145,2,151]){
@@ -634,6 +641,31 @@
     a.emit(0xAF);word(0x32,0x0004); // ROM cold/autoboot paths always enter CCP on A:
     word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
 
+    // S80B v3 uses the native 2HD-JP 1024-byte physical sector geometry.
+    // The complete fixed header is compared before any RAM handoff state is
+    // changed. Sector 1 contains the header, loader, and first 0300h CBIOS
+    // bytes; sectors 2-3 complete the exact 0900h CBIOS image.
+    a.label('DISK_BOOT_V3');
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,1);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    a.ldHLLabel('DISK_BOOT_V3_HEADER_EXPECTED');a.emit(0xEB);word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x06,0x40);
+    a.label('DISK_BOOT_V3_HEADER_LOOP');a.emit(0x1A,0xBE);a.absolute(0xC2,'DISK_BOOT_ATTEMPT_FAIL');a.emit(0x13,0x23);jr(0x10,'DISK_BOOT_V3_HEADER_LOOP');
+    word(0x21,DISK_BOOT_V3_SCRATCH+0x40);word(0x11,0x8000);word(0x01,0x0080);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH+0x100);word(0x11,0xF400);word(0x01,0x0300);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,2);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    word(0x21,DISK_BOOT_V3_SCRATCH);word(0x11,0xF700);word(0x01,0x0400);a.emit(0xED,0xB0);
+    word(0x21,DISK_BOOT_V3_SCRATCH);a.emit(0x3E,3);call('DISK_BOOT_READ_SECTOR_V3');a.absolute(0xD2,'DISK_BOOT_ATTEMPT_FAIL');
+    word(0x21,DISK_BOOT_V3_SCRATCH);word(0x11,0xFB00);word(0x01,0x0200);a.emit(0xED,0xB0);
+    a.emit(0x3E,MEMORY_CONTROL_SHADOW_WRITE,0xD3,MEMORY_CONTROL_PORT);
+    a.emit(0x3E,0xC3);word(0x32,0x0000);word(0x21,0xF403);word(0x22,0x0001);a.emit(0xAF);word(0x32,0x0004);
+    word(0x21,0x8000);a.emit(0x3E,MEMORY_CONTROL_LOW_RAM);jp('BIOS_RAM_HANDOFF');
+
+    a.label('DISK_BOOT_V3_HEADER_EXPECTED');a.emit(
+      0x53,0x38,0x30,0x42,0x03,0x40,0x01,0x00,0x00,0x20,0x00,0x00,0x00,0x20,0x00,0x00,
+      0x40,0x00,0x00,0x00,0x80,0x00,0x00,0x80,0x00,0x80,0x00,0x01,0x00,0x00,0x00,0x09,
+      0x00,0xF4,0x00,0xF4,0x00,0x0A,0x00,0x00,0x00,0x08,0x00,0x94,0x00,0x12,0x00,0x00,
+      0x00,0x0E,0x00,0x9C,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x95
+    );
+
     a.label('DISK_BOOT_ATTEMPT_FAIL');a.emit(0xB7,0xC9); // OR A clears carry / RET
     a.label('DISK_BOOT_ERROR_TEXT');a.emit(...[...'DISK BOOT ERROR\r\n'].map(ch=>ch.charCodeAt(0)),0);
 
@@ -643,6 +675,12 @@
     a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
     a.emit(0x06,0x80,0x0E,BLOCK_DATA_PORT,0xED,0xB2,0x37,0xC9); // INIR / SCF / RET
     a.label('DISK_BOOT_READ_FAIL');a.emit(0xB7,0xC9); // OR A clears carry
+
+    a.label('DISK_BOOT_READ_SECTOR_V3');
+    a.emit(0x57,0xAF,0xD3,BLOCK_DRIVE_PORT,0xD3,BLOCK_TRACK_PORT,0xD3,BLOCK_HEAD_PORT,0x7A,0xD3,BLOCK_SECTOR_PORT);
+    a.emit(0x3E,1,0xD3,BLOCK_COMMAND_PORT,0xAF,0xDB,BLOCK_ERROR_PORT,0xB7);a.absolute(0xC2,'DISK_BOOT_READ_FAIL');
+    a.emit(0xAF,0xDB,BLOCK_STATUS_PORT,0xE6,0x04);a.absolute(0xCA,'DISK_BOOT_READ_FAIL');
+    a.emit(0x16,0x04,0x0E,BLOCK_DATA_PORT);a.label('DISK_BOOT_READ_V3_PAGE');a.emit(0x06,0x00,0xED,0xB2,0x15);a.absolute(0xC2,'DISK_BOOT_READ_V3_PAGE');a.emit(0x37,0xC9);
 
     const assembled=a.resolve();
     const testPageInstructions=(256*3)+3;
@@ -667,7 +705,7 @@
         testPageInstructions,
         clearPageInstructions,
         bootTextBytes:24,
-        instructionsBeforeLoop:14123
+        instructionsBeforeLoop:14113
       })
     };
   }
@@ -677,9 +715,9 @@
     TEXT_VRAM_BASE,TEXT_COLS,TEXT_ROWS,TEXT_VRAM_BYTES,TEXT_VRAM_END,VRAM_PAGES,
     BIOS_JUMP_TABLE,BIOS_WORK_CURSOR,BIOS_WORK_COLUMN,IPL_ENTRY,
     KEY_DATA_PORT,KEY_STATUS_PORT,MEMORY_CONTROL_PORT,
-    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BEEPER_PORT,
+    BLOCK_STATUS_PORT,BLOCK_COMMAND_PORT,BLOCK_DRIVE_PORT,BLOCK_TRACK_PORT,BLOCK_SECTOR_PORT,BLOCK_DATA_PORT,BLOCK_ERROR_PORT,BLOCK_HEAD_PORT,BLOCK_MEDIA_PROFILE_PORT,BEEPER_PORT,
     RAM_HANDOFF_TRAMPOLINE,RAM_HANDOFF_DEMO_ENTRY,RAM_HANDOFF_SIGNATURE,
-    DISK_BOOT_HEADER,
+    DISK_BOOT_HEADER,DISK_BOOT_V3_SCRATCH,
     buildSystemRom
   };
 });

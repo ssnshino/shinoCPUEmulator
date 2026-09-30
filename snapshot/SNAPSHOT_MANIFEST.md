@@ -1,6 +1,6 @@
 # SNAPSHOT MANIFEST
 
-Updated: 2026-09-29 JST
+Updated: 2026-09-30 JST
 
 ## Required restart set
 
@@ -9,18 +9,26 @@ Updated: 2026-09-29 JST
 3. `snapshot/CURRENT_SNAPSHOT.md`
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
-6. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
-7. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
-8. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
-9. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
-10. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
+6. `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
+7. `working-logs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_WORKLOG.md`
+8. `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
+9. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
+10. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
+11. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
+12. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
+13. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
 
 ## Latest reviewed implementation
 
 - Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
 - PR #57 — merged
 - reviewed main: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
-- active implementation PLAN: none
+- PHASE 3 baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
+- active Issue: #59
+- branch: `feature/shino80-multi-profile-fdd-phase3-20260929`
+- active PLAN: `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
+- normative spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
+- status: Checkpoints A–E implemented / focused unit + Chromium QA PASS / Checkpoint F closeout active
 
 ## Completed evidence
 
@@ -34,8 +42,7 @@ Updated: 2026-09-29 JST
 
 ## Next boundary
 
-PHASE 3 design is the next roadmap candidate. No PHASE 3 implementation until
-design/research is complete and Human selects it. Publication remains separate.
+PHASE 3 is implemented through Checkpoint E. Resume at Checkpoint F full verification, one logical commit, PR and the authorized unlisted preview integration. SHINO PR merge remains Human-controlled.
 
 ## Validation rule
 

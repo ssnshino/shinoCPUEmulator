@@ -4,7 +4,9 @@
   const {Shino80Bus}=globalThis.SHINO_BUS;
   const {Shino80Keyboard}=globalThis.SHINO_KEYBOARD;
   const {Shino80Beeper,BEEPER_PORT}=globalThis.SHINO_BEEPER;
-  const {Shino80BlockDevice,createBlankBlockImage,BLOCK_IMAGE_SIZE}=globalThis.SHINO_BLOCK_DEVICE;
+  const {Shino80BlockDevice,createBlankBlockImage}=globalThis.SHINO_BLOCK_DEVICE;
+  const {MEDIA_PROFILES,MEDIA_PROFILE_CLASSIC,MEDIA_PROFILE_2HD_JP,mediaProfileById,mediaProfilesForImageLength}=globalThis.SHINO_MEDIA_PROFILES;
+  const {CBIOS3_STATE}=globalThis.SHINO_CBIOS;
   const {buildSystemDisk}=globalThis.SHINO_SYSTEM_DISK;
   const {Z80Core,flagState}=globalThis.SHINO_Z80;
   const {Shino80TextVideo,TEXT_VRAM_BASE}=globalThis.SHINO_VIDEO;
@@ -16,7 +18,6 @@
   diskA.mountImage(createBlankBlockImage(),{drive:1});
   const driveEjectedMedia=[null,null];
   const diskMediaMessage=['',''];
-  const DISK_IMAGE_SIZE=BLOCK_IMAGE_SIZE;
   let diskImportOperation=null;
   let pendingDiskImport=null;
   const systemRom=buildSystemRom();
@@ -66,8 +67,8 @@
     {id:'keyboard',icon:'KB',name:'SHINO KEYBOARD',desc:'ASCII FIFO / I/O 20h–21h',state:'ONLINE'},
     {id:'beeper',icon:'♪',name:'ONE-BIT BEEPER',desc:'BEL / I/O 40h · 880 Hz',state:'ONLINE'},
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
-    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · S80B v2',state:'ONLINE'},
-    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · CLASSIC',state:'ONLINE'},
+    {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · MULTI-PROFILE',state:'ONLINE'},
+    {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · MULTI-PROFILE',state:'ONLINE'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
@@ -181,37 +182,40 @@
 
   function diskInspectorHtml(drive){
     const letter=drive===0?'A':'B',mounted=diskA.mountedAt(drive),ownership=diskOwnership(drive),mediaState=ownership==='empty'?'EMPTY':ownership.toUpperCase();
+    const media=canonicalDiskMedia(drive),profile=media?mediaProfileById(media.profileId):null;
     const targetImportPending=pendingDiskImport?.drive===drive;
     const canEject=!ui.powered&&!targetImportPending&&mounted&&driveEjectedMedia[drive]===null;
-    const canInsert=!ui.powered&&!targetImportPending&&!mounted&&driveEjectedMedia[drive] instanceof Uint8Array;
+    const canInsert=!ui.powered&&!targetImportPending&&!mounted&&isMediaBundle(driveEjectedMedia[drive]);
     const canExport=!ui.powered&&ownership!=='empty'&&ownership!=='invalid';
     const canImport=!ui.powered&&!pendingDiskImport&&!diskImportOperation;
     const role=drive===0?'SYSTEM / TOOLS':'USER / WORK / INTERCHANGE';
     const details=drive===0
-      ?`<div class="inspector-kv"><span>Format</span><b>${systemDisk.meta.magic} v${systemDisk.meta.version} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div><div class="inspector-kv"><span>Files</span><b>${systemDisk.files.map(file=>file.name).join(' · ')}</b></div>`
-      :'<div class="inspector-kv"><span>Format</span><b>CLASSIC · CP/M DATA</b></div><div class="inspector-kv"><span>Initial state</span><b>BLANK · E5h</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
+      ?`<div class="inspector-kv"><span>Format</span><b>${profile?.id===MEDIA_PROFILE_2HD_JP?'S80B v3':'S80B v2 / RAW'} · CP/M 2.2</b></div><div class="inspector-kv"><span>System</span><b>CCP 9400h · BDOS 9C00h</b></div>`
+      :'<div class="inspector-kv"><span>Format</span><b>RAW .s80d · CP/M DATA</b></div><div class="inspector-kv"><span>Boot</span><b>NOT AN AUTOBOOT SOURCE</b></div>';
     const note=drive===0?'A: is the only POWER → RUN / RESET AUTOBOOT source. With A: empty, autoboot returns to ROM MON. MON O remains the manual A: retry path.':'B: is an independent writable work disk and is never an autoboot source.';
     const pending=pendingDiskImport&&pendingDiskImport.drive===drive
-      ?`<div class="inspector-section disk-import-pending" role="status"><div class="inspector-kv"><span>IMPORT PENDING</span><b>DRIVE ${letter}:</b></div><div class="inspector-kv"><span>Current state</span><b>${pendingDiskImport.ownership.toUpperCase()}</b></div><div class="inspector-kv"><span>File</span><b>${escapeHtml(pendingDiskImport.fileName)}</b></div><div class="inspector-kv"><span>Bytes</span><b>${pendingDiskImport.bytes.length.toLocaleString('en-US')}</b></div>${drive===0?'<div class="inspector-note disk-import-warning">Bootability is not checked during IMPORT. An unbootable A: image falls back to ROM MON on the next boot.</div>':''}<div class="disk-actions"><button type="button" data-disk-drive="${drive}" data-disk-action="confirm-import"${ui.powered?' disabled':''}>CONFIRM IMPORT</button><button type="button" data-disk-drive="${drive}" data-disk-action="cancel-import">CANCEL</button></div></div>`
+      ?`<div class="inspector-section disk-import-pending" role="status"><div class="inspector-kv"><span>IMPORT PENDING</span><b>DRIVE ${letter}:</b></div><div class="inspector-kv"><span>Current state</span><b>${pendingDiskImport.ownership.toUpperCase()}</b></div><div class="inspector-kv"><span>File</span><b>${escapeHtml(pendingDiskImport.fileName)}</b></div><div class="inspector-kv"><span>Profile</span><b>${hex(pendingDiskImport.profileId)}h ${escapeHtml(pendingDiskImport.profile.name)}</b></div><div class="inspector-kv"><span>Geometry</span><b>${pendingDiskImport.profile.cylinders}C × ${pendingDiskImport.profile.heads}H × ${pendingDiskImport.profile.physicalSectorsPerTrack}S</b></div><div class="inspector-kv"><span>Bytes</span><b>${pendingDiskImport.bytes.length.toLocaleString('en-US')}</b></div>${drive===0?'<div class="inspector-note disk-import-warning">Bootability is not checked during IMPORT. An unbootable A: image falls back to ROM MON on the next boot.</div>':''}<div class="disk-actions"><button type="button" data-disk-drive="${drive}" data-disk-action="confirm-import"${ui.powered?' disabled':''}>CONFIRM IMPORT</button><button type="button" data-disk-drive="${drive}" data-disk-action="cancel-import">CANCEL</button></div></div>`
       :(pendingDiskImport?`<div class="inspector-section inspector-note">IMPORT PENDING FOR DRIVE ${pendingDiskImport.drive===0?'A':'B'}. Finish or cancel it before starting another IMPORT.</div>`:'');
     const message=diskMediaMessage[drive]?`<div class="inspector-section inspector-note disk-media-message" role="status">${escapeHtml(diskMediaMessage[drive])}</div>`:'';
-    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Geometry</span><b>77 TRACKS × 26 SECTORS</b></div><div class="inspector-kv"><span>Sector</span><b>128 BYTES</b></div><div class="inspector-kv"><span>Image</span><b>256,256 BYTES</b></div><div class="inspector-kv"><span>Ports</span><b>30h–36h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:${diskA.track}/${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${diskA.writeProtectedAt(drive)?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div>${pending}<div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button><button type="button" data-disk-drive="${drive}" data-disk-action="export"${canExport?'':' disabled'}>EXPORT DISK IMAGE</button><button type="button" data-disk-drive="${drive}" data-disk-action="import"${canImport?'':' disabled'}>IMPORT / REPLACE DISK IMAGE</button></div>${message}<div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
+    return `<div class="inspector-section"><div class="inspector-kv"><span>Role</span><b>${role}</b></div><div class="inspector-kv"><span>Media</span><b>${mediaState}</b></div>${details}<div class="inspector-kv"><span>Profile</span><b>${profile?hex(profile.id)+'h '+escapeHtml(profile.name):'FFh NONE'}</b></div><div class="inspector-kv"><span>Geometry</span><b>${profile?profile.cylinders+'C × '+profile.heads+'H × '+profile.physicalSectorsPerTrack+'S':'—'}</b></div><div class="inspector-kv"><span>Physical sector</span><b>${profile?profile.physicalSectorSize.toLocaleString('en-US')+' BYTES':'—'}</b></div><div class="inspector-kv"><span>Image</span><b>${profile?profile.imageBytes.toLocaleString('en-US')+' BYTES':'—'}</b></div><div class="inspector-kv"><span>Ports</span><b>30h–38h · DRIVE ${drive}</b></div><div class="inspector-kv"><span>Controller</span><b>${diskA.drive===drive?'SELECTED':'NOT SELECTED'} · ${letter}:C${diskA.track}/H${diskA.head}/S${diskA.sector}</b></div><div class="inspector-kv"><span>Transfer</span><b>${diskA.drive===drive&&diskA.transferMode?diskA.transferMode.toUpperCase()+' '+diskA.transferRemaining+' B':'IDLE'}</b></div><div class="inspector-kv"><span>Write protect</span><b>${media?.writeProtected?'ON':'OFF'}</b></div><div class="inspector-kv"><span>Error</span><b>${diskA.error}</b></div></div>${pending}<div class="inspector-section disk-actions" aria-label="Drive ${letter} media controls"><button type="button" data-disk-drive="${drive}" data-disk-action="eject"${canEject?'':' disabled'}>EJECT</button><button type="button" data-disk-drive="${drive}" data-disk-action="insert-ejected"${canInsert?'':' disabled'}>INSERT EJECTED DISK</button><button type="button" data-disk-drive="${drive}" data-disk-action="export"${canExport?'':' disabled'}>EXPORT DISK IMAGE</button><button type="button" data-disk-drive="${drive}" data-disk-action="import"${canImport?'':' disabled'}>IMPORT / REPLACE DISK IMAGE</button></div>${message}<div class="inspector-section inspector-note">Media changes require POWER OFF. ${note}</div>`;
   }
 
   function refreshDevicePresentation(){renderDevices();renderInspector();ui.dirty=true;}
+  function isMediaBundle(value){return Boolean(value&&value.bytes instanceof Uint8Array&&mediaProfileById(value.profileId)&&typeof value.writeProtected==='boolean');}
   function diskOwnership(drive){
-    const mounted=diskA.mountedAt(drive),shelved=driveEjectedMedia[drive] instanceof Uint8Array;
+    const mounted=diskA.mountedAt(drive),shelved=isMediaBundle(driveEjectedMedia[drive]);
     if(mounted&&!shelved)return 'inserted';
     if(!mounted&&shelved)return 'ejected';
     if(!mounted&&!shelved)return 'empty';
     return 'invalid';
   }
-  function canonicalDiskImage(drive){
+  function canonicalDiskMedia(drive){
     const ownership=diskOwnership(drive);
-    if(ownership==='inserted')return diskA.exportImage({drive});
-    if(ownership==='ejected')return new Uint8Array(driveEjectedMedia[drive]);
+    if(ownership==='inserted')return {bytes:diskA.exportImage({drive}),profileId:diskA.mediaProfileIdAt(drive),writeProtected:diskA.writeProtectedAt(drive)};
+    if(ownership==='ejected'){const media=driveEjectedMedia[drive];return {bytes:new Uint8Array(media.bytes),profileId:media.profileId,writeProtected:media.writeProtected};}
     return null;
   }
+  function canonicalDiskImage(drive){return canonicalDiskMedia(drive)?.bytes||null;}
   function clearImportOperation(){
     diskImportOperation=null;
     const input=queryOne('#diskImageInput');if(input)input.value='';
@@ -222,7 +226,7 @@
   }
   function exportDiskImage(drive){
     if(ui.powered)return false;
-    const bytes=canonicalDiskImage(drive);if(!(bytes instanceof Uint8Array)||bytes.length!==DISK_IMAGE_SIZE)return false;
+    const media=canonicalDiskMedia(drive),bytes=media?.bytes;if(!(bytes instanceof Uint8Array)||!mediaProfileById(media.profileId))return false;
     const letter=drive===0?'A':'B',blob=new Blob([new Uint8Array(bytes)],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
     anchor.href=url;anchor.download=`SHINO80_DRIVE_${letter}.s80d`;anchor.hidden=true;document.body.appendChild(anchor);anchor.click();anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);diskMediaMessage[drive]=`EXPORT READY: ${anchor.download} · ${bytes.length.toLocaleString('en-US')} BYTES`;refreshDevicePresentation();return true;
@@ -241,9 +245,12 @@
     try{
       const buffer=await file.arrayBuffer();
       if(diskImportOperation!==operation||ui.powered){if(diskImportOperation===operation)clearImportOperation();refreshDevicePresentation();return false;}
-      if(buffer.byteLength!==DISK_IMAGE_SIZE){diskMediaMessage[drive]=`IMPORT REJECTED: EXPECTED ${DISK_IMAGE_SIZE.toLocaleString('en-US')} BYTES, GOT ${buffer.byteLength.toLocaleString('en-US')}.`;clearImportOperation();refreshDevicePresentation();return false;}
+      const matches=mediaProfilesForImageLength(buffer.byteLength);
+      if(matches.length===0){diskMediaMessage[drive]=`IMPORT REJECTED — UNSUPPORTED MEDIA SIZE: ${buffer.byteLength.toLocaleString('en-US')} BYTES`;clearImportOperation();refreshDevicePresentation();return false;}
+      if(matches.length!==1){diskMediaMessage[drive]=`IMPORT REJECTED — AMBIGUOUS MEDIA SIZE: ${buffer.byteLength.toLocaleString('en-US')} BYTES`;clearImportOperation();refreshDevicePresentation();return false;}
       if(diskOwnership(drive)!==ownership){diskMediaMessage[drive]='IMPORT REJECTED: MEDIA OWNERSHIP CHANGED WHILE READING.';clearImportOperation();refreshDevicePresentation();return false;}
-      pendingDiskImport={drive,ownership,fileName:file.name||`SHINO80_DRIVE_${drive===0?'A':'B'}.s80d`,bytes:new Uint8Array(buffer)};
+      const current=canonicalDiskMedia(drive);
+      pendingDiskImport={drive,ownership,fileName:file.name||`SHINO80_DRIVE_${drive===0?'A':'B'}.s80d`,bytes:new Uint8Array(buffer),profileId:matches[0].id,profile:matches[0],writeProtected:current?.writeProtected||false};
       clearImportOperation();diskMediaMessage[drive]='';refreshDevicePresentation();return true;
     }catch(_error){
       if(diskImportOperation===operation){diskMediaMessage[drive]='IMPORT REJECTED: FILE READ FAILED.';clearImportOperation();refreshDevicePresentation();}
@@ -254,10 +261,11 @@
     const pending=pendingDiskImport;
     if(!pending||pending.drive!==drive)return false;
     if(ui.powered){clearPendingImport('IMPORT CANCELED: POWER MUST REMAIN OFF.',drive);refreshDevicePresentation();return false;}
-    if(pending.bytes.length!==DISK_IMAGE_SIZE||diskOwnership(drive)!==pending.ownership){clearPendingImport('IMPORT CANCELED: MEDIA OWNERSHIP CHANGED.',drive);refreshDevicePresentation();return false;}
+    const profile=mediaProfileById(pending.profileId);
+    if(!profile||pending.bytes.length!==profile.imageBytes||diskOwnership(drive)!==pending.ownership){clearPendingImport('IMPORT CANCELED: MEDIA OWNERSHIP CHANGED.',drive);refreshDevicePresentation();return false;}
     const bytes=new Uint8Array(pending.bytes);
-    if(pending.ownership==='ejected')driveEjectedMedia[drive]=bytes;
-    else {diskA.mountImage(bytes,{drive});driveEjectedMedia[drive]=null;}
+    if(pending.ownership==='ejected')driveEjectedMedia[drive]={bytes,profileId:profile.id,writeProtected:pending.writeProtected};
+    else {diskA.mountImage(bytes,{drive,profileId:profile.id,writeProtected:pending.writeProtected});driveEjectedMedia[drive]=null;}
     clearPendingImport(`IMPORT COMPLETE: DRIVE ${drive===0?'A':'B'} · ${bytes.length.toLocaleString('en-US')} BYTES`,drive);refreshDevicePresentation();return true;
   }
   function cancelDiskImport(drive){
@@ -266,14 +274,14 @@
   }
   function ejectDrive(drive){
     if(ui.powered||pendingDiskImport?.drive===drive||!diskA.mountedAt(drive)||driveEjectedMedia[drive]!==null)return false;
-    const media=diskA.eject({drive});
+    const profileId=diskA.mediaProfileIdAt(drive),writeProtected=diskA.writeProtectedAt(drive),media=diskA.eject({drive});
     if(!(media instanceof Uint8Array))return false;
-    driveEjectedMedia[drive]=media;refreshDevicePresentation();return true;
+    driveEjectedMedia[drive]={bytes:media,profileId,writeProtected};refreshDevicePresentation();return true;
   }
   function insertEjectedDrive(drive){
-    if(ui.powered||pendingDiskImport?.drive===drive||diskA.mountedAt(drive)||!(driveEjectedMedia[drive] instanceof Uint8Array))return false;
+    if(ui.powered||pendingDiskImport?.drive===drive||diskA.mountedAt(drive)||!isMediaBundle(driveEjectedMedia[drive]))return false;
     const media=driveEjectedMedia[drive];
-    diskA.mountImage(media,{drive});
+    diskA.mountImage(media.bytes,{drive,profileId:media.profileId,writeProtected:media.writeProtected});
     driveEjectedMedia[drive]=null;refreshDevicePresentation();return true;
   }
   function handleDiskAction(action,drive){
@@ -312,7 +320,7 @@
   function render(){
     if(ui.view==='display'){
       syncDisplayGeometry();
-      const pointer=memory.lowRamEnabled?systemDisk.cbios.labels.CBIOS_CURSOR:systemRom.meta.biosWorkCursor;
+      const pointer=memory.lowRamEnabled?(diskA.mediaProfileIdAt(0)===MEDIA_PROFILE_2HD_JP?CBIOS3_STATE.cursor:systemDisk.cbios.labels.CBIOS_CURSOR):systemRom.meta.biosWorkCursor;
       const cursorAddress=bus.debugPeek(pointer)|(bus.debugPeek(pointer+1)<<8);
       const cursorVisible=ui.powered&&(Math.floor(cpu.state.tStates/2000000)&1)===0;
       video.render({cursorAddress,cursorVisible});

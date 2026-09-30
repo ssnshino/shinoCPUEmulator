@@ -1,9 +1,9 @@
 # SHINO-80 Technical Manual v0.1
 
 Status: CURRENT INTEGRATION REFERENCE
-Updated: 2026-09-29 JST
-Reviewed baseline: Issue #54 / PR #55 / main `ff04df719e19d517faeea26e09cfbc912bb2cd18`
-Active candidate: Issue #56 / PHASE 2 Whole Disk IMPORT + EXPORT
+Updated: 2026-09-30 JST
+Reviewed baseline: Issue #56 / PR #57 / main `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
+Active candidate: Issue #59 / PHASE 3 Checkpoints A–E complete
 
 ## Deliverable and authority
 
@@ -29,16 +29,16 @@ Do not hand-edit the generated HTML.
 - 1,780 Z80 encoding reference with examples and accuracy boundaries
 - system wiring, memory/I/O maps, ROM BIOS/MON and pageable firmware
 - DM-80 / native CG-ROM
-- one Virtual Disk controller on 30h–36h with A:/B: media slots
+- one Virtual Disk controller on 30h–38h with A:/B: multi-profile media slots
 - DRIVE 32h selector: 0=A:, 1=B:
-- A: BOOT / SYSTEM / TOOLS with S80B v2 autoboot
-- B: USER / WORK / INTERCHANGE blank CLASSIC medium
+- A: BOOT / SYSTEM / TOOLS with compatible S80B v2 and 2HD-JP S80B v3 autoboot
+- B: USER / WORK / INTERCHANGE with any native profile
 - independent POWER-OFF A/B EJECT / REINSERT SAME MEDIA
 - shared desktop/compact disk inspector/action path
-- DPH_A / DPH_B, shared DPB / FD00h DIRBUF, independent CSV / ALV
-- CBIOS 657 bytes inside the existing 768-byte S80B v2 reservation
+- DPH_A / DPH_B, five fixed DPBs / FD00h DIRBUF, independent CSV / ALV / profile state
+- CBIOS v3 exact 2,304-byte F400h–FCFFh resident image
 - WBOOT B: preservation versus ROM/UI RESET A: initialization
-- A/B raw 256,256-byte `.s80d` EXPORT from INSERTED/EJECTED state
+- A/B raw `.s80d` IMPORT / EXPORT for all five exact native image sizes
 - transactional POWER-OFF IMPORT with single pending confirmation and atomic no-op failures
 - pending target EJECT / REINSERT disabled in both UI and handlers
 - CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled A: programs
@@ -51,14 +51,14 @@ Do not hand-edit the generated HTML.
 - block controller is PIO, not a mechanical FDD/FDC
 - B: is implemented but is not a boot source in PHASE 1
 - browser-reload persistence and factory-media restore are not implemented
-- larger media profiles are not implemented
+- foreign/container media autodetection beyond the five native raw profiles is not implemented
 - UART and printer remain future work
 - reserved BIOS vectors are not implemented drivers or interrupt handlers
 
 ## Storage roadmap relationship
 
-PHASE 1 is the reviewed dual-drive implementation. Issue #56 is the active
-PHASE 2 Whole Disk IMPORT + EXPORT candidate awaiting Human Review.
+PHASE 1/2 are the reviewed dual-drive and whole-disk foundations. Issue #59 is
+the active PHASE 3 multi-profile candidate in PR/preview closeout.
 
 See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
 

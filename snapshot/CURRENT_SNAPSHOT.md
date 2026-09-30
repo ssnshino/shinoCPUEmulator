@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT — SHINO-80
 
-Updated: 2026-09-29 JST
+Updated: 2026-09-30 JST
 
 ## Live-state rule
 
@@ -10,22 +10,24 @@ Latest reviewed storage implementation:
 
 - Issue #56 — PHASE 2 Whole Disk IMPORT + EXPORT
 - PR #57 — merged
-- reviewed `main`: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
+- reviewed implementation merge: `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
+- PHASE 3 baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
+- active Issue #59 / branch `feature/shino80-multi-profile-fdd-phase3-20260929`
 
 ## Current machine
 
 - Z80 external full-state oracle: `1,604,000 / 1,604,000 PASS`
 - BIOS/MON v0.3, pageable 64 KiB RAM, DM-80, Keyboard, beeper
 - licensed CP/M 2.2 with writable A:/B: filesystems
-- one controller on 30h–36h; selector 32h 0=A / 1=B
+- one controller on 30h–38h; selector 32h 0=A / 1=B
 - A: BOOT / SYSTEM / TOOLS and only ROM autoboot source
 - B: USER / WORK / INTERCHANGE and never autoboot
-- independent A/B CLASSIC 256,256-byte removable media and shelves
-- A/B raw 256,256-byte `.s80d` IMPORT / EXPORT
+- independent A/B five-profile removable media and profile-preserving shelves
+- A/B raw `.s80d` IMPORT / EXPORT for CLASSIC, 2HD-JP, 2DD-720, 2HD-AT-1200 and 2HD-1440
 - byte-exact EXPORT from INSERTED block slot or EJECTED host shelf
 - POWER-OFF transactional IMPORT with one workbench-wide pending transaction
 - explicit CONFIRM / CANCEL; pending target EJECT / REINSERT blocked in UI and handlers
-- commit-time POWER / target / ownership / size revalidation
+- commit-time POWER / target / ownership / exact profile-size revalidation
 - INSERTED remains INSERTED; EJECTED remains EJECTED
 - invalid size, read failure, cancel, ownership change and POWER ON are atomic no-ops
 - POWER ON immediately discards pending import
@@ -33,17 +35,33 @@ Latest reviewed storage implementation:
 - A import does not preflight bootability; invalid boot reaches ROM MON
 - B remains nonbootable
 
-Not implemented:
+Not implemented on reviewed main:
 
 - browser reload persistence / media library
 - factory restore / recent media
-- larger/multi-profile media
 - C:/D:
 - individual CP/M file bridge
 - foreign legacy CP/M geometry autodetection
 
+## PHASE 3 active candidate
+
+Issue comments #5886687192 / #5886783128 / #5886824325 have been incorporated into Issue #59, the active PLAN and `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`. The six pre-implementation specification areas are frozen.
+
+Checkpoints A–E are implemented and focused automated/Chromium QA passes. An
+immutable five-profile model owns geometry and derived DPBs. The block controller
+mounts all five native profiles independently on A:/B:, exposes HEAD 37h and
+read-only MEDIA_PROFILE 38h, and transfers exact 128/512/1024-byte physical
+sectors while preserving CLASSIC compatibility. The DPB calculator, exact S80B
+v3 header and high-RAM overlap fixtures are implemented and passing. The
+profile-aware CBIOS, exact S80B v3 2HD-JP boot image, safe RMW, generic CP/M
+filesystem builder and all-profile host IMPORT/EXPORT UX are active. Exact
+closeout verification and generated artifact hashes are recorded in the active worklog.
+
 ## Current entries
 
+- `plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
+- `working-logs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_WORKLOG.md`
+- `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 - `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
 - `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
@@ -58,6 +76,4 @@ then fetch live Git state. Live Git wins.
 
 ## Next
 
-No active implementation PLAN. PHASE 3 is the next roadmap candidate, but do not
-start implementation until lounge/research/basic/detail/QA design is completed
-and Human selects it for implementation. Do not publish without Human authorization.
+PHASE 3 implementation is complete through Checkpoint E. Resume at Checkpoint F closeout: full verification, one logical commit, PR, then the Human-authorized unlisted preview flow. Do not merge the SHINO PR without Human Review.
