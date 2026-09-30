@@ -4,7 +4,7 @@ Issue: #59
 Purpose branch: `feature/shino80-multi-profile-fdd-phase3-20260929`
 Baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
 
-Status: CHECKPOINTS A–E COMPLETE / FOCUSED AUTOMATED + CHROMIUM QA PASS / CHECKPOINT F CLOSEOUT
+Status: COMPLETED / REVIEWED / MERGED
 
 ## 2026-09-29 setup
 
@@ -249,3 +249,12 @@ Generated artifacts:
 
 PR and unlisted preview deployment evidence will be added after the corresponding
 GitHub/content operations complete. The SHINO PR remains unmerged for Human Review.
+
+
+## 2026-09-30 Human merge closeout
+
+- PR #60 merged after Human Review.
+- reviewed merge: `682a9196f3726ad49d745b8373c22ffab5366cc3`.
+- PR #61 demo software disk was rebased onto merged PHASE 3 main and merged.
+- current main after PR #61: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`.
+- active PLAN/worklog moved to history.
