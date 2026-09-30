@@ -89,3 +89,15 @@ Public/unlisted preview publication remains a separate Human-authorized step.
 - implemented five-profile host IMPORT/EXPORT, shelf profile/write-protect retention and geometry Inspector
 - focused unit tests and real Chromium all-profile/S80B v3 boot regressions PASS
 - Checkpoint F full regression, one logical commit, PR and unlisted preview closeout in progress
+
+
+## PHASE 3 merge closeout — 2026-09-30
+
+- Issue #59 — PHASE 3 Multi-Profile FDD completed.
+- PR #60 merged by explicit Human GO.
+- reviewed PHASE 3 merge: `682a9196f3726ad49d745b8373c22ffab5366cc3`.
+- PR #61 demo software disk rebased onto the merged PHASE 3 main and merged.
+- current main after PR #61: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`.
+- PHASE 3 PLAN/worklog moved to history.
+- active implementation PLAN: none.
+- unlisted PHASE 3 preview had already been deployed and Human exercised the application before merge.
