@@ -134,8 +134,8 @@ This file-length rule replaces the previously assumed all-cylinders flag.
 
 Payload tracks are stored in increasing logical track order. For ordinary two-head geometries:
 
-`cylinder = floor(trackIndex / heads)`  
-`head = trackIndex % heads`
+- `cylinder = floor(trackIndex / heads)`
+- `head = trackIndex % heads`
 
 Within each stored track, sector payload is sequential sector IDs 1..sectorsPerTrack.
 
@@ -442,3 +442,5 @@ One final PR is created at closeout. Human controls merge. Publication remains s
 ## Update History
 
 - 2026-09-30T14:50:37+09:00 — Codex — Clarified contract implemented on purpose branch. See PHASE 4 worklog for verification and artifact hashes. Normative requirements remain unchanged; merge approval is not implied.
+
+- 2026-09-30T16:53:59+09:00 — Codex — Replaced logical-track formula hard breaks with a list; normative semantics unchanged.

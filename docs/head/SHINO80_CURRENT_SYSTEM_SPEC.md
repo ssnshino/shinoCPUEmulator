@@ -1,9 +1,11 @@
 # SHINO-80 Current Integrated System Specification
 
 Status: CURRENT INTEGRATION BASELINE
-Updated: 2026-09-30 JST
+Updated: 2026-09-30T16:53:59+09:00
+Active candidate: PHASE 4 / Issue #63 / PR #64 OPEN / Human Review pending
+Reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout)
 Latest reviewed storage implementation: Issue #59 / PR #60 / merge `682a9196f3726ad49d745b8373c22ffab5366cc3`
-Current main after demo software disk PR #61: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
+Historical main at demo software disk PR #61 merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
 Normative PHASE 3 spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 
 Live Git state wins over recorded SHAs. This document describes the reviewed PHASE 3 machine and records PHASE 4 as the active compatibility/foreign-media candidate. PHASE 4 must not change the reviewed native runtime contract.
@@ -247,3 +249,5 @@ writer / one purpose branch. Human review controls merge and publication.
 ## Update History
 
 - 2026-09-30T14:42:19+09:00 — Codex — PHASE 4 candidate implementation and host-only boundaries documented; reviewed main remains unchanged.
+
+- 2026-09-30T16:53:59+09:00 — Codex — Clarified reviewed main and PHASE 4 candidate; preserved historical PR #61 SHA. No runtime or publication change.

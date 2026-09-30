@@ -68,12 +68,12 @@ Read-only:
 
 ## Architecture
 
-A. CP/M Compatibility Test Layer  
-B. Foreign Container Layer  
-C. Foreign CP/M Profile Layer  
-D. Foreign Filesystem Reader  
-E. Native Bridge Layer  
-F. Host UX / browser acceptance
+- A. CP/M Compatibility Test Layer
+- B. Foreign Container Layer
+- C. Foreign CP/M Profile Layer
+- D. Foreign Filesystem Reader
+- E. Native Bridge Layer
+- F. Host UX / browser acceptance
 
 ## Checkpoints
 
@@ -153,3 +153,7 @@ git diff --check
 - D: all five native builders, capacity preflight and no partial output implemented. Native packing now respects EXM and USER/name grouping.
 - E: I/O host bridge, multi-disk selector, USER filter, file/destination/capacity/build/download/pending SEND implemented.
 - F: generated machine/manual, standard regression, three-size Chromium acceptance and restart synchronization. One final logical commit/PR, then Human Review. No merge/publication.
+
+## Update History
+
+- 2026-09-30T16:53:59+09:00 — Codex — Replaced architecture hard breaks with list items; scope and checkpoint contract unchanged.

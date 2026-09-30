@@ -1,6 +1,9 @@
 # CURRENT SNAPSHOT — SHINO-80
 
-Updated: 2026-09-30 JST
+Updated: 2026-09-30T16:53:59+09:00
+
+Current state: PHASE 4 candidate / PR #64 OPEN / Human Review pending.
+Reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout).
 
 ## Live-state rule
 
@@ -12,7 +15,7 @@ Latest reviewed storage implementation:
 - PR #60 — merged
 - reviewed merge: `682a9196f3726ad49d745b8373c22ffab5366cc3`
 - demo software disk PR #61 — merged
-- current main after demo merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
+- historical main at PR #61 demo merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
 
 ## Current machine
 
@@ -98,3 +101,8 @@ remains `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` until Human merges.
 No foreign direct mount, foreign boot or runtime port/profile changes. Native
 packing handles USER/name and EXM; CLASSIC/demo behavior is regression protected.
 Human controls merge and publication; physical iPhone testing remains a Human gate.
+
+
+## Update History
+
+- 2026-09-30T16:53:59+09:00 — Codex — Clarified current reviewed main and PHASE 4 candidate; retained PR #61 merge as historical evidence. Documentation-only PR #64 update; no merge/publication.
