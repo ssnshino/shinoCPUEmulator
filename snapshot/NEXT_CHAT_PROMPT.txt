@@ -3,24 +3,29 @@ SHINO-80をREADME.mdから正規restart順に再開してください。
 合言葉:
 「ごっごっごっごっ♪」
 
-最初にGitHubをfetchし、main HEAD、purpose branch HEAD、open PR/Issue、active PLAN、Issue #59 comments一覧をlive確認してください。
+最初にGitHubをfetchし、main HEAD、open PR/Issue、active PLANをlive確認してください。
 
-active implementation:
-- Issue #59 PHASE 3 Multi-Profile FDD
-- branch feature/shino80-multi-profile-fdd-phase3-20260929
-- baseline c6e0e041370bd20b2a32fa10c218f4212c051fdf
-- PLAN plan/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md
-- normative spec docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md
-- latest direction comment 5892194891
+latest reviewed storage implementation:
+- Issue #59 / PR #60 — PHASE 3 Multi-Profile FDD
+- reviewed merge: 682a9196f3726ad49d745b8373c22ffab5366cc3
 
-implemented and focused-tested:
-- five native MediaProfiles and exact DPBs
-- 30h–38h controller with independent A:/B: profiles
-- profile-aware CBIOS v3, safe immediate RMW, CLASSIC compatibility
-- exact S80B v3 2HD-JP system disk and strict ROM v2/v3 boot/fallback
-- profile-aware CP/M filesystem and F400h BIOS relocation
-- all-profile raw .s80d IMPORT/EXPORT and profile-preserving shelves
-- Inspector profile/geometry/C/H/S
-- real Chromium all-profile round trips and S80B v3 boot to A>
+latest software addition:
+- PR #61 — reproducible CLASSIC demo software disk
+- main after merge: e48dd446a2c2f6d54f81ce19965598f73f7cb79e
 
-If Checkpoint F is not complete, run the documented full test/build/manual/browser/diff suite, sync hashes and closeout evidence, preserve one logical main-based commit, create the single PHASE 3 PR, then follow the already-authorized unlisted preview integration/deploy/smoke flow. Do not merge the SHINO PR; stop for Human Review only after the app is publicly testable at the unlisted preview URL.
+implemented:
+- five native FDD profiles
+- A/B multi-profile media
+- S80B v3 2HD-JP autoboot
+- profile-aware CBIOS and CP/M filesystem
+- 128/512/1024-byte blocking/deblocking
+- all-profile raw .s80d IMPORT / EXPORT / EJECT / REINSERT
+- demo disk with BALLS.COM / MONX.COM / BEEP.COM / ABOUT.COM
+
+current active implementation PLAN:
+- none
+
+next roadmap candidate:
+- PHASE 4 CP/M compatibility / foreign-media interoperability
+
+Do not start a new phase, merge, or publish without Human authorization.
