@@ -72,19 +72,24 @@
     const installed=[],seen=new Set();
     for(const source of files){
       const normalized=normalizeName(source.name);
-      if(seen.has(normalized.full))throw new RangeError(`Duplicate CP/M filename ${normalized.full}`);seen.add(normalized.full);
+      const fileUser=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
+      if(!Number.isInteger(fileUser)||fileUser<0||fileUser>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);
+      const key=`${fileUser}:${normalized.full}`;
+      if(seen.has(key))throw new RangeError(`Duplicate CP/M filename ${normalized.full} in USER ${fileUser}`);seen.add(key);
       const bytes=bytesOf(source.bytes),padding=source.padding===undefined?CPM_TEXT_EOF:Number(source.padding)&0xFF;
-      const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),extentCount=Math.max(1,Math.ceil(records/CPM_EXTENT_RECORDS));
+      const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),recordsPerEntry=CPM_EXTENT_RECORDS*(layout.dpb.exm+1);
+      const extentCount=Math.max(1,Math.ceil(records/recordsPerEntry));
       const fileBlocks=[];
       for(let extentNumber=0;extentNumber<extentCount;extentNumber++){
         if(directoryIndex>=layout.directoryEntries)throw new RangeError('CP/M directory is full');
-        const firstRecord=extentNumber*CPM_EXTENT_RECORDS;
-        const extentRecords=Math.min(CPM_EXTENT_RECORDS,Math.max(0,records-firstRecord));
+        const firstRecord=extentNumber*recordsPerEntry;
+        const extentRecords=Math.min(recordsPerEntry,Math.max(0,records-firstRecord));
         const blockCount=Math.ceil(extentRecords/(layout.blockSize/CPM_RECORD_SIZE));
         if(nextBlock+blockCount>layout.totalBlocks)throw new RangeError(`CP/M disk is full while adding ${normalized.full}`);
         const entry=new Uint8Array(CPM_DIRECTORY_ENTRY_SIZE),user=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
         if(!Number.isInteger(user)||user<0||user>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);entry[0]=user;
-        writeName(entry,normalized);entry[12]=extentNumber&0x1F;entry[13]=0;entry[14]=(extentNumber>>5)&0x3F;entry[15]=extentRecords;
+        const logicalExtent=extentNumber*(layout.dpb.exm+1)+Math.floor(Math.max(0,extentRecords-1)/CPM_EXTENT_RECORDS);
+        writeName(entry,normalized);entry[12]=logicalExtent&0x1F;entry[13]=0;entry[14]=(logicalExtent>>5)&0x3F;entry[15]=extentRecords===0?0:((extentRecords-1)%CPM_EXTENT_RECORDS)+1;
         for(let index=0;index<blockCount;index++){
           const allocationBlock=nextBlock++;entry[16+index]=allocationBlock;fileBlocks.push(allocationBlock);
           const target=dataOffsetForProfile(profileId,allocationBlock);output.fill(padding,target,target+layout.blockSize);

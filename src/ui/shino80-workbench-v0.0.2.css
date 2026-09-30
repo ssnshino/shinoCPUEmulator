@@ -122,3 +122,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .monitor-maker{font-size:9px}
   .monitor-type{font-size:6px}
 }
+/* Host foreign-media bridge: one selected device, never a new top-level pane. */
+.foreign-bridge{min-width:0;overflow-wrap:anywhere;font-family:var(--font-ui,system-ui,sans-serif)}
+.foreign-bridge p{line-height:1.5;font-size:13px}
+.foreign-control{display:grid;gap:6px;margin:12px 0}
+.foreign-control select,.foreign-bridge button{min-height:44px;max-width:100%;width:100%;color:inherit;background:#18232b;border:1px solid #43505b;border-radius:8px;padding:8px;font:inherit}
+.foreign-status{padding:10px 0;color:#9cd4e5;line-height:1.5}
+.foreign-files{max-height:280px;overflow-y:auto}
+.foreign-file{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 0}
+.foreign-file input{width:24px;height:24px;flex-shrink:0}
+.foreign-file small{display:block;color:#98a8b4}
+.foreign-bridge button:disabled{opacity:.45}

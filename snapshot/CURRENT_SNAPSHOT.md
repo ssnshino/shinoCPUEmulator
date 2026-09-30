@@ -59,6 +59,11 @@ closeout verification and generated artifact hashes are recorded in the active w
 
 ## Current entries
 
+- `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
+- `working-logs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md`
+- `docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
+- `docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
+
 - `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 - `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
 - `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
@@ -72,6 +77,24 @@ Completed PHASE 2 evidence is archived under `plan/history/2026-09-29/` and
 Read README -> AGENTS -> CURRENT -> LAST_RUN -> NEXT_CHAT_PROMPT -> MANIFEST,
 then fetch live Git state. Live Git wins.
 
+## PHASE 4 active
+
+- Issue #63
+- branch: `feature/shino80-phase4-cpm-compat-foreign-media-20260930`
+- baseline: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654`
+- PLAN: `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
+- normative spec: `docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
+- acceptance: `docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
+- state: implemented and verified candidate / Human Review pending
+- PR #64: https://github.com/ssnshino/shinoCPUEmulator/pull/64 (not merged)
+
+PHASE 4 adds CP/M compatibility regression plus a host-side read-only foreign-media bridge. Foreign disks are not directly mounted into A:/B:. Exact v1 profiles are F000 IBM3740-CPM22 and F001 SINCLAIR-PLUS3-CPM22-720. D88 / FDI / DCP/DCU are the v1 container readers.
+
 ## Next
 
-No active implementation PLAN. The next roadmap phase is PHASE 4 CP/M compatibility / foreign-media interoperability. Do not start it without Human selection. Do not publish without Human authorization.
+PHASE 4 source, tests and host bridge are implemented and verified on the purpose branch.
+Read the PHASE 4 worklog for final command receipts and PR state. Reviewed main
+remains `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` until Human merges.
+No foreign direct mount, foreign boot or runtime port/profile changes. Native
+packing handles USER/name and EXM; CLASSIC/demo behavior is regression protected.
+Human controls merge and publication; physical iPhone testing remains a Human gate.

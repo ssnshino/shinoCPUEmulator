@@ -50,10 +50,12 @@ assert.equal(data.machine.systemDiskMagic,'S80B');assert.equal(data.machine.syst
 assert.deepEqual(data.machine.systemDiskFiles.map(file=>file.name),['WELCOME.TXT','HELLO.COM','S80INFO.COM']);
 assert.equal(data.machine.cbiosBytes,657);assert.equal(data.machine.cbiosEnd,0xFC91);
 assert.equal(data.machine.cpmCcpOrigin,0x9400);assert.equal(data.machine.cpmBdosOrigin,0x9C00);assert.equal(data.machine.cpmBdosEntry,0x9C06);
-assert.equal(data.revision,'feature/shino80-multi-profile-fdd-phase3-20260929');
+assert.equal(data.revision,'feature/shino80-phase4-cpm-compat-foreign-media-20260930');
 assert(data.baseline.includes('all-profile .s80d IMPORT / EXPORT'));
 assert(Object.hasOwn(data.sources,'src/app/shino80-workbench-v0.0.2.js'));
 assert(Object.hasOwn(data.sources,'src/devices/shino80/shino80-media-profiles.js'));
+assert(Object.hasOwn(data.sources,'src/host/shino80-foreign-media.js'));
+assert(Object.hasOwn(data.sources,'src/app/shino80-foreign-bridge-ui.js'));
 assert.equal(data.machine.cgBytes.length,4096);
 assert.equal(crypto.createHash('sha256').update(Buffer.from(data.machine.cgBytes)).digest('hex'),data.machine.cgHash);
 const html=build();assert.equal(build(),html,'deterministic output');
@@ -64,6 +66,7 @@ assert(html.includes('Virtual Disk A/B I/O'));assert(html.includes('0=A: / 1=B:'
 assert(html.includes('53 38 30 42 02 02 03 06 00 80 00 FA 80 00 91 02 97'));
 assert(html.includes('CP/Mコマンドリファレンス'));assert(html.includes('href="#cpm"'));
 assert(html.includes('SAVE 1 COPY.COM'));assert(html.includes('REN NEW.COM=OLD.COM'));assert(html.includes('USER 0'));
+assert(html.includes('PHASE 4 Foreign Media Bridge'));assert(html.includes('OPEN FOREIGN IMAGE'));assert(html.includes('SEND TO NATIVE IMPORT A/B'));
 assert(html.includes('<link rel="icon" href="data:,">'));
 assert(!/\/\* MANUAL_(CSS|DATA|JS) \*\//.test(html));
 assert(!/<(?:script[^>]*src|img[^>]*src)=/i.test(html),'standalone assets');

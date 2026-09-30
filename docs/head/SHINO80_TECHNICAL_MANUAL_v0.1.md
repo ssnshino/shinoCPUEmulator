@@ -2,8 +2,8 @@
 
 Status: CURRENT INTEGRATION REFERENCE
 Updated: 2026-09-30 JST
-Reviewed baseline: Issue #56 / PR #57 / main `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
-Active candidate: Issue #59 / PHASE 3 Checkpoints A–E complete
+Reviewed baseline: PHASE 3 and demo disk / main `830f6a30c9b2a22dbdef3b0e400ff863c14e6654`
+Active candidate: Issue #63 / PHASE 4 Foreign Media Bridge
 
 ## Deliverable and authority
 
@@ -43,6 +43,7 @@ Do not hand-edit the generated HTML.
 - pending target EJECT / REINSERT disabled in both UI and handlers
 - CP/M DIR / TYPE / ERA / REN / SAVE / USER and bundled A: programs
 - source hashes and external references
+- PHASE 4 host foreign bridge operation, explicit F000/F001 selection and native pending confirmation
 
 ## Accuracy and implementation boundaries
 
@@ -51,14 +52,14 @@ Do not hand-edit the generated HTML.
 - block controller is PIO, not a mechanical FDD/FDC
 - B: is implemented but is not a boot source in PHASE 1
 - browser-reload persistence and factory-media restore are not implemented
-- foreign/container media autodetection beyond the five native raw profiles is not implemented
+- foreign/container parsing is host-side only; CP/M filesystem identity is never auto-selected from geometry
 - UART and printer remain future work
 - reserved BIOS vectors are not implemented drivers or interrupt handlers
 
 ## Storage roadmap relationship
 
-PHASE 1/2 are the reviewed dual-drive and whole-disk foundations. Issue #59 is
-the active PHASE 3 multi-profile candidate in PR/preview closeout.
+PHASE 1–3 are reviewed native foundations. Issue #63 is the active PHASE 4
+compatibility/foreign bridge candidate; publication remains separate.
 
 See `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`.
 
@@ -68,3 +69,7 @@ Publication in `ssnshino/shinomiya-daihanten-content` is a separate,
 Human-authorized step and records the exact source commit and artifact SHA-256.
 Updating this repository's generated manual does not itself publish the
 Daihanten unlisted reference page.
+
+## Update History
+
+- 2026-09-30T14:42:19+09:00 — Codex — Synchronized manual candidate status and offline Foreign Media Bridge guide.

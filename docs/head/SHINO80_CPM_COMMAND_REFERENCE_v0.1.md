@@ -1,12 +1,12 @@
 # SHINO-80 CP/M 2.2 Command Reference v0.1
 
-Updated: 2026-09-28 JST
+Updated: 2026-09-30 JST
 Scope: SHINO-80 CP/M 2.2 CCP with A: system disk and B: work disk
 
 ## Starting CP/M
 
 1. Power on SHINO-80 and run the machine.
-2. ROM checks the mounted valid S80B v2 **A:** medium only.
+2. ROM checks the mounted valid S80B v2 CLASSIC or v3 2HD-JP **A:** medium only.
 3. `SHINO-80 CP/M 2.2` and then `A>` appear.
 
 UI RESET follows the ROM autoboot path and returns to `A>`. If A: is missing,
@@ -20,7 +20,7 @@ edit the current command line, and output scrolls through the 80×25 DM-80.
 
 ### A: — BOOT / SYSTEM / TOOLS
 
-- S80B v2 system medium
+- default S80B v2 CLASSIC system medium; supported v3 2HD-JP system image
 - CP/M loader / CBIOS / CCP / BDOS
 - starter files: WELCOME.TXT, HELLO.COM, S80INFO.COM
 - only ROM autoboot source
@@ -125,17 +125,34 @@ Mounted media survives RESET, POWER cycling inside the page, and CP/M warm boot.
 It does not survive closing/reloading the browser page yet.
 
 While POWER is OFF, Disk Inspector can `EXPORT DISK IMAGE` for either A/B from
-INSERTED or EJECTED state. The raw `.s80d` file is exactly 256,256 bytes.
+INSERTED or EJECTED state. The raw `.s80d` retains its native profile: CLASSIC
+256,256; 2HD-JP 1,261,568; 2DD-720 737,280; 2HD-AT-1200 1,228,800;
+2HD-1440 1,474,560 bytes.
 `IMPORT / REPLACE DISK IMAGE` reads and validates the whole file, then waits for
 `CONFIRM IMPORT`; until confirmation the existing medium is unchanged. A:
 bootability is checked only by the real ROM on the next boot, not by the host UI.
 While confirmation is pending, EJECT / INSERT EJECTED DISK for that target drive
 is disabled; the other drive remains available except for starting another import.
 
+## Foreign file conversion in the PHASE 4 candidate
+
+Open I/O → FOREIGN MEDIA BRIDGE → OPEN FOREIGN IMAGE. This is a host tool,
+not a CP/M command. Choose a disk, explicitly select a compatible F000/F001
+profile, and select files (including USER areas 0–15). The tool checks destination
+capacity and builds a fresh SHINO data disk with BUILD SHINO DISK. DOWNLOAD
+saves it without changing A/B. SEND TO NATIVE IMPORT requires POWER OFF and
+then the usual drive-specific CONFIRM IMPORT; CANCEL leaves the old medium intact.
+
+Foreign system tracks are not copied. COM execution is not guaranteed just by
+successful conversion: programs using nonstandard BIOS, video or peripherals
+may depend on another machine. Raw extraction preserves complete 128-byte
+records, including trailing 1Ah; this is not byte-length recovery for text files.
+Use a supported system image/CBIOS for mixed-profile guest access. The default
+CLASSIC v2 console remains unchanged.
+
 ## Not included yet
 
 - browser-reload persistence
-- larger WORK media profiles
 - factory restore
 - historical utility binaries such as PIP, STAT, ED, ASM, DDT and LOAD
 - BASIC
@@ -143,3 +160,7 @@ is disabled; the other drive remains available except for starting another impor
 The six built-in command names are confirmed against the included CP/M 2.2 CCP
 source at `third_party/cpm22/ccp.asm`. This is a SHINO-80 operating reference,
 not a complete general CP/M manual.
+
+## Update History
+
+- 2026-09-30T14:42:19+09:00 — Codex — Corrected PHASE 3 size/boot statements and added PHASE 4 candidate bridge operations without adding CCP commands.

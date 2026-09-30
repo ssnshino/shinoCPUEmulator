@@ -20,6 +20,7 @@
   const diskMediaMessage=['',''];
   let diskImportOperation=null;
   let pendingDiskImport=null;
+  const foreignBridge=new globalThis.SHINO_FOREIGN_BRIDGE_UI.ForeignBridgeUI(()=>refreshDevicePresentation(),sendForeignToNativeImport);
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -69,6 +70,7 @@
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
     {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · MULTI-PROFILE',state:'ONLINE'},
     {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · MULTI-PROFILE',state:'ONLINE'},
+    {id:'foreign-bridge',icon:'FB',name:'FOREIGN MEDIA BRIDGE',desc:'READ-ONLY HOST · D88 / FDI / DCP/DCU',state:'HOST'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
@@ -268,6 +270,13 @@
     else {diskA.mountImage(bytes,{drive,profileId:profile.id,writeProtected:pending.writeProtected});driveEjectedMedia[drive]=null;}
     clearPendingImport(`IMPORT COMPLETE: DRIVE ${drive===0?'A':'B'} · ${bytes.length.toLocaleString('en-US')} BYTES`,drive);refreshDevicePresentation();return true;
   }
+  function sendForeignToNativeImport(built,drive){
+    if(ui.powered||pendingDiskImport||diskImportOperation||![0,1].includes(drive))return false;
+    const ownership=diskOwnership(drive),profile=mediaProfileById(built.profileId),bytes=built.bytes;
+    if(ownership==='invalid'||!profile||bytes.length!==profile.imageBytes)return false;
+    pendingDiskImport={drive,ownership,fileName:'SHINO80_FOREIGN_CONVERTED.s80d',bytes:new Uint8Array(bytes),profileId:profile.id,profile,writeProtected:canonicalDiskMedia(drive)?.writeProtected||false};
+    diskMediaMessage[drive]='';refreshDevicePresentation();return true;
+  }
   function cancelDiskImport(drive){
     if(!pendingDiskImport||pendingDiskImport.drive!==drive)return false;
     clearPendingImport('IMPORT CANCELED. EXISTING MEDIUM UNCHANGED.',drive);refreshDevicePresentation();return true;
@@ -295,6 +304,7 @@
     return false;
   }
 
+  const inspectorHtmlCache=new WeakMap();
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent'),compactRoot=queryOne('#compactDeviceInspector');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
@@ -311,10 +321,11 @@
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
       else if(d.id==='disk-a'||d.id==='disk-b')html+=diskInspectorHtml(diskDeviceDrive(d.id));
+      else if(d.id==='foreign-bridge')html+=foreignBridge.html(ui.powered,Boolean(pendingDiskImport||diskImportOperation));
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
-    root.innerHTML=html;
-    if(compactRoot){compactRoot.hidden=ui.view!=='devices';compactRoot.innerHTML=ui.view==='devices'?html:'';}
+    if(inspectorHtmlCache.get(root)!==html){root.innerHTML=html;inspectorHtmlCache.set(root,html);}
+    if(compactRoot){compactRoot.hidden=ui.view!=='devices';const compactHtml=ui.view==='devices'?html:'';if(inspectorHtmlCache.get(compactRoot)!==compactHtml){compactRoot.innerHTML=compactHtml;inspectorHtmlCache.set(compactRoot,compactHtml);}}
   }
 
   function render(){
@@ -511,6 +522,9 @@
     const diskImageInput=queryOne('#diskImageInput');
     diskImageInput.addEventListener('change',()=>{const file=diskImageInput.files&&diskImageInput.files[0];readDiskImportFile(file);});
     diskImageInput.addEventListener('cancel',()=>{clearImportOperation();refreshDevicePresentation();});
+    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-foreign-action]');if(!control)return;if(control.dataset.foreignAction==='open'){const input=queryOne('#foreignImageInput');input.value='';input.click();}else foreignBridge.action(control.dataset.foreignAction);});
+    queryOne('#app').addEventListener('change',event=>{const control=event.target.closest('[data-foreign-field]');if(control)foreignBridge.change(control.dataset.foreignField,control.value);});
+    queryOne('#foreignImageInput').addEventListener('change',event=>foreignBridge.open(event.target.files?.[0]));
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
     queryOne('#stepBtn').addEventListener('click',stepOne);

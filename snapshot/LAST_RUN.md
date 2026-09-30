@@ -101,3 +101,27 @@ Public/unlisted preview publication remains a separate Human-authorized step.
 - PHASE 3 PLAN/worklog moved to history.
 - active implementation PLAN: none.
 - unlisted PHASE 3 preview had already been deployed and Human exercised the application before merge.
+
+
+## PHASE 4 implementation setup — 2026-09-30
+
+- Human selected PHASE 4.
+- Issue #63 created: CP/M Compatibility + Foreign Media Bridge.
+- purpose branch: `feature/shino80-phase4-cpm-compat-foreign-media-20260930`.
+- baseline reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654`.
+- Google Drive design/research/basic/detail/QA/final-candidate work completed before repository setup.
+- PLAN/spec/QA imported as the implementation contract.
+- checkpoint stop gates are disabled; A -> F should proceed continuously unless a real spec ambiguity is found.
+- Codex is implementation worker; specification ownership remains with ChatGPT/Human.
+
+## PHASE 4 implementation candidate — 2026-09-30
+
+- Latest normative clarification: Issue #63 comment #5904064282, branch design head `a227fdf76d22ff06d431a52187f4c4ee1731ce4b`.
+- Human GO authorized continuous implementation; Checkpoints A–E implemented.
+- Host D88/FDI/DCP readers, immutable source, explicit F000/F001 validator and CP/M reader, all native conversion/capacity and I/O bridge UI added.
+- Original COM fixtures execute on real Z80/BDOS/CBIOS; all-profile conversion readback crosses 128-record and 1024-record boundaries.
+- Native builder respects USER/name uniqueness and EXM. CPU, ports, controller, CBIOS, profiles and S80B remain unchanged.
+- Final regression/build/browser/artifact receipts are in the active PHASE 4 worklog.
+- Reviewed main remains unchanged. No merge or publication. Human Review and physical-device QA remain next.
+- Final standard test/build/manual/browser/diff checks PASS; byte-exact hashes are recorded in the worklog. The final PR contains one main-based logical commit.
+- Final PR #64: https://github.com/ssnshino/shinoCPUEmulator/pull/64 — OPEN / Human Review pending. Not merged or published. Live PR head is authoritative.
