@@ -24,6 +24,7 @@ PHASE 1E exhaustively checks:
 - shino80_keyboard_monitor.test.cjs
 - shino80_block_device_v01.test.cjs
 - shino80_cbios_v01.test.cjs
+- shino80_demo_disk.test.cjs
 
 Keyboard / Monitor regression checks the controller FIFO, debugger-safe peek,
 full-address I/O trace, BIOS GETCHAR ABI, and ROM commands `H` / `?` / `C` / CR.
@@ -36,6 +37,12 @@ OTIR/INIR sector round trips.
 CBIOS regression checks the standard 17-entry vector, DPH_A/DPH_B, shared DPB
 and FD00h DIRBUF, independent CSV/ALV, RAM-only console, A/B sector
 READ/WRITE/error paths and the original RAM boot proof.
+
+Demo disk regression rebuilds the committed CLASSIC `.s80d` byte-for-byte,
+boots the standard S80B v2 system, mounts the image as B:, then executes DIR,
+TYPE, BALLS, MONX and BEEP through the real CCP/BDOS/CBIOS/CPU path. It proves
+BALLS movement and `C` stop, MONX D/E/F/M/S/G/Q memory behavior and three
+port-40h beeper triggers.
 
 ## Current artifact QA
 
