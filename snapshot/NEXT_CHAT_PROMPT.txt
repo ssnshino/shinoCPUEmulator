@@ -1,33 +1,9 @@
-SHINO-80をREADME.mdから正規restart順に再開してください。
+SHINO-80をREADME.mdから正規restart順に確認してください。
 
-合言葉:
-「ごっごっごっごっ♪」
+PHASE 4 / Issue #63 / PR #64はHuman承認でmerge済みです。
+reviewed implementation merge: 1ed2a7cb794e124dc39fa22c0be10a3b6b69f271
+PLAN/worklogは*/history/2026-09-30/へarchive済み。active PLANなし。Phase5未着手。
+既存の篠宮大飯店unlisted machine/manual/noticesへの公開もHuman承認済みで、公開証跡はCURRENT/LAST_RUNとcontent repoのlive Actionsを参照してください。
+物理iPhone/EdgeでのPhase4 QAは未確認です。
 
-最初にGitHubをfetchし、main HEAD、purpose branch HEAD、open PR/Issue、active PLAN、Issue #63 comments一覧をlive確認してください。
-
-latest reviewed implementation:
-- PHASE 3 Issue #59 / PR #60
-- PHASE 4 baseline main: 830f6a30c9b2a22dbdef3b0e400ff863c14e6654
-
-active implementation:
-- Issue #63 — PHASE 4 CP/M Compatibility + Foreign Media Bridge
-- branch feature/shino80-phase4-cpm-compat-foreign-media-20260930
-- PLAN plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md
-- spec docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md
-- QA docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md
-- worklog working-logs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md
-
-implementation rule:
-- Codex implements; it does not redesign/re-review the spec.
-- PHASE 4 is implemented as an unmerged candidate. Read latest worklog receipts and fetch live PR state before any further edits.
-- routine checkpoint reporting must not stop implementation.
-- if a real specification ambiguity exists, ask Issue #63 with exact location and required decision.
-- create one final PR at F.
-- never merge or publish without Human authorization.
-
-UI test entry: I/O -> FOREIGN MEDIA BRIDGE -> OPEN FOREIGN IMAGE -> choose disk
--> explicitly select F000/F001 -> select files/destination -> BUILD SHINO DISK
--> DOWNLOAD, or POWER OFF SEND TO NATIVE IMPORT -> target drive CONFIRM/CANCEL.
-No proprietary media is needed: tests/fixtures/shino80_phase4_fixtures.cjs generates
-original D88/FDI/DCP samples. pnpm run test:phase4 verifies source/guest behavior;
-pnpm run test:browser includes three-size foreign bridge and native regressions.
+まずmain HEAD、dirty state、open PR、content masterと最新Actionをlive確認し、記録を上書きしないでください。新機能、Phase5、追加公開/infra変更を勝手に開始しません。

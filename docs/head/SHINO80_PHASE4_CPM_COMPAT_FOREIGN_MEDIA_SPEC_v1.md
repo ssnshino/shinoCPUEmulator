@@ -1,6 +1,6 @@
 # SHINO-80 PHASE 4 — CP/M Compatibility + Foreign Media Bridge Specification v1
 
-Status: NORMATIVE / IMPLEMENTED CANDIDATE / HUMAN REVIEW PENDING
+Status: NORMATIVE / IMPLEMENTED / REVIEWED / MERGED
 Updated: 2026-09-30 JST
 Issue: #63
 Baseline: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654`
@@ -444,3 +444,5 @@ One final PR is created at closeout. Human controls merge. Publication remains s
 - 2026-09-30T14:50:37+09:00 — Codex — Clarified contract implemented on purpose branch. See PHASE 4 worklog for verification and artifact hashes. Normative requirements remain unchanged; merge approval is not implied.
 
 - 2026-09-30T16:53:59+09:00 — Codex — Replaced logical-track formula hard breaks with a list; normative semantics unchanged.
+
+- 2026-09-30 — Codex — PR #64 Human-authorized merge recorded; normative semantics unchanged.

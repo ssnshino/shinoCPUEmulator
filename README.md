@@ -24,13 +24,14 @@
 - latest reviewed storage implementation: Issue #59 / PR #60（merge `682a9196f3726ad49d745b8373c22ffab5366cc3`）
 - completed PHASE 3 contract: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 - demo software disk: PR #61（merge `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`）
-- active implementation Issue: #63 — PHASE 4 CP/M Compatibility + Foreign Media Bridge
+- completed implementation Issue: #63 — PHASE 4 CP/M Compatibility + Foreign Media Bridge
 - purpose branch: `feature/shino80-phase4-cpm-compat-foreign-media-20260930`
-- active PLAN: `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
+- completed PLAN: `plan/history/2026-09-30/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
 - normative PHASE 4 spec: `docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
 - PHASE 4 acceptance: `docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
-- current status: PHASE 4 implemented and verified candidate / Human Review pending
-- candidate PR: [#64](https://github.com/ssnshino/shinoCPUEmulator/pull/64) — not merged / not published
+- current status: PHASE 4 reviewed and merged / no active implementation PLAN
+- merged PR: [#64](https://github.com/ssnshino/shinoCPUEmulator/pull/64) — implementation merge `1ed2a7cb794e124dc39fa22c0be10a3b6b69f271`
+- publication: existing unlisted preview refreshed and verified; content PR #16/#17, deployed master `c112d2604a1c03982fc12427701be9f8f8f74a7e`, Action `36688934009` SUCCESS. Physical iPhone/Edge PHASE 4 QA remains unverified.
 - development source of truth: `src/`
 - generated standalone machine: `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
 - generated standalone manual: `deploy/shino80_technical_manual_v0.1.html`
@@ -58,7 +59,7 @@
   - `HELLO.COM`
   - `S80INFO.COM`
 - CP/M CCP操作: `DIR`, `TYPE`, `SAVE`, `ERA`, `REN`, `USER`とCOM実行
-- PHASE 4 candidate: I/O → FOREIGN MEDIA BRIDGEでD88 / FDI / DCP/DCUを読み取り専用解析
+- PHASE 4: I/O → FOREIGN MEDIA BRIDGEでD88 / FDI / DCP/DCUを読み取り専用解析
 - F000/F001の明示選択・全required sector検証・USER別ファイル選択・全5 native媒体への変換
 - BUILD / DOWNLOADはA/B不変。SENDは既存native pending IMPORTへ入り、CONFIRMまで交換しない
 - non-destructive cursor、Bus-visible one-bit BEEP
@@ -106,8 +107,8 @@ pnpm run test:demo-disk
 - PHASE 3 normative implementation contract: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 - PHASE 4 normative implementation contract: `docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
 - PHASE 4 acceptance: `docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
-- active PHASE 4 PLAN: `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
-- active PHASE 4 worklog: `working-logs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md`
+- completed PHASE 4 PLAN: `plan/history/2026-09-30/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
+- completed PHASE 4 worklog: `working-logs/history/2026-09-30/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md`
 - CP/M command reference: `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
 - Technical Manual contract: `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
 - source/deploy layout: `docs/head/SHINO_80_SOURCE_DEPLOY_LAYOUT_STANDARD_v0.1.md`
@@ -116,7 +117,7 @@ pnpm run test:demo-disk
 - long-term lab vision: `docs/head/VIRTUAL_MICROCOMPUTER_LAB_VISION_v0.1.md`
 - demo software disk: `docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`
 
-`plan/head/`には実行中のPLANだけを置く。現在のactive implementation PLANは`plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`。PHASE 3 PLAN/worklogは`*/history/2026-09-30/`へ閉じている。
+`plan/head/`には実行中のPLANだけを置く。現在active implementation PLANはない。PHASE 4 PLAN/worklogは`*/history/2026-09-30/`へ閉じている。PHASE 3 PLAN/worklogは`*/history/2026-09-30/`へ閉じている。
 
 ## 開発と検証
 
@@ -157,7 +158,7 @@ pnpm run test:browser
 
 Disk SubsystemはPHASE 0–5で完成ラインを固定している。
 
-1. PHASE 4 candidate: CP/M compatibility + foreign bridge。Human Review後にmerge
+1. PHASE 4 completed: CP/M compatibility + foreign bridge。PR #64 merged
 2. PHASE 5: daily development environment
 3. PHASE 5以降: Advanced Storage
 
@@ -185,3 +186,5 @@ AIは`main`へ直接pushせず、Humanの明示指示なしにPRをmergeしな�
 ## Update History
 
 - 2026-09-30T14:42:19+09:00 — Codex — Issue #63 clarified contract implemented as a review candidate; restart entries and known runtime retained. Publication is not authorized by this update.
+
+- 2026-09-30 — Codex — Human-authorized PR #64 merge closeout; PHASE 4 PLAN/worklog archived. PHASE 5 remains unstarted; existing unlisted publication is separately tracked in content repo.
