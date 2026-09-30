@@ -129,6 +129,17 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .monitor-maker{font-size:9px}
   .monitor-type{font-size:6px}
 }
+/* Host foreign-media bridge: one selected device, never a new top-level pane. */
+.foreign-bridge{min-width:0;overflow-wrap:anywhere;font-family:var(--font-ui,system-ui,sans-serif)}
+.foreign-bridge p{line-height:1.5;font-size:13px}
+.foreign-control{display:grid;gap:6px;margin:12px 0}
+.foreign-control select,.foreign-bridge button{min-height:44px;max-width:100%;width:100%;color:inherit;background:#18232b;border:1px solid #43505b;border-radius:8px;padding:8px;font:inherit}
+.foreign-status{padding:10px 0;color:#9cd4e5;line-height:1.5}
+.foreign-files{max-height:280px;overflow-y:auto}
+.foreign-file{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 0}
+.foreign-file input{width:24px;height:24px;flex-shrink:0}
+.foreign-file small{display:block;color:#98a8b4}
+.foreign-bridge button:disabled{opacity:.45}
 </style>
 </head>
 <body>
@@ -266,6 +277,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   </section>
 </div>
 <input class="disk-image-input" id="diskImageInput" type="file" accept=".s80d,application/octet-stream" aria-label="Import SHINO-80 disk image">
+<input class="disk-image-input" id="foreignImageInput" type="file" aria-label="Open foreign disk image">
 <textarea class="keyboard-capture" id="keyboardCapture" aria-label="SHINO-80 keyboard input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
 <script>(function(root,factory){
   const api=factory();
@@ -1553,19 +1565,24 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const installed=[],seen=new Set();
     for(const source of files){
       const normalized=normalizeName(source.name);
-      if(seen.has(normalized.full))throw new RangeError(`Duplicate CP/M filename ${normalized.full}`);seen.add(normalized.full);
+      const fileUser=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
+      if(!Number.isInteger(fileUser)||fileUser<0||fileUser>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);
+      const key=`${fileUser}:${normalized.full}`;
+      if(seen.has(key))throw new RangeError(`Duplicate CP/M filename ${normalized.full} in USER ${fileUser}`);seen.add(key);
       const bytes=bytesOf(source.bytes),padding=source.padding===undefined?CPM_TEXT_EOF:Number(source.padding)&0xFF;
-      const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),extentCount=Math.max(1,Math.ceil(records/CPM_EXTENT_RECORDS));
+      const records=Math.ceil(bytes.length/CPM_RECORD_SIZE),recordsPerEntry=CPM_EXTENT_RECORDS*(layout.dpb.exm+1);
+      const extentCount=Math.max(1,Math.ceil(records/recordsPerEntry));
       const fileBlocks=[];
       for(let extentNumber=0;extentNumber<extentCount;extentNumber++){
         if(directoryIndex>=layout.directoryEntries)throw new RangeError('CP/M directory is full');
-        const firstRecord=extentNumber*CPM_EXTENT_RECORDS;
-        const extentRecords=Math.min(CPM_EXTENT_RECORDS,Math.max(0,records-firstRecord));
+        const firstRecord=extentNumber*recordsPerEntry;
+        const extentRecords=Math.min(recordsPerEntry,Math.max(0,records-firstRecord));
         const blockCount=Math.ceil(extentRecords/(layout.blockSize/CPM_RECORD_SIZE));
         if(nextBlock+blockCount>layout.totalBlocks)throw new RangeError(`CP/M disk is full while adding ${normalized.full}`);
         const entry=new Uint8Array(CPM_DIRECTORY_ENTRY_SIZE),user=source.user===undefined?CPM_USER_DEFAULT:Number(source.user);
         if(!Number.isInteger(user)||user<0||user>15)throw new RangeError(`Invalid CP/M user for ${normalized.full}`);entry[0]=user;
-        writeName(entry,normalized);entry[12]=extentNumber&0x1F;entry[13]=0;entry[14]=(extentNumber>>5)&0x3F;entry[15]=extentRecords;
+        const logicalExtent=extentNumber*(layout.dpb.exm+1)+Math.floor(Math.max(0,extentRecords-1)/CPM_EXTENT_RECORDS);
+        writeName(entry,normalized);entry[12]=logicalExtent&0x1F;entry[13]=0;entry[14]=(logicalExtent>>5)&0x3F;entry[15]=extentRecords===0?0:((extentRecords-1)%CPM_EXTENT_RECORDS)+1;
         for(let index=0;index<blockCount;index++){
           const allocationBlock=nextBlock++;entry[16+index]=allocationBlock;fileBlocks.push(allocationBlock);
           const target=dataOffsetForProfile(profileId,allocationBlock);output.fill(padding,target,target+layout.blockSize);
@@ -1601,6 +1618,253 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     filesystemLayout,normalizeName,dataOffset,dataOffsetForProfile,buildFilesystem,buildFilesystemForProfile,readDirectory,readDirectoryForProfile
   };
 });
+</script>
+<script>(function(root,factory){
+  const node=typeof module==='object'&&module.exports;
+  const api=factory(node?require('../firmware/shino80/shino80-cpm-filesystem.js'):root.SHINO_CPM_FILESYSTEM,node?require('../devices/shino80/shino80-media-profiles.js'):root.SHINO_MEDIA_PROFILES);
+  if(node)module.exports=api;
+  root.SHINO_FOREIGN_MEDIA=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(fs,native){
+  'use strict';
+  const fail=(code,message)=>{const error=new Error(`${code}: ${message}`);error.code=code;throw error;};
+  const frozen=list=>Object.freeze(list);
+  // Typed arrays cannot be frozen. Every public byte accessor returns a copy.
+  function bytesProperty(object,key,bytes){const copy=new Uint8Array(bytes);Object.defineProperty(object,key,{enumerable:true,get:()=>new Uint8Array(copy)});return object;}
+  function sector(c,h,r,n,bytes,offset,status=0){return Object.freeze(bytesProperty({cylinder:c,head:h,sectorId:r,sizeCode:n,byteLength:bytes.length,status,sourceOffset:offset},'data',bytes));}
+  function track(c,h,ordinal,sectors){return Object.freeze({cylinder:c,head:h,ordinal,sectors:frozen(sectors)});}
+  function disk(index,name,writeProtected,tracks,warnings=[],comment='',metadata={}){return Object.freeze({index,name,writeProtected,comment,...metadata,tracks:frozen(tracks),structuralWarnings:frozen(warnings)});}
+  function container(type,fileName,bytes,disks){return Object.freeze(bytesProperty({type,fileName,sourceByteLength:bytes.length,disks:frozen(disks),warnings:frozen([])},'sourceBytes',bytes));}
+  function input(value){if(!(value instanceof Uint8Array))fail('INVALID_INPUT','Expected Uint8Array');return new Uint8Array(value);}
+  function bounds(bytes,offset,length){if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(length)||offset<0||length<0||offset+length>bytes.length)fail('MALFORMED_CONTAINER','Out-of-range header/payload');}
+  function u16(bytes,offset){bounds(bytes,offset,2);return bytes[offset]|bytes[offset+1]<<8;}
+  function u32(bytes,offset){bounds(bytes,offset,4);return new DataView(bytes.buffer,bytes.byteOffset+offset,4).getUint32(0,true);}
+  const sizeCode=size=>Math.log2(size/128);
+  const validSize=size=>[128,256,512,1024,2048,4096,8192].includes(size);
+  function linear(bytes,start,cylinders,heads,spt,bps,present=null){
+    const tracks=[];let offset=start;
+    for(let i=0;i<cylinders*heads;i++){
+      if(present&&!present(i))continue;
+      const c=Math.floor(i/heads),h=i%heads,size=typeof bps==='function'?bps(i):bps,sectors=[];
+      for(let r=1;r<=spt;r++){bounds(bytes,offset,size);sectors.push(sector(c,h,r,sizeCode(size),bytes.slice(offset,offset+size),offset));offset+=size;}
+      tracks.push(track(c,h,i,sectors));
+    }
+    if(offset!==bytes.length)fail('MALFORMED_CONTAINER','Trailing or missing payload');
+    return tracks;
+  }
+  function parseFdi(value,fileName=''){
+    const bytes=input(value);bounds(bytes,0,32);
+    const header=u32(bytes,8),data=u32(bytes,12),bps=u32(bytes,16),spt=u32(bytes,20),heads=u32(bytes,24),cylinders=u32(bytes,28);
+    if(header<32||header>bytes.length||header+data!==bytes.length||!validSize(bps)||spt<1||spt>255||heads<1||heads>2||cylinders<1||cylinders>256||cylinders*heads*spt*bps!==data)fail('MALFORMED_CONTAINER','Invalid FDI geometry/header');
+    return container('FDI',fileName,bytes,[disk(0,'FDI disk',false,linear(bytes,header,cylinders,heads,spt,bps),[],'',{fddType:u32(bytes,4),reserved:u32(bytes,0),diskByteLength:data})]);
+  }
+  const DCP_MEDIA=Object.freeze({1:[77,2,8,1024],2:[80,2,15,512],3:[80,2,18,512],4:[80,2,8,512],5:[80,2,9,512],8:[80,2,9,1024],17:[77,2,26,256],25:[80,2,16,256],33:[80,2,26,256]});
+  Object.values(DCP_MEDIA).forEach(Object.freeze);
+  function parseDcp(value,fileName=''){
+    const bytes=input(value);bounds(bytes,0,162);
+    const geometry=DCP_MEDIA[bytes[0]];if(!geometry)fail('UNSUPPORTED_CONTAINER','Unknown DCP/DCU media type');
+    const [c,h,s,b]=geometry,vector=bytes.slice(1,162),sentinel=vector.lastIndexOf(1);
+    if(vector.some(v=>v!==0&&v!==1)||sentinel<0||sentinel>c*h)fail('MALFORMED_CONTAINER','Invalid DCP/DCU sentinel/vector');
+    const bps=i=>bytes[0]===17&&i===0?128:b;
+    let full=0,sparse=0;for(let i=0;i<c*h;i++){full+=s*bps(i);if(i<sentinel&&vector[i]===1)sparse+=s*bps(i);}
+    const isFull=bytes.length===162+full;
+    if(!isFull&&bytes.length!==162+sparse)fail('MALFORMED_CONTAINER','DCP/DCU payload size mismatch');
+    const tracks=linear(bytes,162,c,h,s,bps,isFull?null:i=>i<sentinel&&vector[i]===1);
+    return container('DCP/DCU',fileName,bytes,[disk(0,'DCP/DCU disk',false,tracks,isFull?[]:['SPARSE_LAYOUT: absent tracks remain absent'],'',{mediaType:bytes[0],layout:isFull?'FULL':'SPARSE',diskByteLength:bytes.length-162})]);
+  }
+  function parseD88(value,fileName=''){
+    const bytes=input(value),disks=[];let base=0;
+    while(base<bytes.length){
+      bounds(bytes,base,0x2B0);const length=u32(bytes,base+0x1C);
+      if(length<0x2B0||base+length>bytes.length)fail('MALFORMED_CONTAINER','D88 disk size');
+      const offsets=[];for(let i=0;i<164;i++){const offset=u32(bytes,base+0x20+i*4);if(offset){if(offset<0x2B0||offset>=length)fail('MALFORMED_CONTAINER','D88 track offset');offsets.push({offset,ordinal:i});}}
+      offsets.sort((a,b)=>a.offset-b.offset);
+      if(new Set(offsets.map(t=>t.offset)).size!==offsets.length)fail('MALFORMED_CONTAINER','D88 overlapping tracks');
+      const tracks=[],warnings=[];
+      for(let ti=0;ti<offsets.length;ti++){
+        const item=offsets[ti],end=base+(offsets[ti+1]?.offset??length);let pos=base+item.offset;
+        bounds(bytes,pos,16);const count=u16(bytes,pos+4);if(!count||count>255)fail('MALFORMED_CONTAINER','D88 impossible sector count');
+        const sectors=[],ids=new Set();let c=null,h=null;
+        for(let si=0;si<count;si++){
+          if(pos+16>end)fail('MALFORMED_CONTAINER','D88 truncated sector header');
+          const sc=bytes[pos],sh=bytes[pos+1],r=bytes[pos+2],n=bytes[pos+3],size=u16(bytes,pos+14),status=bytes[pos+8]||bytes[pos+7];
+          if(u16(bytes,pos+4)!==count||!size||pos+16+size>end)fail('MALFORMED_CONTAINER','D88 count/payload bounds');
+          if(c===null){c=sc;h=sh;}else if(c!==sc||h!==sh)warnings.push('INCONSISTENT_CH');
+          if(ids.has(r))warnings.push('DUPLICATE_SECTOR_ID');ids.add(r);
+          if(n>6||size!==128*2**n)warnings.push('VARIABLE_SECTOR_SIZE');
+          if(status)warnings.push('SECTOR_STATUS_OR_DELETED');
+          sectors.push(sector(sc,sh,r,n,bytes.slice(pos+16,pos+16+size),pos+16,status));pos+=16+size;
+        }
+        if(pos!==end)fail('MALFORMED_CONTAINER','D88 overlapping/trailing track payload');
+        if(new Set(sectors.map(s=>s.byteLength)).size>1)warnings.push('VARIABLE_SECTOR_SIZE');
+        if(Array.from({length:count},(_,i)=>i+1).some(id=>!ids.has(id)))warnings.push('NONCONTIGUOUS_SECTOR_IDS');
+        tracks.push(track(c,h,item.ordinal,sectors));
+      }
+      tracks.sort((a,b)=>a.ordinal-b.ordinal);
+      const name=String.fromCharCode(...bytes.slice(base,base+17)).split('\0')[0];
+      disks.push(disk(disks.length,name||`Disk ${disks.length+1}`,bytes[base+0x1A]!==0,tracks,[...new Set(warnings)],'',{mediaType:bytes[base+0x1B],diskByteLength:length}));base+=length;
+    }
+    if(!disks.length)fail('MALFORMED_CONTAINER','Empty D88');
+    return container('D88',fileName,bytes,disks);
+  }
+  function parse(value,fileName=''){
+    const bytes=input(value),matches=[];
+    for(const parser of [parseD88,parseFdi,parseDcp]){try{matches.push(parser(bytes,fileName));}catch(error){if(!error.code)throw error;}}
+    if(!matches.length)fail('UNSUPPORTED_CONTAINER','No structurally valid D88, FDI or DCP/DCU reader');
+    if(matches.length>1)fail('AMBIGUOUS_CONTAINER','More than one structural reader matched');
+    return matches[0];
+  }
+  const XLT=frozen([1,7,13,19,25,5,11,17,23,3,9,15,21,2,8,14,20,26,6,12,18,24,4,10,16,22]);
+  function descriptor(id,name,cylinders,heads,spt,bps,dpb,pointerBytes,xlt){return Object.freeze({id,name,cylinders,heads,sectorsPerTrack:spt,sectorBytes:bps,dpb:Object.freeze(dpb),pointerBytes,xlt:frozen(xlt),blockSize:128*2**dpb.bsh});}
+  const DESCRIPTORS=frozen([
+    descriptor('F000','IBM3740-CPM22',77,1,26,128,{spt:26,bsh:3,blm:7,exm:0,dsm:242,drm:63,al0:192,al1:0,cks:16,off:2},1,XLT),
+    descriptor('F001','SINCLAIR-PLUS3-CPM22-720',80,2,9,512,{spt:36,bsh:4,blm:15,exm:0,dsm:356,drm:255,al0:240,al1:0,cks:64,off:1},2,Array.from({length:9},(_,i)=>i+1))
+  ]);
+  function validate(disk,id){
+    const profile=DESCRIPTORS.find(p=>p.id===id);if(!profile)fail('UNKNOWN_CPM_PROFILE','Explicit F000/F001 selection required');
+    const total=profile.cylinders*profile.heads;
+    if(!disk||disk.tracks.length!==total)fail('PROFILE_MISMATCH','Required track count');
+    for(let i=0;i<total;i++){
+      const c=Math.floor(i/profile.heads),h=i%profile.heads,t=disk.tracks[i];
+      if(t.cylinder!==c||t.head!==h||t.sectors.length!==profile.sectorsPerTrack)fail('PROFILE_MISMATCH','Track order/sector count');
+      const ids=new Set();for(const s of t.sectors){
+        if(s.cylinder!==c||s.head!==h||s.sectorId<1||s.sectorId>profile.sectorsPerTrack||ids.has(s.sectorId)||s.byteLength!==profile.sectorBytes||s.sizeCode!==sizeCode(profile.sectorBytes)||s.status)fail('PROFILE_MISMATCH','Unsafe required sector');ids.add(s.sectorId);
+      }
+    }
+    return profile;
+  }
+  function candidates(disk){return frozen(DESCRIPTORS.filter(p=>{try{validate(disk,p.id);return true;}catch(_){return false;}}).map(p=>p.id));}
+  function reader(disk,id){
+    const p=validate(disk,id),maps=disk.tracks.map(t=>new Map(t.sectors.map(s=>[s.sectorId,s.data])));
+    const recordsPerSector=p.sectorBytes/128;
+    return {profile:p,record(index){
+      if(!Number.isInteger(index)||index<0||index>=maps.length*p.dpb.spt)fail('MALFORMED_FILESYSTEM','Record out of range');
+      const logicalTrack=Math.floor(index/p.dpb.spt),within=index%p.dpb.spt,physical=Math.floor(within/recordsPerSector),sectorId=p.xlt[physical],offset=(within%recordsPerSector)*128;
+      const data=maps[logicalTrack].get(sectorId);if(!data||offset+128>data.length)fail('MALFORMED_FILESYSTEM','Missing logical record');
+      return data.slice(offset,offset+128);
+    }};
+  }
+  function readFilesystem(disk,id){
+    const read=reader(disk,id),p=read.profile,start=p.dpb.off*p.dpb.spt,dir=new Uint8Array((p.dpb.drm+1)*32);
+    for(let i=0;i<dir.length/128;i++)dir.set(read.record(start+i),i*128);
+    const groups=new Map(),used=new Set(),directoryBlocks=Math.ceil(dir.length/p.blockSize);
+    for(let i=0;i<=p.dpb.drm;i++){
+      const e=dir.slice(i*32,i*32+32);if(e[0]===0xE5)continue;
+      if(e[0]>15||e[15]>128||e[13]!==0||e[14]>63)fail('MALFORMED_FILESYSTEM',`Directory entry ${i}: USER/RC/S1/S2`);
+      const part=(start,length)=>String.fromCharCode(...e.slice(start,start+length).map(v=>v&127)).trimEnd();
+      let name;try{name=fs.normalizeName(part(1,8)+(part(9,3)?'.'+part(9,3):'')).full;}catch(_){fail('MALFORMED_FILESYSTEM',`Directory entry ${i}: filename`);}
+      const extent=(e[14]<<5)|(e[12]&31),blocks=[],needed=Math.ceil(e[15]*128/p.blockSize);
+      for(let ai=0;ai<16/p.pointerBytes;ai++){
+        const number=p.pointerBytes===1?e[16+ai]:u16(e,16+ai*2);
+        if(number>p.dpb.dsm)fail('MALFORMED_FILESYSTEM','Allocation exceeds DSM');
+        if(ai<needed){if(number<directoryBlocks||used.has(number))fail('MALFORMED_FILESYSTEM','Missing/reserved/crosslinked allocation');used.add(number);blocks.push(number);}
+        else if(number!==0)fail('MALFORMED_FILESYSTEM','Unexpected allocation after RC');
+      }
+      const key=`${e[0]}:${name}`,group=groups.get(key)||{key,user:e[0],name,extents:[]};
+      group.extents.push({extent,records:e[15],blocks});groups.set(key,group);
+    }
+    const files=[];
+    for(const group of groups.values()){
+      group.extents.sort((a,b)=>a.extent-b.extent);let records=0;
+      group.extents.forEach((e,i)=>{if(e.extent!==i||(i<group.extents.length-1&&e.records!==128))fail('MALFORMED_FILESYSTEM',`Duplicate/gapped/short extent: ${group.key}`);records+=e.records;});
+      const bytes=new Uint8Array(records*128);let offset=0;
+      for(const e of group.extents){let remaining=e.records;for(const b of e.blocks){for(let r=0;r<p.blockSize/128&&remaining>0;r++,remaining--){bytes.set(read.record(start+b*p.blockSize/128+r),offset);offset+=128;}}}
+      files.push(Object.freeze(bytesProperty({key:group.key,user:group.user,name:group.name,records,extents:group.extents.length},'bytes',bytes)));
+    }
+    return Object.freeze({profile:p,files:frozen(files),directoryEntries:[...groups.values()].reduce((n,g)=>n+g.extents.length,0)});
+  }
+  function capacity(files,profileId){
+    const layout=fs.filesystemLayout(profileId);let records=0,extents=0,entries=0,blocks=0;const keys=new Set();
+    for(const file of files){
+      const name=fs.normalizeName(file.name).full,user=file.user;
+      if(!Number.isInteger(user)||user<0||user>15||keys.has(`${user}:${name}`))fail('INVALID_SELECTION','Duplicate filename/USER');keys.add(`${user}:${name}`);
+      const bytes=file.bytes;if(!(bytes instanceof Uint8Array)||bytes.length%128)fail('INVALID_SELECTION','Raw files must contain whole CP/M records');
+      const count=bytes.length/128;records+=count;extents+=Math.max(1,Math.ceil(count/128));
+      entries+=Math.max(1,Math.ceil(count/(128*(layout.dpb.exm+1))));
+      for(let first=0;first<count;first+=128)blocks+=Math.ceil(Math.min(128,count-first)*128/layout.blockSize);
+    }
+    const maxBlocks=layout.totalBlocks-layout.firstDataBlock,ok=entries<=layout.directoryEntries&&blocks<=maxBlocks;
+    return Object.freeze({ok,files:files.length,records,extents,directoryEntries:entries,blocks,maxDirectoryEntries:layout.directoryEntries,maxBlocks,profileId});
+  }
+  function buildNative(files,profileId){
+    if(!files.length)fail('INVALID_SELECTION','Select at least one file');
+    const summary=capacity(files,profileId);if(!summary.ok)fail('CAPACITY_EXCEEDED','No partial conversion is produced');
+    const result=fs.buildFilesystemForProfile(native.createBlankMediaImage(profileId),profileId,files.map(f=>({name:f.name,user:f.user,bytes:f.bytes,padding:0})));
+    return Object.freeze(bytesProperty({profileId,summary},'bytes',result.image));
+  }
+  return {parse,parseD88,parseFdi,parseDcp,DESCRIPTORS,DCP_MEDIA,candidates,validate,reader,readFilesystem,capacity,buildNative};
+});
+</script>
+<script>(function(root){
+  'use strict';
+  const media=root.SHINO_FOREIGN_MEDIA,native=root.SHINO_MEDIA_PROFILES;
+  const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  class ForeignBridgeUI{
+    constructor(refresh,send){this.refresh=refresh;this.send=send;this.state='IDLE';this.generation=0;this.container=null;this.diskIndex=0;this.filesystem=null;this.selected=new Set();this.user='all';this.destination=0;this.built=null;this.message='';}
+    async open(file){
+      if(!file)return;
+      const generation=++this.generation;this.state='READING';this.container=null;this.filesystem=null;this.built=null;this.selected.clear();this.message='';this.refresh();
+      try{const bytes=new Uint8Array(await file.arrayBuffer());if(generation!==this.generation)return;this.container=media.parse(bytes,file.name);this.diskIndex=0;this.state='PARSED';}
+      catch(error){if(generation!==this.generation)return;this.state='FAILED';this.message=error.message;}
+      this.refresh();
+    }
+    get disk(){return this.container?.disks[this.diskIndex];}
+    get files(){return this.filesystem?.files.filter(f=>this.selected.has(f.key))||[];}
+    update(){this.built=null;const summary=media.capacity(this.files,this.destination);this.state=this.files.length&&summary.ok?'READY_TO_BUILD':'SELECTING';}
+    change(field,value){
+      try{
+        this.message='';
+        if(field==='disk'){this.diskIndex=Number(value);this.filesystem=null;this.selected.clear();this.built=null;this.state='PARSED';}
+        if(field==='profile'){
+          this.filesystem=null;this.selected.clear();this.built=null;
+          if(!value)this.state='PARSED';else{this.filesystem=media.readFilesystem(this.disk,value);this.state='PROFILE_MATCHED';}
+        }
+        if(field==='user')this.user=value;
+        if(field==='destination'){this.destination=Number(value);if(this.filesystem)this.update();}
+        if(field==='file'){if(this.selected.has(value))this.selected.delete(value);else this.selected.add(value);this.update();}
+      }catch(error){this.state='FAILED';this.message=error.message;}
+      this.refresh();
+    }
+    action(action){
+      try{
+        if(action==='build'){this.built=media.buildNative(this.files,this.destination);this.state='BUILT';this.message='New native data disk built. Source and A:/B: unchanged.';}
+        if(action==='download'&&this.built){
+          const url=URL.createObjectURL(new Blob([this.built.bytes],{type:'application/octet-stream'})),a=document.createElement('a');a.href=url;a.download='SHINO80_FOREIGN_CONVERTED.s80d';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        }
+        if(action.startsWith('send-')&&this.built){const drive=action==='send-a'?0:1;this.message=this.send(this.built,drive)?'Native IMPORT pending. Select that drive to CONFIRM or CANCEL.':'SEND rejected: POWER must be OFF and no other native IMPORT may be active.';}
+      }catch(error){this.state='FAILED';this.message=error.message;this.built=null;}
+      this.refresh();
+    }
+    html(powered,busy){
+      const select=(field,label,options)=>`<label class="foreign-control">${label}<select data-foreign-field="${field}">${options}</select></label>`;
+      const option=(value,label,current)=>`<option value="${escape(value)}"${String(value)===String(current)?' selected':''}>${escape(label)}</option>`;
+      let html=`<section class="foreign-bridge"><p>Read-only host bridge. No foreign boot or direct guest mount.</p><div role="status" class="foreign-status">${escape(this.state)}${this.message?' — '+escape(this.message):''}</div><button type="button" data-foreign-action="open"${this.state==='READING'?' disabled':''}>OPEN FOREIGN IMAGE</button>`;
+      if(this.container){
+        html+=`<p>${escape(this.container.fileName)} · ${this.container.type} · ${this.container.sourceByteLength.toLocaleString('en-US')} bytes</p>`;
+        html+=select('disk','Disk',this.container.disks.map(d=>option(d.index,`${d.index+1}: ${d.name}`,this.diskIndex)).join(''));
+        html+=`<p>${this.disk.tracks.length} stored tracks · ${this.disk.tracks.reduce((n,t)=>n+t.sectors.length,0)} sectors · source write protect ${this.disk.writeProtected?'ON':'OFF'}</p>`;
+        html+=`<p>Sector bytes: ${[...new Set(this.disk.tracks.flatMap(t=>t.sectors.map(s=>s.byteLength)))].join(' / ')||'none'} · media ${this.disk.mediaType??this.disk.fddType??'n/a'}${this.disk.layout?' · '+this.disk.layout:''}</p>`;
+        html+=`<p>Warnings: ${escape(this.disk.structuralWarnings.join(', ')||'none')}</p>`;
+        const candidates=media.candidates(this.disk);
+        html+=select('profile','CP/M profile — explicit selection required',option('','Select a profile (not automatic)',this.filesystem?.profile.id||'')+candidates.map(id=>option(id,`${id} ${media.DESCRIPTORS.find(p=>p.id===id).name}`,this.filesystem?.profile.id)).join(''));
+        if(!candidates.length)html+='<p>UNKNOWN_CPM_PROFILE — container inspection only.</p>';
+      }
+      if(this.filesystem){
+        html+=select('user','USER filter',option('all','All users',this.user)+Array.from({length:16},(_,i)=>option(i,`USER ${i}`,this.user)).join(''));
+        html+='<div class="foreign-files" aria-label="Foreign files">';
+        for(const f of this.filesystem.files.filter(f=>this.user==='all'||f.user===Number(this.user)))html+=`<label class="foreign-file"><input type="checkbox" data-foreign-field="file" value="${escape(f.key)}"${this.selected.has(f.key)?' checked':''}><span>USER ${f.user} · ${escape(f.name)}<small>${f.records} records · ${f.extents} extents</small></span></label>`;
+        html+='</div>';
+        if(!this.filesystem.files.length)html+='<p>No files.</p>';
+        html+=select('destination','SHINO destination',native.MEDIA_PROFILES.map(p=>option(p.id,p.name,this.destination)).join(''));
+        const capacity=media.capacity(this.files,this.destination);
+        html+=`<p class="foreign-capacity">${capacity.files} selected · ${capacity.records} records · ${capacity.extents} extents<br>Directory ${capacity.directoryEntries}/${capacity.maxDirectoryEntries} · blocks ${capacity.blocks}/${capacity.maxBlocks}<br>${capacity.ok?'CAPACITY OK':'CAPACITY EXCEEDED — BUILD disabled'}</p>`;
+        html+=`<button type="button" data-foreign-action="build"${capacity.ok&&capacity.files?'':' disabled'}>BUILD SHINO DISK</button>`;
+      }
+      if(this.built)html+=`<div class="disk-actions"><button type="button" data-foreign-action="download">DOWNLOAD .s80d</button><button type="button" data-foreign-action="send-a"${powered||busy?' disabled':''}>SEND TO NATIVE IMPORT A</button><button type="button" data-foreign-action="send-b"${powered||busy?' disabled':''}>SEND TO NATIVE IMPORT B</button></div>`;
+      return html+'</section>';
+    }
+  }
+  root.SHINO_FOREIGN_BRIDGE_UI={ForeignBridgeUI};
+})(globalThis);
 </script>
 <script>(function(root,factory){
   const api=factory();
@@ -4013,6 +4277,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   const diskMediaMessage=['',''];
   let diskImportOperation=null;
   let pendingDiskImport=null;
+  const foreignBridge=new globalThis.SHINO_FOREIGN_BRIDGE_UI.ForeignBridgeUI(()=>refreshDevicePresentation(),sendForeignToNativeImport);
   const systemRom=buildSystemRom();
   const memory=new Shino80Memory();memory.loadFirmware(systemRom.bytes);
   const bus=new Shino80Bus({traceLimit:512,memoryDevice:memory,ioDevices:[keyboard,diskA,beeper]});
@@ -4062,6 +4327,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     {id:'memory',icon:'MM',name:'MEMORY CONTROL',desc:'BOOT 8K + EXT 8K / I/O 00h',state:'ONLINE'},
     {id:'disk-a',icon:'A:',name:'VIRTUAL DISK A',desc:'SYSTEM / TOOLS · CP/M 2.2 · MULTI-PROFILE',state:'ONLINE'},
     {id:'disk-b',icon:'B:',name:'VIRTUAL DISK B',desc:'USER / WORK / INTERCHANGE · MULTI-PROFILE',state:'ONLINE'},
+    {id:'foreign-bridge',icon:'FB',name:'FOREIGN MEDIA BRIDGE',desc:'READ-ONLY HOST · D88 / FDI / DCP/DCU',state:'HOST'},
     {id:'uart',icon:'⇄',name:'RS-232C',desc:'UART / Virtual Modem',state:'RESERVED'},
     {id:'printer',icon:'PR',name:'PRINTER',desc:'Parallel printer interface',state:'RESERVED'},
     {id:'timer',icon:'T',name:'TIMER',desc:'System timer',state:'RESERVED'},
@@ -4261,6 +4527,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     else {diskA.mountImage(bytes,{drive,profileId:profile.id,writeProtected:pending.writeProtected});driveEjectedMedia[drive]=null;}
     clearPendingImport(`IMPORT COMPLETE: DRIVE ${drive===0?'A':'B'} · ${bytes.length.toLocaleString('en-US')} BYTES`,drive);refreshDevicePresentation();return true;
   }
+  function sendForeignToNativeImport(built,drive){
+    if(ui.powered||pendingDiskImport||diskImportOperation||![0,1].includes(drive))return false;
+    const ownership=diskOwnership(drive),profile=mediaProfileById(built.profileId),bytes=built.bytes;
+    if(ownership==='invalid'||!profile||bytes.length!==profile.imageBytes)return false;
+    pendingDiskImport={drive,ownership,fileName:'SHINO80_FOREIGN_CONVERTED.s80d',bytes:new Uint8Array(bytes),profileId:profile.id,profile,writeProtected:canonicalDiskMedia(drive)?.writeProtected||false};
+    diskMediaMessage[drive]='';refreshDevicePresentation();return true;
+  }
   function cancelDiskImport(drive){
     if(!pendingDiskImport||pendingDiskImport.drive!==drive)return false;
     clearPendingImport('IMPORT CANCELED. EXISTING MEDIUM UNCHANGED.',drive);refreshDevicePresentation();return true;
@@ -4288,6 +4561,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     return false;
   }
 
+  const inspectorHtmlCache=new WeakMap();
   function renderInspector(){
     const s=cpu.state,root=queryOne('#inspectorContent'),compactRoot=queryOne('#compactDeviceInspector');let html=`<div class="inspector-head"><h2>${ui.view.toUpperCase()} INSPECTOR</h2><span class="eyebrow">context</span></div>`;
     if(ui.view==='display')html+=`<div class="inspector-section"><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'CPU POWERED':'CPU OFF'}</div><div class="inspector-chip"><span class="dot ${ui.powered?'ok':''}"></span>${ui.powered?'TEXT VIDEO ONLINE':'TEXT VIDEO OFF'}</div></div><div class="inspector-section"><div class="inspector-kv"><span>PC</span><b>${hex(s.pc,4)}h</b></div><div class="inspector-kv"><span>R</span><b>${hex(s.r,2)}h</b></div><div class="inspector-kv"><span>T-states</span><b>${s.tStates}</b></div><div class="inspector-kv"><span>TEXT VRAM</span><b>C000h–C7CFh</b></div><div class="inspector-kv"><span>CG-ROM</span><b>4 KiB / NATIVE 8×16</b></div></div><div class="inspector-section inspector-note">CRT pixels come from TEXT VRAM + CG-ROM. JavaScript does not print the IPL banner directly.</div>`;
@@ -4304,10 +4578,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       else if(d.id==='beeper')html+=`<div class="inspector-section"><div class="inspector-kv"><span>Trigger</span><b>I/O 40h</b></div><div class="inspector-kv"><span>Count</span><b>${beeper.triggerCount}</b></div><div class="inspector-kv"><span>Last value</span><b>${hex(beeper.lastValue)}h</b></div><div class="inspector-kv"><span>Output</span><b>880 Hz · 80 ms</b></div></div><div class="inspector-section inspector-note">ROM BIOS and CBIOS route ASCII BEL 07h through the Bus. Browser audio is presentation only and requires the POWER gesture.</div>`;
       else if(d.id==='memory')html+=`<div class="inspector-section"><div class="inspector-kv"><span>BOOT ROM</span><b>0000h–1FFFh</b></div><div class="inspector-kv"><span>EXT ROM</span><b>2000h–3FFFh · BANK ${memory.extensionBank}</b></div><div class="inspector-kv"><span>RAM</span><b>64 KiB UNDERLAY</b></div><div class="inspector-kv"><span>MODE</span><b>${memory.lowRamEnabled?'FULL RAM':'ROM VISIBLE'}</b></div></div><div class="inspector-section inspector-note">I/O 00h controls page-out, shadow writes and the extension bank. RESET restores ROM-visible bank 0.</div>`;
       else if(d.id==='disk-a'||d.id==='disk-b')html+=diskInspectorHtml(diskDeviceDrive(d.id));
+      else if(d.id==='foreign-bridge')html+=foreignBridge.html(ui.powered,Boolean(pendingDiskImport||diskImportOperation));
       else html+=`<div class="inspector-section inspector-note">Reserved device slot; behavior not implemented yet.</div>`;
     }
-    root.innerHTML=html;
-    if(compactRoot){compactRoot.hidden=ui.view!=='devices';compactRoot.innerHTML=ui.view==='devices'?html:'';}
+    if(inspectorHtmlCache.get(root)!==html){root.innerHTML=html;inspectorHtmlCache.set(root,html);}
+    if(compactRoot){compactRoot.hidden=ui.view!=='devices';const compactHtml=ui.view==='devices'?html:'';if(inspectorHtmlCache.get(compactRoot)!==compactHtml){compactRoot.innerHTML=compactHtml;inspectorHtmlCache.set(compactRoot,compactHtml);}}
   }
 
   function render(){
@@ -4504,6 +4779,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     const diskImageInput=queryOne('#diskImageInput');
     diskImageInput.addEventListener('change',()=>{const file=diskImageInput.files&&diskImageInput.files[0];readDiskImportFile(file);});
     diskImageInput.addEventListener('cancel',()=>{clearImportOperation();refreshDevicePresentation();});
+    queryOne('#app').addEventListener('click',event=>{const control=event.target.closest('[data-foreign-action]');if(!control)return;if(control.dataset.foreignAction==='open'){const input=queryOne('#foreignImageInput');input.value='';input.click();}else foreignBridge.action(control.dataset.foreignAction);});
+    queryOne('#app').addEventListener('change',event=>{const control=event.target.closest('[data-foreign-field]');if(control)foreignBridge.change(control.dataset.foreignField,control.value);});
+    queryOne('#foreignImageInput').addEventListener('change',event=>foreignBridge.open(event.target.files?.[0]));
     queryOne('#powerBtn').addEventListener('click',togglePower);
     queryOne('#runPauseBtn').addEventListener('click',toggleRun);
     queryOne('#stepBtn').addEventListener('click',stepOne);

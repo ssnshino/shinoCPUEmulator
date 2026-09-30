@@ -1,12 +1,14 @@
 # SHINO-80 Current Integrated System Specification
 
 Status: CURRENT INTEGRATION BASELINE
-Updated: 2026-09-30 JST
+Updated: 2026-09-30T16:53:59+09:00
+Active candidate: PHASE 4 / Issue #63 / PR #64 OPEN / Human Review pending
+Reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout)
 Latest reviewed storage implementation: Issue #59 / PR #60 / merge `682a9196f3726ad49d745b8373c22ffab5366cc3`
-Current main after demo software disk PR #61: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
+Historical main at demo software disk PR #61 merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
 Normative PHASE 3 spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 
-Live Git state wins over recorded SHAs. This document preserves the reviewed PHASE 2 machine and records the active PHASE 3 candidate. Checkpoints A–E are implemented and verified; PR/preview closeout is active.
+Live Git state wins over recorded SHAs. This document describes the reviewed PHASE 3 machine and records PHASE 4 as the active compatibility/foreign-media candidate. PHASE 4 must not change the reviewed native runtime contract.
 
 ## Purpose
 
@@ -217,11 +219,35 @@ Issue #54 / PR #55 reviewed evidence includes:
 - compact 390×844, desktop 1280×900, compact-height 900×400
 - `pnpm test`, `pnpm run test:browser`, `git diff --check` PASS
 
+## PHASE 4 active candidate
+
+Issue #63 implements a host-side Foreign Media Bridge and an explicit CP/M 2.2 compatibility gate on the purpose branch. This is an unmerged review candidate, not a new reviewed main baseline.
+
+D88 / FDI / DCP/DCU are parsed read-only into a normalized sector model. Exact foreign CP/M descriptors F000 IBM3740-CPM22 and F001 SINCLAIR-PLUS3-CPM22-720 may reconstruct files. Selected files are repacked into a fresh existing SHINO native medium and then may enter the existing native IMPORT transaction.
+
+Normative contract:
+`docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
+
+Acceptance:
+`docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
+
+No foreign profile is added to port 38h; no foreign system boot or direct foreign A:/B: mount is part of PHASE 4.
+
+The I/O device list contains FOREIGN MEDIA BRIDGE. Structural detection is independent of extension. A compatible-descriptor list is advisory: even a sole F000/F001 candidate requires explicit selection and complete sector validation. Files are grouped by USER/name, raw record bytes retain trailing 1Ah, and malformed/crosslinked/gapped structures reject conversion. DCP/DCU uses the frozen 162-byte header and terminal-sentinel/full-versus-sparse contract.
+
+Capacity preflight reports records, logical extents, physical directory entries and allocation blocks. Native packing honors EXM grouping and USER/name uniqueness. BUILD produces a fresh nonbootable data disk; DOWNLOAD and pending SEND do not mutate guest drives or emit Bus events. SEND requires POWER OFF and no active native import, and reuses the existing CONFIRM/CANCEL ownership guard.
+
 ## Next storage phase
 
-No active implementation PLAN. The next roadmap candidate is PHASE 4 CP/M compatibility / foreign-media interoperability.
+PHASE 4 is active. After Human-reviewed completion, PHASE 5 remains the disk-subsystem completion phase.
 
 ## Change rule
 
 Generated deploy HTML is never the authoring source. One environment / one
 writer / one purpose branch. Human review controls merge and publication.
+
+## Update History
+
+- 2026-09-30T14:42:19+09:00 — Codex — PHASE 4 candidate implementation and host-only boundaries documented; reviewed main remains unchanged.
+
+- 2026-09-30T16:53:59+09:00 — Codex — Clarified reviewed main and PHASE 4 candidate; preserved historical PR #61 SHA. No runtime or publication change.

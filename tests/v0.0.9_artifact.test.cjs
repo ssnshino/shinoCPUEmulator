@@ -18,7 +18,7 @@ for(const match of h.matchAll(/<link\b[^>]*\bhref=["']?([^"' >]+)/gi))if(!match[
 if(/\bprompt\s*\(/.test(h))throw Error('browser prompt() must not be used');
 if(/\b(?:window\.)?confirm\s*\(/.test(h))throw Error('browser confirm() must not be used');
 const scripts=[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
-if(scripts.length!==18)throw Error('inline script count '+scripts.length);
+if(scripts.length!==20)throw Error('inline script count '+scripts.length);
 scripts.forEach((m,i)=>new vm.Script(m[1],{filename:'inline-'+i}));
 if(!h.trimEnd().endsWith('</html>'))throw Error('truncated html');
 console.log('v0.0.9 artifact static PASS',Buffer.byteLength(h),'bytes');

@@ -10,35 +10,30 @@ Updated: 2026-09-30 JST
 4. `snapshot/LAST_RUN.md`
 5. `snapshot/NEXT_CHAT_PROMPT.txt`
 6. `docs/head/SHINO80_CURRENT_SYSTEM_SPEC.md`
-7. `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
-8. `docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`
-9. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
-10. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
-11. `docs/head/SHINO80_FDD_DISK_DESIGN_NOTES_v0.1.md`
-12. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
+7. `docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md`
+8. `docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md`
+9. `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`
+10. `working-logs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md`
+11. `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
+12. `docs/head/SHINO80_DEMO_SOFTWARE_DISK_v0.1.md`
+13. `docs/head/SHINO80_CPM_COMMAND_REFERENCE_v0.1.md`
+14. `docs/head/SHINO80_TECHNICAL_MANUAL_v0.1.md`
+15. `docs/head/SHINO80_REMOVABLE_MEDIA_ROADMAP_v0.1.md`
 
-## Latest reviewed implementation
+## Active implementation
 
-- Issue #59 — PHASE 3 Multi-Profile FDD
-- PR #60 — merged
-- reviewed merge: `682a9196f3726ad49d745b8373c22ffab5366cc3`
-- PR #61 demo software disk — merged
-- current main after demo merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
-- active implementation PLAN: none
+- Issue #63 — PHASE 4 CP/M Compatibility + Foreign Media Bridge
+- purpose branch: `feature/shino80-phase4-cpm-compat-foreign-media-20260930`
+- baseline: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654`
+- state: implemented and verified candidate / Human Review pending
+- PR: #64 https://github.com/ssnshino/shinoCPUEmulator/pull/64; verify live GitHub
 
-## Completed evidence
+## Latest reviewed completed implementation
 
-- `plan/history/2026-09-30/SHINO80_PHASE3_MULTI_PROFILE_FDD_PLAN.md`
-- `working-logs/history/2026-09-30/SHINO80_PHASE3_MULTI_PROFILE_FDD_WORKLOG.md`
-- `plan/history/2026-09-30/SHINO80_DEMO_SOFTWARE_DISK_PLAN.md`
-- `working-logs/history/2026-09-30/SHINO80_DEMO_SOFTWARE_DISK_WORKLOG.md`
-
-## Generated artifacts
-
-- `deploy/one_page_shino80_v0.0.9_z80_base_complete.html`
-- `deploy/shino80_technical_manual_v0.1.html`
+- Issue #59 / PR #60 — PHASE 3
+- demo disk PR #61
+- PHASE 3 closeout PR #62
 
 ## Validation rule
 
-Fetch live branch/HEAD/Issue/PR before changes. Git live state wins over recorded
-snapshot SHAs. Human controls new-phase start, merge and publication.
+Fetch live Git first. Read Issue comments, not only Issue body. Live Git wins over recorded SHAs. Human controls merge and publication.

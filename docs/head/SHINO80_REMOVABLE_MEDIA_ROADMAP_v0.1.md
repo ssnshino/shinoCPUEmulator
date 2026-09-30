@@ -107,9 +107,13 @@ controller I/O are implemented; CBIOS/filesystem/host runtime work has not start
 
 D88/DCP/FDI and foreign CP/M compatibility remain PHASE 4.
 
-## PHASE 4 — CP/M Compatibility + Filesystem Regression
+## PHASE 4 — CP/M Compatibility + Foreign Media Bridge — ACTIVE
 
-Turn compatibility into an explicit quality gate.
+Issue #63. Purpose branch: `feature/shino80-phase4-cpm-compat-foreign-media-20260930`.
+
+Design is frozen and implementation-ready.
+
+Turn compatibility into an explicit quality gate while keeping the PHASE 3 native runtime unchanged.
 
 Targets:
 
@@ -121,9 +125,11 @@ Targets:
 - disk-full behavior
 - host-side directory/extent/allocation inspection
 - selected known legacy CP/M media profiles
+- D88 / FDI / DCP/DCU read-only parsing
+- exact F000 IBM3740 and F001 Sinclair 720 foreign profiles
+- file extraction and conversion into fresh SHINO native .s80d
 
-Foreign-machine hardware pokes and foreign BIOS/system-disk boot are not the
-general compatibility target.
+Foreign-machine hardware pokes and foreign BIOS/system-disk boot are not the general compatibility target. Foreign disks are not directly mounted into A:/B:.
 
 ## PHASE 5 — Daily Development Environment — DISK SUBSYSTEM COMPLETE
 
@@ -190,6 +196,8 @@ For each PHASE:
 7. only then design the next PHASE
 
 ## Update history
+
+- 2026-09-30 — Human selected PHASE 4; Issue #63 / purpose branch / normative PLAN-spec-QA created
 
 - 2026-09-30 — Issue #59 / PR #60 PHASE 3 Multi-Profile FDD merged after Human Review
 - 2026-09-30 — PR #61 reproducible CLASSIC demo software disk merged

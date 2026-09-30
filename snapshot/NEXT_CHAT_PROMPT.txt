@@ -3,29 +3,31 @@ SHINO-80をREADME.mdから正規restart順に再開してください。
 合言葉:
 「ごっごっごっごっ♪」
 
-最初にGitHubをfetchし、main HEAD、open PR/Issue、active PLANをlive確認してください。
+最初にGitHubをfetchし、main HEAD、purpose branch HEAD、open PR/Issue、active PLAN、Issue #63 comments一覧をlive確認してください。
 
-latest reviewed storage implementation:
-- Issue #59 / PR #60 — PHASE 3 Multi-Profile FDD
-- reviewed merge: 682a9196f3726ad49d745b8373c22ffab5366cc3
+latest reviewed implementation:
+- PHASE 3 Issue #59 / PR #60
+- PHASE 4 baseline main: 830f6a30c9b2a22dbdef3b0e400ff863c14e6654
 
-latest software addition:
-- PR #61 — reproducible CLASSIC demo software disk
-- main after merge: e48dd446a2c2f6d54f81ce19965598f73f7cb79e
+active implementation:
+- Issue #63 — PHASE 4 CP/M Compatibility + Foreign Media Bridge
+- branch feature/shino80-phase4-cpm-compat-foreign-media-20260930
+- PLAN plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md
+- spec docs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_SPEC_v1.md
+- QA docs/head/SHINO80_PHASE4_QA_ACCEPTANCE_v1.md
+- worklog working-logs/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_WORKLOG.md
 
-implemented:
-- five native FDD profiles
-- A/B multi-profile media
-- S80B v3 2HD-JP autoboot
-- profile-aware CBIOS and CP/M filesystem
-- 128/512/1024-byte blocking/deblocking
-- all-profile raw .s80d IMPORT / EXPORT / EJECT / REINSERT
-- demo disk with BALLS.COM / MONX.COM / BEEP.COM / ABOUT.COM
+implementation rule:
+- Codex implements; it does not redesign/re-review the spec.
+- PHASE 4 is implemented as an unmerged candidate. Read latest worklog receipts and fetch live PR state before any further edits.
+- routine checkpoint reporting must not stop implementation.
+- if a real specification ambiguity exists, ask Issue #63 with exact location and required decision.
+- create one final PR at F.
+- never merge or publish without Human authorization.
 
-current active implementation PLAN:
-- none
-
-next roadmap candidate:
-- PHASE 4 CP/M compatibility / foreign-media interoperability
-
-Do not start a new phase, merge, or publish without Human authorization.
+UI test entry: I/O -> FOREIGN MEDIA BRIDGE -> OPEN FOREIGN IMAGE -> choose disk
+-> explicitly select F000/F001 -> select files/destination -> BUILD SHINO DISK
+-> DOWNLOAD, or POWER OFF SEND TO NATIVE IMPORT -> target drive CONFIRM/CANCEL.
+No proprietary media is needed: tests/fixtures/shino80_phase4_fixtures.cjs generates
+original D88/FDI/DCP samples. pnpm run test:phase4 verifies source/guest behavior;
+pnpm run test:browser includes three-size foreign bridge and native regressions.
