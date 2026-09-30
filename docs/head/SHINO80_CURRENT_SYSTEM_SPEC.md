@@ -1,14 +1,17 @@
 # SHINO-80 Current Integrated System Specification
 
+
+Current authoritative state — 2026-09-30: PHASE 4 / PR #64 MERGED. Reviewed implementation main `1ed2a7cb794e124dc39fa22c0be10a3b6b69f271`. No active implementation PLAN; PHASE 5 not started. Prior candidate descriptions below are historical. Existing unlisted publication is Human-authorized and tracked in ssnshino/shinomiya-daihanten-content. Physical iPhone/Edge PHASE 4 QA remains unverified.
+
 Status: CURRENT INTEGRATION BASELINE
 Updated: 2026-09-30T16:53:59+09:00
-Active candidate: PHASE 4 / Issue #63 / PR #64 OPEN / Human Review pending
-Reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout)
+Reviewed implementation: PHASE 4 / Issue #63 / PR #64 MERGED
+Historical baseline main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout)
 Latest reviewed storage implementation: Issue #59 / PR #60 / merge `682a9196f3726ad49d745b8373c22ffab5366cc3`
 Historical main at demo software disk PR #61 merge: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
 Normative PHASE 3 spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 
-Live Git state wins over recorded SHAs. This document describes the reviewed PHASE 3 machine and records PHASE 4 as the active compatibility/foreign-media candidate. PHASE 4 must not change the reviewed native runtime contract.
+Live Git state wins over recorded SHAs. This document describes the reviewed PHASE 3 machine and records PHASE 4 as the reviewed compatibility/foreign-media implementation. PHASE 4 must not change the reviewed native runtime contract.
 
 ## Purpose
 
@@ -219,7 +222,7 @@ Issue #54 / PR #55 reviewed evidence includes:
 - compact 390×844, desktop 1280×900, compact-height 900×400
 - `pnpm test`, `pnpm run test:browser`, `git diff --check` PASS
 
-## PHASE 4 active candidate
+## PHASE 4 reviewed implementation
 
 Issue #63 implements a host-side Foreign Media Bridge and an explicit CP/M 2.2 compatibility gate on the purpose branch. This is an unmerged review candidate, not a new reviewed main baseline.
 
@@ -239,7 +242,7 @@ Capacity preflight reports records, logical extents, physical directory entries 
 
 ## Next storage phase
 
-PHASE 4 is active. After Human-reviewed completion, PHASE 5 remains the disk-subsystem completion phase.
+PHASE 4 is reviewed and merged. PHASE 5 remains the next disk-subsystem phase and has not started.
 
 ## Change rule
 

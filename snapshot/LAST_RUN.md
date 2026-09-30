@@ -1,9 +1,18 @@
+# LAST RUN — 2026-09-30 PHASE 4 HUMAN MERGE CLOSEOUT
+
+- PR #64 merged by explicit Human GO; implementation merge `1ed2a7cb794e124dc39fa22c0be10a3b6b69f271`.
+- Local verification at approved head b0e70d86: full tests/build/manual/browser and base diff check PASS; artifacts unchanged.
+- PLAN/worklog archived under history/2026-09-30. No active implementation PLAN; PHASE 5 not started.
+- Existing Daihanten unlisted publication authorized; content repo owns deployment receipts. Physical iPhone/Edge remain unverified.
+
+## Historical candidate and earlier phase records
+
 # LAST RUN — 2026-09-30 PHASE 4 CANDIDATE / PR #64 / HUMAN REVIEW PENDING
 
 Updated: 2026-09-30T16:53:59+09:00
 
 - Reviewed main: `830f6a30c9b2a22dbdef3b0e400ff863c14e6654` (PR #62 PHASE 3 closeout).
-- Active PLAN: `plan/head/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`.
+- Active PLAN: `plan/history/2026-09-30/SHINO80_PHASE4_CPM_COMPAT_FOREIGN_MEDIA_PLAN.md`.
 - State: PHASE 4 candidate / Human Review pending. PR #64 remains OPEN and unmerged; physical iPhone/Edge QA remains unverified.
 - Latest change: documentation-only current-state clarification and Markdown whitespace cleanup.
 
@@ -148,3 +157,15 @@ Public/unlisted preview publication remains a separate Human-authorized step.
 - Follow-up validation: `pnpm test`, `pnpm run build`, `pnpm run build:manual`, `pnpm run test:manual`, `pnpm run test:browser`, and base-to-candidate `git diff --check` PASS on the isolated Mac mini checkout.
 - Machine/manual hashes remain byte-identical to the original PHASE 4 candidate. Browser coverage is Chromium at 390×844 / 1280×900 / 900×400; physical iPhone/Edge remain unverified.
 - Evidence is local execution, not GitHub CI; this repository has no tracked GitHub Actions workflow. The original implementation commit is preserved, followed by this Human-authorized documentation commit using a normal push.
+
+## Verified existing-site publication — 2026-09-30
+
+- Source PR #64 implementation merge: `1ed2a7cb794e124dc39fa22c0be10a3b6b69f271`.
+- Content artifact PR #16 merge: `84eeb095bbb1f5d156f7eacb7fe22f551af090a6`; deploy Action `36688482025` SUCCESS / exact SHA.
+- Content record PR #17 merge/final deployed master: `c112d2604a1c03982fc12427701be9f8f8f74a7e`; deploy Action `36688934009` SUCCESS. Documentation-only follow-up leaves artifact hashes unchanged.
+- Machine: https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-preview.html
+- Manual: https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-reference.html
+- Notices: https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/shino80-notices.txt
+- BASE local/public shared + conditional runtime/SHINO smoke PASS; independent public 9/9 HTTP 200 and all three hashes equal content. Chrome 390×844 / 1280×900 POWER, explicit F000 BUILD, manual/noindex/NOTICES/overflow/pageerrors PASS.
+- Full PHASE 4 published-copy browser acceptance 390×844 / 1280×900 / 900×400 PASS before publication. Source local full test/build/manual/browser receipts at approved head b0e70d86 remain applicable: implementation/artifacts unchanged through merge and this documentation closeout.
+- Physical iPhone/Edge PHASE 4 QA remains UNVERIFIED. No container/infra/service changes, unrelated PR merge or PHASE 5 work.

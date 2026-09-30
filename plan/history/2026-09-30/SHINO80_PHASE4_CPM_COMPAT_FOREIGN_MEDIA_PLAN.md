@@ -157,3 +157,11 @@ git diff --check
 ## Update History
 
 - 2026-09-30T16:53:59+09:00 — Codex — Replaced architecture hard breaks with list items; scope and checkpoint contract unchanged.
+
+
+## Human-authorized merge closeout — 2026-09-30
+
+- PR #64 merged by explicit Human GO; implementation merge `1ed2a7cb794e124dc39fa22c0be10a3b6b69f271`.
+- Verified head `b0e70d86d3b9216bf6fb0f2208a47743daed0e94`; all local standard tests/builds/browser and base diff checks PASS.
+- Status: COMPLETED / REVIEWED / MERGED. PHASE 5 not started.
+- Human authorized publication to the existing Daihanten unlisted routes; content deployment is tracked in the content repository. Physical iPhone/Edge remain unverified for PHASE 4.
