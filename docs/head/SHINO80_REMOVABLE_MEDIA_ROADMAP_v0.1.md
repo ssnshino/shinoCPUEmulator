@@ -79,7 +79,7 @@ The superseded EXPORT-only PLAN/basic/detailed design are archived under
 `*/history/2026-09-28/`. Their useful browser-download research remains
 available as input, not as an active implementation contract.
 
-## PHASE 3 — Multi-Profile FDD — ACTIVE / CHECKPOINT A COMPLETE
+## PHASE 3 — Multi-Profile FDD — IMPLEMENTED / REVIEWED
 
 Issue #59 / `feature/shino80-multi-profile-fdd-phase3-20260929`.
 
@@ -190,6 +190,9 @@ For each PHASE:
 7. only then design the next PHASE
 
 ## Update history
+
+- 2026-09-30 — Issue #59 / PR #60 PHASE 3 Multi-Profile FDD merged after Human Review
+- 2026-09-30 — PR #61 reproducible CLASSIC demo software disk merged
 
 - 2026-09-29 — Issue #59 PHASE 3 Checkpoint A + DPB/header/RAM fixtures implemented
 - 2026-09-29 — Issue #59 PHASE 3 Checkpoint B controller multi-profile I/O implemented and verified
