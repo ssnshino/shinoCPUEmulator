@@ -2,11 +2,9 @@
 
 Status: CURRENT INTEGRATION BASELINE
 Updated: 2026-09-30 JST
-Latest reviewed storage implementation: Issue #56 / PR #57 / implementation merge `8c3e1896db4c68cfc1746ed2ebca38d624ef4dc1`
-PHASE 3 baseline main: `c6e0e041370bd20b2a32fa10c218f4212c051fdf`
-Active candidate: Issue #59 / PHASE 3 Multi-Profile FDD
-Purpose branch: `feature/shino80-multi-profile-fdd-phase3-20260929`
-Normative spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
+Latest reviewed storage implementation: Issue #59 / PR #60 / merge `682a9196f3726ad49d745b8373c22ffab5366cc3`
+Current main after demo software disk PR #61: `e48dd446a2c2f6d54f81ce19965598f73f7cb79e`
+Normative PHASE 3 spec: `docs/head/SHINO80_PHASE3_MULTI_PROFILE_FDD_SPEC_v1.md`
 
 Live Git state wins over recorded SHAs. This document preserves the reviewed PHASE 2 machine and records the active PHASE 3 candidate. Checkpoints A–E are implemented and verified; PR/preview closeout is active.
 
@@ -221,9 +219,7 @@ Issue #54 / PR #55 reviewed evidence includes:
 
 ## Next storage phase
 
-Issue #59 PHASE 3 is active. Checkpoints A/B and the fixture gate are implemented
-with focused and full regression evidence. Checkpoints C/D remain unstarted and
-require a separate Human instruction; this Checkpoint B task stops here.
+No active implementation PLAN. The next roadmap candidate is PHASE 4 CP/M compatibility / foreign-media interoperability.
 
 ## Change rule
 
